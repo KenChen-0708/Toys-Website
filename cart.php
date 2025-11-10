@@ -1,0 +1,145 @@
+<?php 
+  $title = "Cart"; 
+  include 'partials/header.php'; 
+?>
+
+<main class="main">
+  <!--=============== BREADCRUMB ===============-->
+  <section class="breadcrumb">
+    <ul class="breadcrumb__list flex container">
+      <li><a href="index.php" class="breadcrumb__link">Home</a></li>
+      <li><span class="breadcrumb__link">></span></li>
+      <li><a href="shop.php" class="breadcrumb__link">Shop</a></li>
+      <li><span class="breadcrumb__link">></span></li>
+      <li><span class="breadcrumb__link">Cart</span></li>
+    </ul>
+  </section>
+
+  <!--=============== CART ===============-->
+  <section class="cart section--lg container">
+    <div class="table__container">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Image</th>
+            <th>Name</th>
+            <th>Price</th>
+            <th>Quantity</th>
+            <th>Subtotal</th>
+            <th>Remove</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><img src="./assets/img/product-1-2.jpg" alt="" class="table__img"></td>
+            <td>
+              <h3 class="table__title">J.Crew Mercantile Women's Short-Sleeve</h3>
+              <p class="table__description">Lorem ipsum dolor sit amet consectetur.</p>
+            </td>
+            <td><span class="table__price">$110</span></td>
+            <td><input type="number" value="3" class="quantity"></td>
+            <td><span class="subtotal">$220</span></td>
+            <td><i class="fi fi-rs-trash table__trash"></i></td>
+          </tr>
+
+          <tr>
+            <td><img src="./assets/img/product-7-1.jpg" alt="" class="table__img"></td>
+            <td>
+              <h3 class="table__title">Amazon Essentials Women's Tank</h3>
+              <p class="table__description">Lorem ipsum dolor sit amet consectetur.</p>
+            </td>
+            <td><span class="table__price">$110</span></td>
+            <td><input type="number" value="3" class="quantity"></td>
+            <td><span class="subtotal">$220</span></td>
+            <td><i class="fi fi-rs-trash table__trash"></i></td>
+          </tr>
+
+          <tr>
+            <td><img src="./assets/img/product-2-1.jpg" alt="" class="table__img"></td>
+            <td>
+              <h3 class="table__title">Amazon Brand - Daily Ritual Women's Jersey</h3>
+              <p class="table__description">Lorem ipsum dolor sit amet consectetur.</p>
+            </td>
+            <td><span class="table__price">$110</span></td>
+            <td><input type="number" value="3" class="quantity"></td>
+            <td><span class="subtotal">$220</span></td>
+            <td><i class="fi fi-rs-trash table__trash"></i></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="cart__actions">
+      <a href="#" class="btn flex btn__md"><i class="fi-rs-shuffle"></i> Update Cart</a>
+      <a href="shop.php" class="btn flex btn__md"><i class="fi-rs-shopping-bag"></i> Continue Shopping</a>
+    </div>
+
+    <div class="divider"><i class="fi fi-rs-fingerprint"></i></div>
+
+    <div class="cart__group grid">
+      <div>
+        <div class="cart__shippinp">
+          <h3 class="section__title">Calculate Shipping</h3>
+          <form class="form grid">
+            <input type="text" class="form__input" placeholder="State / Country">
+            <div class="form__group grid">
+              <input type="text" class="form__input" placeholder="City">
+              <input type="text" class="form__input" placeholder="PostCode">
+            </div>
+            <div class="form__btn">
+              <button class="btn flex btn--sm"><i class="fi-rs-shuffle"></i> Update</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="cart__coupon">
+          <h3 class="section__title">Apply Coupon</h3>
+          <form class="coupon__form form grid">
+            <div class="form__group grid">
+              <input type="text" class="form__input" placeholder="Enter Your Coupon">
+              <div class="form__btn">
+                <button class="btn flex btn--sm"><i class="fi-rs-label"></i> Apply</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <div class="cart__total">
+        <h3 class="section__title">Cart Totals</h3>
+        <table class="cart__total-table">
+          <tr>
+            <td>Cart Subtotal</td>
+            <td>$240.00</td>
+          </tr>
+          <tr>
+            <td>Shipping</td>
+            <td>$10.00</td>
+          </tr>
+          <tr>
+            <td>Total</td>
+            <td>$250.00</td>
+          </tr>
+        </table>
+        <a href="checkout.php" class="btn flex btn--md"><i class="fi fi-rs-box-alt"></i> Proceed To Checkout</a>
+      </div>
+    </div>
+  </section>
+
+  <!--=============== NEWSLETTER ===============-->
+  <section class="newsletter section">
+    <div class="newsletter__container container grid">
+      <h3 class="newsletter__title flex">
+        <img src="./assets/img/icon-email.svg" alt="" class="newsletter__icon" />
+        Sign in to Newsletter
+      </h3>
+      <p class="newsletter__description">...and receive $25 coupon for first shopping.</p>
+      <form class="newsletter__form">
+        <input type="text" placeholder="Enter Your Email" class="newsletter__input">
+        <button type="submit" class="newsletter__btn">Subscribe</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<?php include 'partials/footer.php'; ?>
