@@ -148,7 +148,7 @@ if ($result) {
                 <span class="icon">📊</span>
                 <span>Dashboard</span>
             </a>
-            <a href="#" class="nav-item">
+            <a href="admin.php" class="nav-item">
                 <span class="icon">👥</span>
                 <span>Members</span>
             </a>
