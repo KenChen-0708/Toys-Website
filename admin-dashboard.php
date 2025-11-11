@@ -8,11 +8,19 @@ $db_pass = '';
 $db_name = 'assignment'; 
 
 // Create connection
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+// Disable mysqli exceptions locally and catch constructor failures to keep UI rendering
+mysqli_report(MYSQLI_REPORT_OFF);
+$conn = null;
+$db_ok = true;
+try {
+    $conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
+} catch (mysqli_sql_exception $e) {
+    $db_ok = false;
+}
 
 // Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if (!$conn || $conn->connect_error) {
+    $db_ok = false;
 }
 
 // Simulate login check
@@ -28,44 +36,55 @@ $total_revenue = 0;
 $pending_orders = 0;
 
 // Total Members
-$result = $conn->query("SELECT COUNT(*) as count FROM Member");
-if ($result) {
-    $row = $result->fetch_assoc();
-    $total_users = $row['count'];
+if ($db_ok) {
+    $result = $conn->query("SELECT COUNT(*) as count FROM Member");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $total_users = $row['count'];
+    }
 }
 
 // Total Orders
-$result = $conn->query("SELECT COUNT(*) as count FROM `Order`");
-if ($result) {
-    $row = $result->fetch_assoc();
-    $total_orders = $row['count'];
+if ($db_ok) {
+    $result = $conn->query("SELECT COUNT(*) as count FROM `Order`");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $total_orders = $row['count'];
+    }
 }
 
 // Total Revenue
-$result = $conn->query("SELECT SUM(total_amount) as total FROM `Order` WHERE status != 'Cancelled'");
-if ($result) {
-    $row = $result->fetch_assoc();
-    $total_revenue = $row['total'] ?? 0;
+if ($db_ok) {
+    $result = $conn->query("SELECT SUM(total_amount) as total FROM `Order` WHERE status != 'Cancelled'");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $total_revenue = $row['total'] ?? 0;
+    }
 }
 
 // Pending Orders
-$result = $conn->query("SELECT COUNT(*) as count FROM `Order` WHERE status = 'Pending'");
-if ($result) {
-    $row = $result->fetch_assoc();
-    $pending_orders = $row['count'];
+if ($db_ok) {
+    $result = $conn->query("SELECT COUNT(*) as count FROM `Order` WHERE status = 'Pending'");
+    if ($result) {
+        $row = $result->fetch_assoc();
+        $pending_orders = $row['count'];
+    }
 }
 
 // Recent Users
 $recent_users = [];
-$result = $conn->query("SELECT member_id, name, email FROM Member ORDER BY member_id DESC LIMIT 5");
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $recent_users[] = $row;
+if ($db_ok) {
+    $result = $conn->query("SELECT member_id, name, email FROM Member ORDER BY member_id DESC LIMIT 5");
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $recent_users[] = $row;
+        }
     }
 }
 
 // Recent Orders
 $recent_orders = [];
+if ($db_ok) {
 $result = $conn->query("
     SELECT o.order_id, m.name as customer, o.total_amount, o.status, o.order_date 
     FROM `Order` o 
@@ -78,9 +97,11 @@ if ($result) {
         $recent_orders[] = $row;
     }
 }
+}
 
 // Chart Data: Orders by Status
 $order_status_data = [];
+if ($db_ok) {
 $result = $conn->query("
     SELECT status, COUNT(*) as count 
     FROM `Order` 
@@ -91,9 +112,11 @@ if ($result) {
         $order_status_data[] = $row;
     }
 }
+}
 
 // Chart Data: Revenue by Month (Last 6 months)
 $revenue_by_month = [];
+if ($db_ok) {
 $result = $conn->query("
     SELECT 
         DATE_FORMAT(order_date, '%Y-%m') as month,
@@ -109,9 +132,11 @@ if ($result) {
         $revenue_by_month[] = $row;
     }
 }
+}
 
 // Chart Data: New Members by Month (Last 6 months)
 $members_by_month = [];
+if ($db_ok) {
 $result = $conn->query("
     SELECT 
         DATE_FORMAT(member_id, '%Y-%m') as month,
@@ -126,6 +151,7 @@ if ($result) {
         $members_by_month[] = array_reverse($row);
     }
     $members_by_month = array_reverse($members_by_month);
+}
 }
 ?>
 <!DOCTYPE html>
@@ -396,5 +422,7 @@ if ($result) {
 </body>
 </html>
 <?php
-$conn->close();
+if (isset($db_ok) && $db_ok) {
+    $conn->close();
+}
 ?>
