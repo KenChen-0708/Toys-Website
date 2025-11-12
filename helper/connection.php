@@ -21,3 +21,11 @@ try {
 if (!$conn || $conn->connect_error) {
     $db_ok = false;
 }
+
+if (!$db_ok) {
+    echo "<p style='color:red;'>Database connection failed. Please check your configuration or try again later.</p>";
+
+    // Optionally, show detailed error info for debugging (not in production!)
+    // echo "<p>Error: " . $conn->connect_error . "</p>";
+    exit; // Stop further execution
+}
