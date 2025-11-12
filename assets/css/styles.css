@@ -2194,3 +2194,86 @@ table {
     max-width: 270px;
   }
 }
+
+/* ======= THEME OVERRIDES ======= */
+:root{
+  --header-top-bg: #0e1b14;
+  --header-top-text: #e7f4ec;
+  --nav-bg: #CFE7DC;        /* darker than #DFF4E9 */
+  --footer-bg: #CFE7DC;
+  --nav-link-color: #0D3B2F;
+  --nav-link-active: #0A6A50;
+}
+
+
+/* 1) HEADER TOP — dark background + light text */
+.header__top{
+  background: var(--header-top-bg) !important;
+  border-bottom-color: rgba(255,255,255,.2) !important;
+  color: var(--header-top-text);
+}
+.header__contact span,
+.header__alert-news,
+.header__top-action{
+  color: var(--header-top-text) !important;
+}
+
+/* 2) NAV BAR — light green FULL-BLEED without changing HTML
+   We use the "full-bleed box-shadow" hack so the background extends
+   past the centered .container to the edges of the viewport. */
+.nav{
+  background: var(--nav-bg);
+  /* full-bleed trick */
+  box-shadow: 0 0 0 100vmax var(--nav-bg);
+  clip-path: inset(0 -100vmax);
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+
+/* Nav link colors for contrast on light green */
+.nav__link{
+  color: var(--nav-link-color);
+}
+.active-link,
+.nav__link:hover{
+  color: var(--nav-link-active);
+}
+
+/* If your search input border looks too stark on the green: */
+.header__search .form__input{
+  border-color: rgba(0,0,0,.1);
+  background: #fff;
+}
+
+/* 3) FOOTER — light green FULL-BLEED without changing HTML */
+.footer{
+  background: var(--footer-bg);
+  /* full-bleed trick */
+  box-shadow: 0 0 0 100vmax var(--footer-bg);
+  clip-path: inset(0 -100vmax);
+  border-top: 1px solid rgba(0,0,0,.06);
+}
+
+/* Footer text/link colors tuned for light green */
+.footer__title,
+.footer__link,
+.footer__description,
+.footer__subtitle,
+.copyright,
+.designer{
+  color: #0f3c2f;
+}
+.footer__link:hover{
+  color: var(--nav-link-active);
+}
+
+/* Optional: make the small social icons a bit crisper on green */
+.footer__social-icon{
+  filter: saturate(0) brightness(0.25);
+}
+
+/* 4) Swiper arrow chips (if you keep them) on light green bars */
+.swiper-button-next,
+.swiper-button-prev{
+  background: rgba(255,255,255,.8);
+  border-color: rgba(0,0,0,.08);
+}
