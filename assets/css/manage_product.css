@@ -1,3 +1,5 @@
+/* Manage Product Styles */
+
 * {
     margin: 0;
     padding: 0;
@@ -14,7 +16,6 @@ body {
     display: flex;
     min-height: 100vh;
 }
-
 
 /* Main Content */
 .main-content {
@@ -38,6 +39,7 @@ body {
     color: #2d3748;
 }
 
+/* Buttons */
 .btn {
     padding: 10px 20px;
     border: none;
@@ -108,7 +110,7 @@ body {
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 25px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     display: flex;
     gap: 15px;
     flex-wrap: wrap;
@@ -129,7 +131,7 @@ body {
 .table-container {
     background: white;
     border-radius: 10px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     overflow: hidden;
 }
 
@@ -192,7 +194,7 @@ tr:hover {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.5);
+    background: rgba(0,0,0,0.5);
     z-index: 1000;
     animation: fadeIn 0.3s;
 }
@@ -266,17 +268,131 @@ tr:hover {
     border-radius: 8px;
 }
 
+.sub-images-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.sub-images-preview .preview-item {
+    position: relative;
+}
+
+.sub-images-preview img {
+    width: 100px;
+    height: 100px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+}
+
+.sub-images-preview .preview-label {
+    position: absolute;
+    bottom: 5px;
+    left: 5px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+}
+
+.sub-images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 15px;
+    margin-top: 10px;
+    min-height: 50px;
+}
+
+.sub-images-grid.empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    background: #f7fafc;
+    border-radius: 8px;
+    border: 2px dashed #e2e8f0;
+}
+
+.sub-images-grid .empty-message {
+    color: #718096;
+    font-size: 14px;
+    text-align: center;
+}
+
+.sub-images-grid .empty-message i {
+    display: block;
+    font-size: 40px;
+    margin-bottom: 10px;
+    opacity: 0.5;
+}
+
+.sub-image-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 2px solid #e2e8f0;
+    transition: transform 0.2s;
+}
+
+.sub-image-item:hover {
+    transform: scale(1.05);
+    border-color: #667eea;
+}
+
+.sub-image-item img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+}
+
+.sub-image-delete {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #f56565;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.3s;
+}
+
+.sub-image-delete:hover {
+    background: #c53030;
+}
+
+.loading-message {
+    text-align: center;
+    padding: 20px;
+    color: #718096;
+}
+
+.error-message {
+    text-align: center;
+    padding: 20px;
+    color: #e53e3e;
+    background: #fed7d7;
+    border-radius: 8px;
+}
+
+/* Mobile Menu Button */
+.mobile-menu-btn {
+    display: none;
+}
+
 /* Responsive Design */
 @media (max-width: 968px) {
-    .sidebar {
-        transform: translateX(-100%);
-        z-index: 999;
-    }
-
-    .sidebar.active {
-        transform: translateX(0);
-    }
-
     .main-content {
         margin-left: 0;
         width: 100%;
@@ -300,8 +416,7 @@ tr:hover {
         font-size: 12px;
     }
 
-    th,
-    td {
+    th, td {
         padding: 10px;
     }
 
@@ -320,16 +435,16 @@ tr:hover {
         margin: 20px;
         padding: 20px;
     }
+
+    .sub-images-grid {
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    }
 }
 
+/* Animations */
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes slideDown {
@@ -337,7 +452,6 @@ tr:hover {
         opacity: 0;
         transform: translateY(-50px);
     }
-
     to {
         opacity: 1;
         transform: translateY(0);
@@ -349,13 +463,8 @@ tr:hover {
         opacity: 0;
         transform: translateX(-20px);
     }
-
     to {
         opacity: 1;
         transform: translateX(0);
     }
-}
-
-.mobile-menu-btn {
-    display: none;
 }
