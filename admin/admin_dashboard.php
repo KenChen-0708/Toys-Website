@@ -160,14 +160,14 @@ if ($result) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="assets/css/admin_dashboard.css">
-    <link rel="stylesheet" href="assets/css/admin_panel.css">
+    <link rel="stylesheet" href="../assets/css/admin_dashboard.css">
+    <link rel="stylesheet" href="../assets/css/admin_panel.css">
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
     <!-- Sidebar -->
-    <?php include 'partials/admin_panel.php'; ?>
+    <?php include '../partials/admin_panel.php'; ?>
 
     <!-- Main Content -->
     <div class="main-content">

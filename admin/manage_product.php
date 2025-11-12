@@ -72,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         // Handle image upload
         $image_path = $conn->real_escape_string($_POST['existing_image']);
         if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-            $target_dir = "uploads/products/";
+            $target_dir = "../img/products/";
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
@@ -157,15 +157,15 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Products - Admin Panel</title>
-	<link rel="stylesheet" href="assets/css/manage_product.css">
-    <link rel="stylesheet" href="assets/css/admin_panel.css">
+	<link rel="stylesheet" href="../assets/css/manage_product.css">
+    <link rel="stylesheet" href="../assets/css/admin_panel.css">
 </head>
 <body>
     <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
 
     <div class="admin-container">
        
-        <?php include 'partials/admin_panel.php'; ?>
+        <?php include '../partials/admin_panel.php'; ?>
 
         <!-- Main Content -->
         <div class="main-content">
