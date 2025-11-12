@@ -279,12 +279,12 @@ $flashes = flash_take_all();
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Manage Members</title>
-	<link rel="stylesheet" href="assets/css/admin_panel.css">
-	<link rel="stylesheet" href="assets/css/admin_dashboard.css"> <!-- Overlap, need separte css file -->
-	<link rel="stylesheet" href="assets/css/manage_member.css">
+	<link rel="stylesheet" href="../assets/css/admin_panel.css">
+	<link rel="stylesheet" href="../assets/css/admin_dashboard.css"> <!-- Overlap, need separte css file -->
+	<link rel="stylesheet" href="../assets/css/manage_member.css">
 </head>
 <body>
-	<?php include 'partials/admin_panel.php'; ?>
+	<?php include '../partials/admin_panel.php'; ?>
 	<div class="main-content">
 		<header class="header">
 			<div class="header-left">
