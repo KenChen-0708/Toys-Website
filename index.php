@@ -1,6 +1,7 @@
 <?php 
   $title = "Home";
   include 'partials/header.php';
+
 ?>
 
 <!--=============== MAIN ===============-->
