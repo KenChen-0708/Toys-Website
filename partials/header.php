@@ -22,7 +22,7 @@
     />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="/online_store/assets/css/styles.css" />
+    <link rel="stylesheet" href="../assets/css/styles.css" />
 
     <title><?= htmlspecialchars($title) ?></title>
   </head>

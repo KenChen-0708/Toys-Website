@@ -22,8 +22,3 @@ if (!$conn || $conn->connect_error) {
     $db_ok = false;
 }
 
-if (!$db_ok) {
-    echo '<div style="background:#f8d7da; color:#721c24; padding:10px; text-align:center; position:fixed; top:0; left:0; width:100%; z-index:999;">
-        ⚠️ Database connection failed. Some data may not be available.
-    </div>';
-}

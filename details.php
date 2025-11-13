@@ -1,5 +1,42 @@
 <?php 
-  $title = "Henley Shirt — Details";
+  require_once 'helper/connection.php';
+
+  // Get product ID from URL
+  $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+  
+  // Fetch product details
+  $product = null;
+  $sub_images = [];
+  
+  if ($db_ok && $conn && $product_id > 0) {
+    // Fetch main product details
+    $stmt = $conn->prepare("SELECT * FROM Product WHERE product_id = ?");
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $product = $result->fetch_assoc();
+    $stmt->close();
+    
+    // Fetch sub images
+    if ($product) {
+      $stmt = $conn->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = ?");
+      $stmt->bind_param("i", $product_id);
+      $stmt->execute();
+      $result = $stmt->get_result();
+      while ($row = $result->fetch_assoc()) {
+        $sub_images[] = $row['sub_image_path'];
+      }
+      $stmt->close();
+    }
+  }
+  
+  // Redirect if product not found
+  if (!$product) {
+    header("Location: shop.php");
+    exit();
+  }
+  
+  $title = htmlspecialchars($product['name']) . " — Details";
   include 'partials/header.php';
 ?>
 
@@ -9,9 +46,9 @@
     <ul class="breadcrumb__list flex container">
       <li><a href="index.php" class="breadcrumb__link">Home</a></li>
       <li><span class="breadcrumb__link">></span></li>
-      <li><a href="shop.php" class="breadcrumb__link">Fashion</a></li>
+      <li><a href="shop.php" class="breadcrumb__link"><?php echo htmlspecialchars($product['category']); ?></a></li>
       <li><span class="breadcrumb__link">></span></li>
-      <li><span class="breadcrumb__link">Henley Shirt</span></li>
+      <li><span class="breadcrumb__link"><?php echo htmlspecialchars($product['name']); ?></span></li>
     </ul>
   </section>
 
@@ -19,27 +56,28 @@
   <section class="details section--lg">
     <div class="details__container container grid">
       <div class="details__group">
-        <img src="./assets/img/product-8-1.jpg" alt="" class="details__img" />
+        <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__img" />
         <div class="details__small-images grid">
-          <img src="./assets/img/product-8-2.jpg" alt="" class="details__small-img" />
-          <img src="./assets/img/product-8-1.jpg" alt="" class="details__small-img" />
-          <img src="./assets/img/product-8-2.jpg" alt="" class="details__small-img" />
+          <?php if (!empty($sub_images)): ?>
+            <?php foreach ($sub_images as $sub_image): ?>
+              <img src="<?php echo htmlspecialchars($sub_image); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__small-img" />
+            <?php endforeach; ?>
+          <?php else: ?>
+            <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__small-img" />
+          <?php endif; ?>
         </div>
       </div>
 
       <div class="details__group">
-        <h3 class="details__title">Henley Shirt</h3>
-        <p class="details__brand">Brand: <span>adidas</span></p>
+        <h3 class="details__title"><?php echo htmlspecialchars($product['name']); ?></h3>
+        <p class="details__brand">Category: <span><?php echo htmlspecialchars($product['category']); ?></span></p>
 
         <div class="details__price flex">
-          <span class="new__price">$116</span>
-          <span class="old__price">$200.00</span>
-          <span class="save__price">25% Off</span>
+          <span class="new__price">$<?php echo number_format($product['price'], 2); ?></span>
         </div>
 
         <p class="short__description">
-          Lorem ipsum dolor sit amet, consectetur adipisicing elit. Voluptate, fuga. Quo blanditiis
-          recusandae facere nobis cum optio, inventore aperiam placeat, quis maxime nam officiis illum?
+          <?php echo nl2br(htmlspecialchars($product['description'])); ?>
         </p>
 
         <ul class="products__list">
@@ -76,9 +114,15 @@
         </div>
 
         <ul class="details__meta">
-          <li class="meta__list flex"><span>SKU:</span> FWM15VKT</li>
-          <li class="meta__list flex"><span>Tags:</span> Clothes, Women, Dress</li>
-          <li class="meta__list flex"><span>Availability:</span> 8 Items in Stock</li>
+          <li class="meta__list flex"><span>Product ID:</span> <?php echo $product['product_id']; ?></li>
+          <li class="meta__list flex"><span>Category:</span> <?php echo htmlspecialchars($product['category']); ?></li>
+          <li class="meta__list flex"><span>Availability:</span> 
+            <?php if ($product['status'] == 'Available'): ?>
+              <?php echo $product['stock']; ?> Items in Stock
+            <?php else: ?>
+              <span style="color: red;">Out of Stock</span>
+            <?php endif; ?>
+          </li>
         </ul>
       </div>
     </div>
@@ -180,113 +224,49 @@
   <section class="products container section--lg">
     <h3 class="section__title"><span>Related</span> Products</h3>
     <div class="products__container grid">
+      <?php
+      // Fetch related products from same category
+      $stmt = $conn->prepare("SELECT p.*, 
+                              (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
+                              FROM Product p 
+                              WHERE p.category = ? AND p.product_id != ? 
+                              LIMIT 4");
+      $stmt->bind_param("si", $product['category'], $product_id);
+      $stmt->execute();
+      $related_result = $stmt->get_result();
+      
+      while ($related = $related_result->fetch_assoc()):
+        $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
+      ?>
       <div class="product__item">
         <div class="product__banner">
-          <a href="details.php" class="product__images">
-            <img src="assets/img/product-1-1.jpg" alt="" class="product__img default" />
-            <img src="assets/img/product-1-2.jpg" alt="" class="product__img hover" />
+          <a href="details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
+            <img src="<?php echo htmlspecialchars($related['main_image_path']); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img default" />
+            <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img hover" />
           </a>
           <div class="product__actions">
-            <a href="#" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
+            <a href="details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
             <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
             <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
           </div>
-          <div class="product__badge light-pink">Hot</div>
         </div>
         <div class="product__content">
-          <span class="product__category">Clothing</span>
-          <a href="details.php"><h3 class="product__title">Colorful Pattern Shirts</h3></a>
+          <span class="product__category"><?php echo htmlspecialchars($related['category']); ?></span>
+          <a href="details.php?id=<?php echo $related['product_id']; ?>">
+            <h3 class="product__title"><?php echo htmlspecialchars($related['name']); ?></h3>
+          </a>
           <div class="product__rating">
             <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
           </div>
           <div class="product__price flex">
-            <span class="new__price">$238.85</span>
-            <span class="old__price">$245.8</span>
+            <span class="new__price">$<?php echo number_format($related['price'], 2); ?></span>
           </div>
           <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
         </div>
       </div>
-
-      <div class="product__item">
-        <div class="product__banner">
-          <a href="details.php" class="product__images">
-            <img src="assets/img/product-2-1.jpg" alt="" class="product__img default" />
-            <img src="assets/img/product-2-2.jpg" alt="" class="product__img hover" />
-          </a>
-          <div class="product__actions">
-            <a href="#" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
-            <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
-            <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
-          </div>
-          <div class="product__badge light-green">Hot</div>
-        </div>
-        <div class="product__content">
-          <span class="product__category">Clothing</span>
-          <a href="details.php"><h3 class="product__title">Colorful Pattern Shirts</h3></a>
-          <div class="product__rating">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-          </div>
-          <div class="product__price flex">
-            <span class="new__price">$238.85</span>
-            <span class="old__price">$245.8</span>
-          </div>
-          <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
-        </div>
-      </div>
-
-      <div class="product__item">
-        <div class="product__banner">
-          <a href="details.php" class="product__images">
-            <img src="assets/img/product-3-1.jpg" alt="" class="product__img default" />
-            <img src="assets/img/product-3-2.jpg" alt="" class="product__img hover" />
-          </a>
-          <div class="product__actions">
-            <a href="#" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
-            <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
-            <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
-          </div>
-          <div class="product__badge light-orange">Hot</div>
-        </div>
-        <div class="product__content">
-          <span class="product__category">Clothing</span>
-          <a href="details.php"><h3 class="product__title">Colorful Pattern Shirts</h3></a>
-          <div class="product__rating">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-          </div>
-          <div class="product__price flex">
-            <span class="new__price">$238.85</span>
-            <span class="old__price">$245.8</span>
-          </div>
-          <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
-        </div>
-      </div>
-
-      <div class="product__item">
-        <div class="product__banner">
-          <a href="details.php" class="product__images">
-            <img src="assets/img/product-4-1.jpg" alt="" class="product__img default" />
-            <img src="assets/img/product-4-2.jpg" alt="" class="product__img hover" />
-          </a>
-          <div class="product__actions">
-            <a href="#" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
-            <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
-            <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
-          </div>
-          <div class="product__badge light-blue">Hot</div>
-        </div>
-        <div class="product__content">
-          <span class="product__category">Clothing</span>
-          <a href="details.php"><h3 class="product__title">Colorful Pattern Shirts</h3></a>
-          <div class="product__rating">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-          </div>
-          <div class="product__price flex">
-            <span class="new__price">$238.85</span>
-            <span class="old__price">$245.8</span>
-          </div>
-          <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
-        </div>
-      </div>
+      <?php endwhile; 
+      $stmt->close();
+      ?>
     </div>
   </section>
 

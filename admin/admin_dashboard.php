@@ -148,6 +148,7 @@ if ($result) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
     <!-- Sidebar -->
     <?php include '../partials/admin_panel.php'; ?>
 
