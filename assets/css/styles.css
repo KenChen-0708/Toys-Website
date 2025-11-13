@@ -216,6 +216,8 @@ table {
 
 .header__top-action {
   color: var(--text-color);
+  margin-right: 10px;
+  font-weight: bold;
 }
 
 .nav,
@@ -2276,4 +2278,172 @@ table {
 .swiper-button-prev{
   background: rgba(255,255,255,.8);
   border-color: rgba(0,0,0,.08);
+}
+/* ---- Auth Pages ---- */
+.auth-hero {
+  min-height: calc(100dvh - 140px); /* header+footer safe */
+  display: grid;
+  place-items: center;               /* ✅ Centers horizontally & vertically */
+  background: radial-gradient(1000px 600px at 20% 10%, #f1f5ff 0, transparent 60%),
+              radial-gradient(1000px 600px at 80% 90%, #fef3f2 0, transparent 60%),
+              linear-gradient(180deg, #fff, #fafafa);
+  padding: 2rem 1rem;
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(255,255,255,.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid #eef2f7;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(16,24,40,.06);
+  margin: 0 auto; /* ensures centering horizontally */
+}
+
+
+.auth-title { margin: 0 0 .25rem; font-size: 1.75rem; line-height: 1.2; text-align: center; }
+.auth-sub   { margin: 0 0 1.25rem; color: #667085; text-align: center; }
+
+.form.grid { gap: .9rem; }
+.form__row { display:grid; gap:.35rem; }
+.form__label { font-weight: 600; color:#111827; }
+.form__input {
+  width: 100%; padding: .875rem 1rem;
+  border: 1px solid #e5e7eb; border-radius: 12px;
+  background:#fff; transition: box-shadow .2s, border-color .2s;
+}
+.form__input:focus {
+  outline: none; border-color:#111827;
+  box-shadow: 0 0 0 4px rgba(17,24,39,.09);
+}
+
+.input-affix { position: relative; }
+.input-affix button {
+  position: absolute; right: .5rem; top: 50%;
+  transform: translateY(-50%);
+  border: 0; background: transparent;
+  padding: .25rem .5rem; cursor: pointer; font-weight:600;
+}
+
+.btn {
+  display: inline-flex; justify-content:center; align-items:center;
+  width:100%; padding: .9rem 1rem;
+  border-radius: 12px; border: 1px solid transparent; cursor: pointer;
+  background: #111827; color: #fff; font-weight: 600;
+  transition: transform .04s ease, opacity .2s;
+}
+.btn:hover { opacity: .95; }
+.btn:active { transform: translateY(1px); }
+
+.auth-meta {
+  display:flex; justify-content:space-between;
+  align-items:center; gap:.75rem;
+}
+.checkbox { display:inline-flex; align-items:center; gap:.5rem; color:#374151; }
+.link { color:#111827; text-decoration:underline; text-underline-offset:2px; }
+
+.alert {
+  padding:.875rem 1rem; border-radius:12px; border:1px solid; margin-bottom:1rem;
+}
+.alert--danger {
+  background:#fef2f2; border-color:#fee2e2; color:#7f1d1d;
+}
+
+.header__user-profile {
+  position: relative;
+  display: inline-block;
+}
+
+.avatar-btn {
+  border: 0;
+  background: transparent;
+  cursor: default; /* no hand cursor */
+  padding: 0;
+  line-height: 1;
+  pointer-events: none; /* disables clicking */
+}
+
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #222;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+
+
+/* 1) Sit flush under the avatar (no gap) */
+.profile-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;          /* was calc(100% + 4px) — remove the gap */
+  min-width: 220px;
+  background: #fff;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.12);
+  padding: .5rem;
+  display: none;
+  z-index: 9999;
+  color: darkgreen;
+}
+
+/* 2) Invisible hover bridge so the cursor can pass without losing hover */
+.profile-menu::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -10px;         /* extend 10px above the menu */
+  height: 12px;       /* a small buffer area */
+}
+
+/* default hidden */
+.header__user-profile .profile-menu {
+  display: none !important; /* wins over previous inline styles without !important */
+}
+
+/* Show on hover (and keyboard focus) */
+.header__user-profile:hover .profile-menu,
+.header__user-profile:focus-within .profile-menu {
+  display: block !important;
+}
+
+/* Keep avatar non-clickable */
+.avatar-btn {
+  pointer-events: none;
+  cursor: default;
+}
+
+
+.profile-menu a,
+.profile-menu .logout-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: .5rem .75rem;
+  border-radius: 6px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+
+.profile-menu a:hover,
+.profile-menu .logout-btn:hover {
+  background: #f5f5f5;
+}
+
+.profile-menu__header {
+  padding: .5rem .75rem .25rem;
+  border-bottom: 1px solid #eee;
+  margin-bottom: .25rem;
 }
