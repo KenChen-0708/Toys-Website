@@ -31,26 +31,47 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stock = $conn->real_escape_string($_POST['stock']);
         $status = $conn->real_escape_string($_POST['status']);
         
-        // Handle image upload
-        $image_path = '';
-        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-            $target_dir = "uploads/products/";
+        // Handle main image upload
+        $main_image_path = '../assets/img/default.jpg';
+        if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
+            $target_dir = "../assets/img/";
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
-            $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $new_filename = uniqid() . '.' . $file_extension;
+            $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+            $new_filename = 'product_' . uniqid() . '.' . $file_extension;
             $target_file = $target_dir . $new_filename;
             
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-                $image_path = $target_file;
+            if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
+                $main_image_path = $target_file;
             }
         }
         
-        $sql = "INSERT INTO Product (name, price, description, category, stock, status, image_path) 
-                VALUES ('$name', '$price', '$description', '$category', '$stock', '$status', '$image_path')";
+        // Insert product
+        $sql = "INSERT INTO Product (name, price, description, category, stock, status, main_image_path) 
+                VALUES ('$name', '$price', '$description', '$category', '$stock', '$status', '$main_image_path')";
         
         if ($conn->query($sql)) {
+            $product_id = $conn->insert_id;
+            
+            // Handle sub images upload
+            if (isset($_FILES['sub_images'])) {
+                $total_files = count($_FILES['sub_images']['name']);
+                
+                for ($i = 0; $i < $total_files; $i++) {
+                    if ($_FILES['sub_images']['error'][$i] == 0) {
+                        $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
+                        $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
+                        $target_file = $target_dir . $new_filename;
+                        
+                        if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
+                            $sub_image_path = $conn->real_escape_string($target_file);
+                            $conn->query("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES ('$product_id', '$sub_image_path')");
+                        }
+                    }
+                }
+            }
+            
             $message = "Product added successfully!";
             $message_type = "success";
         } else {
@@ -69,23 +90,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stock = $conn->real_escape_string($_POST['stock']);
         $status = $conn->real_escape_string($_POST['status']);
         
-        // Handle image upload
-        $image_path = $conn->real_escape_string($_POST['existing_image']);
-        if (isset($_FILES['image']) && $_FILES['image']['error'] == 0) {
-            $target_dir = "../img/products/";
+        // Handle main image upload
+        $main_image_path = $conn->real_escape_string($_POST['existing_main_image']);
+        
+        // If main image path is empty, set default
+        if (empty($main_image_path)) {
+            $main_image_path = '../assets/img/default.jpg';
+        }
+        
+        if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
+            $target_dir = "../assets/img/";
             if (!file_exists($target_dir)) {
                 mkdir($target_dir, 0777, true);
             }
-            $file_extension = pathinfo($_FILES['image']['name'], PATHINFO_EXTENSION);
-            $new_filename = uniqid() . '.' . $file_extension;
+            $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+            $new_filename = 'product_' . uniqid() . '.' . $file_extension;
             $target_file = $target_dir . $new_filename;
             
-            if (move_uploaded_file($_FILES['image']['tmp_name'], $target_file)) {
-                // Delete old image
-                if (!empty($image_path) && file_exists($image_path)) {
-                    unlink($image_path);
+            if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
+                // Delete old image if it's not the default image
+                if (!empty($main_image_path) && file_exists($main_image_path) && $main_image_path != '../assets/img/default.jpg') {
+                    unlink($main_image_path);
                 }
-                $image_path = $target_file;
+                $main_image_path = $target_file;
             }
         }
         
@@ -96,10 +123,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 category='$category', 
                 stock='$stock', 
                 status='$status', 
-                image_path='$image_path' 
+                main_image_path='$main_image_path' 
                 WHERE product_id='$product_id'";
         
         if ($conn->query($sql)) {
+            // Handle new sub images upload
+            if (isset($_FILES['sub_images'])) {
+                $total_files = count($_FILES['sub_images']['name']);
+                
+                for ($i = 0; $i < $total_files; $i++) {
+                    if ($_FILES['sub_images']['error'][$i] == 0) {
+                        $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
+                        $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
+                        $target_file = $target_dir . $new_filename;
+                        
+                        if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
+                            $sub_image_path = $conn->real_escape_string($target_file);
+                            $conn->query("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES ('$product_id', '$sub_image_path')");
+                        }
+                    }
+                }
+            }
+            
             $message = "Product updated successfully!";
             $message_type = "success";
         } else {
@@ -112,11 +157,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     if (isset($_POST['delete_product'])) {
         $product_id = $conn->real_escape_string($_POST['product_id']);
         
-        // Get image path before deleting
-        $result = $conn->query("SELECT image_path FROM Product WHERE product_id='$product_id'");
+        // Get main image path before deleting
+        $result = $conn->query("SELECT main_image_path FROM Product WHERE product_id='$product_id'");
         if ($row = $result->fetch_assoc()) {
-            if (!empty($row['image_path']) && file_exists($row['image_path'])) {
-                unlink($row['image_path']);
+            // Don't delete the default image
+            if (!empty($row['main_image_path']) && file_exists($row['main_image_path']) && $row['main_image_path'] != '../assets/img/default.jpg') {
+                unlink($row['main_image_path']);
+            }
+        }
+        
+        // Get and delete all sub images
+        $sub_images = $conn->query("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id='$product_id'");
+        while ($sub_img = $sub_images->fetch_assoc()) {
+            if (!empty($sub_img['sub_image_path']) && file_exists($sub_img['sub_image_path'])) {
+                unlink($sub_img['sub_image_path']);
             }
         }
         
@@ -124,6 +178,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         if ($conn->query($sql)) {
             $message = "Product deleted successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error: " . $conn->error;
+            $message_type = "error";
+        }
+    }
+    
+    // DELETE - Remove sub image
+    if (isset($_POST['delete_sub_image'])) {
+        $sub_image_id = $conn->real_escape_string($_POST['sub_image_id']);
+        
+        // Get sub image path before deleting
+        $result = $conn->query("SELECT sub_image_path FROM Product_Sub_Image WHERE sub_image_id='$sub_image_id'");
+        if ($row = $result->fetch_assoc()) {
+            if (!empty($row['sub_image_path']) && file_exists($row['sub_image_path'])) {
+                unlink($row['sub_image_path']);
+            }
+        }
+        
+        $sql = "DELETE FROM Product_Sub_Image WHERE sub_image_id='$sub_image_id'";
+        
+        if ($conn->query($sql)) {
+            $message = "Sub image deleted successfully!";
             $message_type = "success";
         } else {
             $message = "Error: " . $conn->error;
@@ -157,8 +234,9 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Manage Products - Admin Panel</title>
-	<link rel="stylesheet" href="../assets/css/manage_product.css">
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
+    <link rel="stylesheet" href="../assets/css/manage_product.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
     <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
@@ -219,11 +297,13 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
                                 <tr>
                                     <td><?php echo $product['product_id']; ?></td>
                                     <td>
-                                        <?php if (!empty($product['image_path'])): ?>
-                                            <img src="<?php echo htmlspecialchars($product['image_path']); ?>" 
+                                        <?php if (!empty($product['main_image_path']) && $product['main_image_path'] != '../assets/img/default.jpg'): ?>
+                                            <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" 
                                                  alt="Product" class="product-image">
                                         <?php else: ?>
-                                            <div class="product-image" style="background: #e2e8f0; display: flex; align-items: center; justify-content: center;">📦</div>
+                                            <img src="../assets/img/default.jpg" alt="Default Product" class="product-image" 
+                                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                            <div class="product-image" style="background: #e2e8f0; display: none; align-items: center; justify-content: center;">📦</div>
                                         <?php endif; ?>
                                     </td>
                                     <td><?php echo htmlspecialchars($product['name']); ?></td>
@@ -296,9 +376,14 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Product Image</label>
-                    <input type="file" name="image" accept="image/*" onchange="previewImage(event, 'createPreview')">
+                    <label>Main Product Image</label>
+                    <input type="file" name="main_image" accept="image/*" onchange="previewImage(event, 'createPreview')">
                     <img id="createPreview" class="image-preview" style="display: none;">
+                </div>
+                <div class="form-group">
+                    <label>Sub Images (Multiple)</label>
+                    <input type="file" name="sub_images[]" accept="image/*" multiple onchange="previewMultipleImages(event, 'createSubPreviews')">
+                    <div id="createSubPreviews" class="sub-images-preview"></div>
                 </div>
                 <button type="submit" name="create_product" class="btn btn-primary">Create Product</button>
             </form>
@@ -314,7 +399,7 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
             </div>
             <form method="POST" enctype="multipart/form-data" id="editForm">
                 <input type="hidden" name="product_id" id="edit_product_id">
-                <input type="hidden" name="existing_image" id="edit_existing_image">
+                <input type="hidden" name="existing_main_image" id="edit_existing_main_image">
                 <div class="form-group">
                     <label>Product Name *</label>
                     <input type="text" name="name" id="edit_name" required>
@@ -343,9 +428,18 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Product Image</label>
-                    <input type="file" name="image" accept="image/*" onchange="previewImage(event, 'editPreview')">
+                    <label>Main Product Image</label>
+                    <input type="file" name="main_image" accept="image/*" onchange="previewImage(event, 'editPreview')">
                     <img id="editPreview" class="image-preview">
+                </div>
+                <div class="form-group">
+                    <label>Existing Sub Images</label>
+                    <div id="existingSubImages" class="sub-images-grid"></div>
+                </div>
+                <div class="form-group">
+                    <label>Add New Sub Images</label>
+                    <input type="file" name="sub_images[]" accept="image/*" multiple onchange="previewMultipleImages(event, 'editSubPreviews')">
+                    <div id="editSubPreviews" class="sub-images-preview"></div>
                 </div>
                 <button type="submit" name="update_product" class="btn btn-success">Update Product</button>
             </form>
@@ -358,68 +452,13 @@ $categories_result = $conn->query("SELECT DISTINCT category FROM Product WHERE c
         <input type="hidden" name="delete_product" value="1">
     </form>
 
-    <script>
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('active');
-        }
+    <!-- Delete Sub Image Form (Hidden) -->
+    <form method="POST" id="deleteSubImageForm" style="display: none;">
+        <input type="hidden" name="sub_image_id" id="delete_sub_image_id">
+        <input type="hidden" name="delete_sub_image" value="1">
+    </form>
 
-        function openCreateModal() {
-            document.getElementById('createModal').style.display = 'block';
-        }
-
-        function openEditModal(product) {
-            document.getElementById('edit_product_id').value = product.product_id;
-            document.getElementById('edit_name').value = product.name;
-            document.getElementById('edit_price').value = product.price;
-            document.getElementById('edit_description').value = product.description || '';
-            document.getElementById('edit_category').value = product.category || '';
-            document.getElementById('edit_stock').value = product.stock;
-            document.getElementById('edit_status').value = product.status;
-            document.getElementById('edit_existing_image').value = product.image_path || '';
-            
-            const preview = document.getElementById('editPreview');
-            if (product.image_path) {
-                preview.src = product.image_path;
-                preview.style.display = 'block';
-            } else {
-                preview.style.display = 'none';
-            }
-            
-            document.getElementById('editModal').style.display = 'block';
-        }
-
-        function closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-        }
-
-        function confirmDelete(productId) {
-            if (confirm('Are you sure you want to delete this product? This action cannot be undone.')) {
-                document.getElementById('delete_product_id').value = productId;
-                document.getElementById('deleteForm').submit();
-            }
-        }
-
-        function previewImage(event, previewId) {
-            const preview = document.getElementById(previewId);
-            const file = event.target.files[0];
-            
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                }
-                reader.readAsDataURL(file);
-            }
-        }
-
-        // Close modal when clicking outside
-        window.onclick = function(event) {
-            if (event.target.classList.contains('modal')) {
-                event.target.style.display = 'none';
-            }
-        }
-    </script>
+    <script src="../assets/js/manage_product.js"></script>
 </body>
 </html>
 
