@@ -9,7 +9,9 @@ $db_name = 'online_store';
 // Create connection
 // Disable mysqli exceptions locally and catch constructor failures to keep UI rendering
 mysqli_report(MYSQLI_REPORT_OFF);
+
 $conn = null;
+
 $db_ok = true;
 try {
     $conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);

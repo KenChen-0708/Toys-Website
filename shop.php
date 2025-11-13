@@ -43,12 +43,12 @@
         ?>
         <div class="product__item">
           <div class="product__banner">
-            <a href="details.php?id=<?php echo $product['product_id']; ?>" class="product__images">
+            <a href="product_details.php?id=<?php echo $product['product_id']; ?>" class="product__images">
               <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product__img default" />
               <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product__img hover" />
             </a>
             <div class="product__actions">
-              <a href="details.php?id=<?php echo $product['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
+              <a href="product_details.php?id=<?php echo $product['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
               <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
               <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
             </div>
@@ -58,7 +58,7 @@
           </div>
           <div class="product__content">
             <span class="product__category"><?php echo htmlspecialchars($product['category']); ?></span>
-            <a href="details.php?id=<?php echo $product['product_id']; ?>">
+            <a href="product_details.php?id=<?php echo $product['product_id']; ?>">
               <h3 class="product__title"><?php echo htmlspecialchars($product['name']); ?></h3>
             </a>
             <div class="product__rating">

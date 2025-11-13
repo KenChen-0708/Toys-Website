@@ -1,5 +1,5 @@
 <?php 
-  require_once 'helper/connection.php';
+  require_once '/helper/connection.php';
 
   // Get product ID from URL
   $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -240,19 +240,19 @@
       ?>
       <div class="product__item">
         <div class="product__banner">
-          <a href="details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
+          <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
             <img src="<?php echo htmlspecialchars($related['main_image_path']); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img default" />
             <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img hover" />
           </a>
           <div class="product__actions">
-            <a href="details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
+            <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
             <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
             <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
           </div>
         </div>
         <div class="product__content">
           <span class="product__category"><?php echo htmlspecialchars($related['category']); ?></span>
-          <a href="details.php?id=<?php echo $related['product_id']; ?>">
+          <a href="product_details.php?id=<?php echo $related['product_id']; ?>">
             <h3 class="product__title"><?php echo htmlspecialchars($related['name']); ?></h3>
           </a>
           <div class="product__rating">
