@@ -26,19 +26,7 @@ if (!$errors) {
   $valid = false;
   if ($user) {
     $hash = $user['password'];
-    if (password_get_info(hash: $hash)['algo'] !== 0) {
-      $valid = password_verify($password, $hash);
-    } else {
-      // legacy plaintext (from seed data)
-      $valid = hash_equals($hash, $password);
-      if ($valid) {
-        // upgrade to hash
-        $newHash = password_hash($password, PASSWORD_DEFAULT);
-        $up = $conn->prepare("UPDATE Member SET password = ? WHERE member_id = ?");
-        $up->bind_param('si', $newHash, $user['member_id']);
-        $up->execute();
-      }
-    }
+    $valid = password_verify($password, $hash);
   }
 
   if ($valid) {
