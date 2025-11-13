@@ -23,9 +23,7 @@ if (!$conn || $conn->connect_error) {
 }
 
 if (!$db_ok) {
-    echo "<p style='color:red;'>Database connection failed. Please check your configuration or try again later.</p>";
-
-    // Optionally, show detailed error info for debugging (not in production!)
-    // echo "<p>Error: " . $conn->connect_error . "</p>";
-    exit; // Stop further execution
+    echo '<div style="background:#f8d7da; color:#721c24; padding:10px; text-align:center; position:fixed; top:0; left:0; width:100%; z-index:999;">
+        ⚠️ Database connection failed. Some data may not be available.
+    </div>';
 }

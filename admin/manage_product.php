@@ -1,18 +1,12 @@
 <?php
 session_start();
 
-// Database configuration
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'assignment';
-
-// Create connection
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+// Include database connection
+include '../helper/connection.php';
 
 // Check connection
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+if (!$db_ok || !$conn) {
+    die("Connection failed: Unable to connect to database");
 }
 
 // Initialize variables

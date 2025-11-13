@@ -1,19 +1,13 @@
 <?php
 header('Content-Type: application/json');
 
-// Database configuration
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'assignment';
-
-// Create connection
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+// Include database connection
+include '../helper/connection.php';
 
 // Check connection
-if ($conn->connect_error) {
+if (!$db_ok || !$conn) {
     http_response_code(500);
-    echo json_encode(['error' => 'Database connection failed', 'message' => $conn->connect_error]);
+    echo json_encode(['error' => 'Database connection failed', 'message' => 'Unable to connect to database']);
     exit;
 }
 
