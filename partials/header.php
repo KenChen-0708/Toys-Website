@@ -22,7 +22,7 @@
     />
 
     <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="/online_store/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/styles.css" />
 
     <title><?= htmlspecialchars($title) ?></title>
   </head>
@@ -49,17 +49,17 @@
                     <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong><br>
                     <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
                   </div>
-                  <a href="/online_store/accounts.php">My Account</a>
-                  <a href="/online_store/orders.php">My Orders</a>
-                  <form action="/online_store/auth/logout.php" method="post">
+                  <a href="/accounts.php">My Account</a>
+                  <a href="/orders.php">My Orders</a>
+                  <form action="/auth/logout.php" method="post">
                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                     <button type="submit" class="logout-btn">Log Out</button>
                   </form>
                 </div>
               </div>
             <?php else: ?>
-              <a href="/online_store/auth/login.php" class="header__top-action">Log In</a>
-              <a href="/online_store/auth/register.php" class="header__top-action">Register</a>
+              <a href="/auth/login.php" class="header__top-action">Log In</a>
+              <a href="/auth/register.php" class="header__top-action">Register</a>
             <?php endif; ?>
           </div>
 
@@ -69,31 +69,31 @@
       </div>
 
       <nav class="nav container">
-        <a href="/online_store/index.php" class="nav__logo">
-          <img class="nav__logo-img" src="/online_store/assets/img/logo.jpg" alt="website logo" />
+        <a href="/index.php" class="nav__logo">
+          <img class="nav__logo-img" src="/assets/img/logo.jpg" alt="website logo" />
         </a>
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
-            <li><a href="/online_store/index.php" class="nav__link">Home</a></li>
-            <li><a href="/online_store/shop.php" class="nav__link">Shop</a></li>
-            <li><a href="/online_store/accounts.php" class="nav__link active-link">My Account</a></li>
-            <li><a href="/online_store/compare.php" class="nav__link">Compare</a></li>
+            <li><a href="/index.php" class="nav__link">Home</a></li>
+            <li><a href="/shop.php" class="nav__link">Shop</a></li>
+            <li><a href="/accounts.php" class="nav__link active-link">My Account</a></li>
+            <li><a href="/compare.php" class="nav__link">Compare</a></li>
           </ul>
           <div class="header__search">
             <input type="text" placeholder="Search For Items..." class="form__input" />
             <button class="search__btn">
-              <img src="/online_store/assets/img/search.png" alt="search icon" />
+              <img src="/assets/img/search.png" alt="search icon" />
             </button>
           </div>
         </div>
 
         <div class="header__user-actions">
-          <a href="/online_store/wishlist.php" class="header__action-btn" title="Wishlist">
-            <img src="/online_store/assets/img/icon-heart.svg" alt="" />
+          <a href="/wishlist.php" class="header__action-btn" title="Wishlist">
+            <img src="/assets/img/icon-heart.svg" alt="" />
             <span class="count">3</span>
           </a>
-          <a href="/online_store/cart.php" class="header__action-btn" title="Cart">
-            <img src="/online_store/assets/img/icon-cart.svg" alt="" />
+          <a href="/cart.php" class="header__action-btn" title="Cart">
+            <img src="/assets/img/icon-cart.svg" alt="" />
             <span class="count">3</span>
           </a>
         </div>

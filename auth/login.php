@@ -179,7 +179,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
             />
             <span>Remember me</span>
           </label>
-          <a href="#" class="link">Forgot password?</a>
+          <a href="./forgot_password.php" class="link">Forgot password?</a>
         </div>
 
         <!-- Button -->
