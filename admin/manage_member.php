@@ -126,6 +126,24 @@ $members = $conn->query($sql);
         th.sortable[data-order="desc"]::after {
             content: '▼';
         }
+
+        /* Password eye toggle */
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.75rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -238,7 +256,21 @@ $members = $conn->query($sql);
 
             <div class="form-group">
                 <label>Password *</label>
-                <input type="password" name="password" required minlength="6">
+                <div class="input-with-icon">
+                    <input
+                        type="password"
+                        name="password"
+                        id="create_member_password"
+                        required
+                        minlength="6"
+                    >
+                    <button
+                        type="button"
+                        id="toggleCreateMemberPwd"
+                        class="password-toggle"
+                        aria-label="Toggle password visibility"
+                    >👁</button>
+                </div>
             </div>
 
             <button type="submit" name="create_member" class="btn btn-primary">Create</button>
@@ -279,7 +311,20 @@ $members = $conn->query($sql);
 
             <div class="form-group">
                 <label>New Password (optional)</label>
-                <input type="password" name="new_password" id="edit_password" placeholder="Leave blank to keep old password">
+                <div class="input-with-icon">
+                    <input
+                        type="password"
+                        name="new_password"
+                        id="edit_member_password"
+                        placeholder="Leave blank to keep old password"
+                    >
+                    <button
+                        type="button"
+                        id="toggleEditMemberPwd"
+                        class="password-toggle"
+                        aria-label="Toggle new password visibility"
+                    >👁</button>
+                </div>
             </div>
 
             <button type="submit" name="update_member" class="btn btn-success">Update</button>
@@ -365,6 +410,25 @@ document.addEventListener('DOMContentLoaded', function () {
             // re-attach sorted rows
             rows.forEach(row => tbody.appendChild(row));
         });
+    });
+
+    // 👁 Password eye toggles for Members page
+    const createPwd = document.getElementById('create_member_password');
+    const toggleCreatePwdBtn = document.getElementById('toggleCreateMemberPwd');
+
+    toggleCreatePwdBtn?.addEventListener('click', () => {
+        const show = createPwd.type === 'password';
+        createPwd.type = show ? 'text' : 'password';
+        toggleCreatePwdBtn.textContent = show ? '🙈' : '👁';
+    });
+
+    const editPwd = document.getElementById('edit_member_password');
+    const toggleEditPwdBtn = document.getElementById('toggleEditMemberPwd');
+
+    toggleEditPwdBtn?.addEventListener('click', () => {
+        const show = editPwd.type === 'password';
+        editPwd.type = show ? 'text' : 'password';
+        toggleEditPwdBtn.textContent = show ? '🙈' : '👁';
     });
 });
 </script>

@@ -2380,70 +2380,117 @@ table {
 
 
 
+/* Container */
+.header__user-profile {
+  position: relative;
+}
+
 /* 1) Sit flush under the avatar (no gap) */
 .profile-menu {
   position: absolute;
   right: 0;
-  top: 100%;          /* was calc(100% + 4px) — remove the gap */
-  min-width: 220px;
+  top: 100%;
+  min-width: 230px;
   background: #fff;
-  border: 1px solid #eee;
-  border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0,0,0,.12);
-  padding: .5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.16);
+  padding: 0.4rem 0;
   display: none;
   z-index: 9999;
-  color: darkgreen;
+  color: #111827;
+  font-size: 0.9rem;
 }
 
-/* 2) Invisible hover bridge so the cursor can pass without losing hover */
+/* 2) Invisible hover bridge */
 .profile-menu::before {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
-  top: -10px;         /* extend 10px above the menu */
-  height: 12px;       /* a small buffer area */
+  top: -10px;
+  height: 12px;
 }
 
 /* default hidden */
 .header__user-profile .profile-menu {
-  display: none !important; /* wins over previous inline styles without !important */
+  display: none !important;
 }
 
-/* Show on hover (and keyboard focus) */
+/* Show on hover (and keyboard focus inside) */
 .header__user-profile:hover .profile-menu,
 .header__user-profile:focus-within .profile-menu {
   display: block !important;
 }
 
-/* Keep avatar non-clickable */
+/* Keep avatar non-clickable (if you really want hover only) */
 .avatar-btn {
   pointer-events: none;
   cursor: default;
 }
 
+/* Avatar circle (optional enhancement) */
+.avatar-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: #111827;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
 
+/* Header inside dropdown */
+.profile-menu__header {
+  padding: 0.6rem 0.85rem 0.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  margin-bottom: 0.25rem;
+}
+
+.profile-menu__header strong {
+  display: block;
+  font-size: 0.92rem;
+  margin-bottom: 0.1rem;
+}
+
+.profile-menu__header small {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* Shared styles for menu items (links + button) */
 .profile-menu a,
 .profile-menu .logout-btn {
   display: block;
   width: 100%;
   text-align: left;
-  padding: .5rem .75rem;
+  padding: 0.45rem 0.85rem;
   border-radius: 6px;
   background: transparent;
   border: 0;
   color: inherit;
   cursor: pointer;
+  font: inherit;          /* ⬅ makes logout font match links */
+  line-height: 1.4;       /* ⬅ consistent line-height */
+  text-decoration: none;
 }
 
+/* Hover / focus states */
 .profile-menu a:hover,
-.profile-menu .logout-btn:hover {
-  background: #f5f5f5;
+.profile-menu a:focus-visible,
+.profile-menu .logout-btn:hover,
+.profile-menu .logout-btn:focus-visible {
+  background: #f3f4f6;
+  outline: none;
 }
 
-.profile-menu__header {
-  padding: .5rem .75rem .25rem;
-  border-bottom: 1px solid #eee;
-  margin-bottom: .25rem;
+/* Make the logout stand out just a bit */
+.profile-menu .logout-btn {
+  margin-top: 0.25rem;
+  border-top: 1px solid #f3f4f6;
+  padding-top: 0.6rem;
+  color: red;
 }

@@ -104,6 +104,24 @@ unset($_SESSION['errors'], $_SESSION['old']);
       transform: translateY(0) scale(1);
     }
   }
+
+  /* Password toggle button */
+  .input-with-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  .password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+  }
 </style>
 
 <main class="main">
@@ -150,15 +168,45 @@ unset($_SESSION['errors'], $_SESSION['old']);
             <label class="form__label">
               <span>Password</span>
               <div class="input-with-icon">
-                <input id="pwd" name="password" type="password" class="form__input"
-                  required minlength="6" autocomplete="new-password"/>
+                <input
+                  id="pwd"
+                  name="password"
+                  type="password"
+                  class="form__input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$"
+                  title="At least 8 characters, including uppercase, lowercase, number and symbol."
+                />
+                <button
+                  type="button"
+                  id="togglePwd"
+                  class="password-toggle"
+                  aria-label="Toggle password visibility"
+                >👁</button>
               </div>
             </label>
 
             <label class="form__label">
               <span>Confirm Password</span>
-              <input id="pwd2" name="password_confirm" type="password" class="form__input"
-                required minlength="6" autocomplete="new-password"/>
+              <div class="input-with-icon">
+                <input
+                  id="pwd2"
+                  name="password_confirm"
+                  type="password"
+                  class="form__input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                />
+                <button
+                  type="button"
+                  id="togglePwd2"
+                  class="password-toggle"
+                  aria-label="Toggle confirm password visibility"
+                >👁</button>
+              </div>
             </label>
           </div>
 
@@ -170,8 +218,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
 
           <label class="form__label">
             <span>Address (optional)</span>
-            <textarea name="address" class="form__input" rows="3"
-              ><?= htmlspecialchars($old['address'] ?? '') ?></textarea>
+            <textarea name="address" class="form__input" rows="3"><?= htmlspecialchars($old['address'] ?? '') ?></textarea>
           </label>
 
           <button class="btn btn--primary btn--block" type="submit">Create account</button>
@@ -206,18 +253,39 @@ unset($_SESSION['errors'], $_SESSION['old']);
   const pwd2 = document.getElementById('pwd2');
   const hint = document.getElementById('pwdHint'); // only used if element exists
 
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/;
+
   function checkMatch() {
     if (!hint) return;
     if (pwd.value && pwd2.value && pwd.value !== pwd2.value) {
       hint.textContent = 'Passwords do not match.';
       hint.classList.add('hint--error');
+    } else if (pwd.value && !passwordPattern.test(pwd.value)) {
+      hint.textContent = 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
+      hint.classList.add('hint--error');
     } else {
-      hint.textContent = 'Use at least 6 characters.';
+      hint.textContent = 'Use at least 8 characters with uppercase, lowercase, number and symbol.';
       hint.classList.remove('hint--error');
     }
   }
   pwd?.addEventListener('input', checkMatch);
   pwd2?.addEventListener('input', checkMatch);
+
+  // 👁 Password eye toggles for both fields
+  const togglePwdBtn = document.getElementById('togglePwd');
+  const togglePwd2Btn = document.getElementById('togglePwd2');
+
+  togglePwdBtn?.addEventListener('click', () => {
+    const show = pwd.type === 'password';
+    pwd.type = show ? 'text' : 'password';
+    togglePwdBtn.textContent = show ? '🙈' : '👁';
+  });
+
+  togglePwd2Btn?.addEventListener('click', () => {
+    const show = pwd2.type === 'password';
+    pwd2.type = show ? 'text' : 'password';
+    togglePwd2Btn.textContent = show ? '🙈' : '👁';
+  });
 
   // ✅ Modal logic + client-side validation
   document.addEventListener('DOMContentLoaded', function() {
@@ -265,6 +333,11 @@ unset($_SESSION['errors'], $_SESSION['old']);
       if (!email) errors.push('Email is required.');
       if (!password) errors.push('Password is required.');
       if (!passwordConfirm) errors.push('Confirm Password is required.');
+
+      if (password && !passwordPattern.test(password)) {
+        errors.push('Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
+      }
+
       if (password && passwordConfirm && password !== passwordConfirm) {
         errors.push('Passwords do not match.');
       }

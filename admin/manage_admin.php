@@ -159,6 +159,23 @@ $admins = $conn->query($sql);
             content: '▼';
         }
 
+        /* Password eye toggle */
+        .input-with-icon {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 0.75rem;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            padding: 0;
+        }
     </style>
 </head>
 <body>
@@ -193,13 +210,13 @@ $admins = $conn->query($sql);
         <div class="table-container">
             <table>
                <thead>
-    <tr>
-        <th class="sortable" data-column="0" data-type="number">ID</th>
-        <th class="sortable" data-column="1" data-type="string">Name</th>
-        <th class="sortable" data-column="2" data-type="string">Email</th>
-        <th>Actions</th>
-    </tr>
-</thead>
+                    <tr>
+                        <th class="sortable" data-column="0" data-type="number">ID</th>
+                        <th class="sortable" data-column="1" data-type="string">Name</th>
+                        <th class="sortable" data-column="2" data-type="string">Email</th>
+                        <th>Actions</th>
+                    </tr>
+               </thead>
 
                 <tbody>
                     <?php if ($admins && $admins->num_rows > 0): ?>
@@ -248,7 +265,21 @@ $admins = $conn->query($sql);
             </div>
             <div class="form-group">
                 <label>Password *</label>
-                <input type="password" name="password" required minlength="6">
+                <div class="input-with-icon">
+                    <input
+                        type="password"
+                        name="password"
+                        id="create_admin_password"
+                        required
+                        minlength="6"
+                    >
+                    <button
+                        type="button"
+                        id="toggleCreateAdminPwd"
+                        class="password-toggle"
+                        aria-label="Toggle password visibility"
+                    >👁</button>
+                </div>
             </div>
 
             <button type="submit" name="create_admin" class="btn btn-primary">Create</button>
@@ -277,7 +308,20 @@ $admins = $conn->query($sql);
             </div>
             <div class="form-group">
                 <label>New Password (optional)</label>
-                <input type="password" name="new_password" id="edit_password" placeholder="Leave blank to keep old password">
+                <div class="input-with-icon">
+                    <input
+                        type="password"
+                        name="new_password"
+                        id="edit_admin_password"
+                        placeholder="Leave blank to keep old password"
+                    >
+                    <button
+                        type="button"
+                        id="toggleEditAdminPwd"
+                        class="password-toggle"
+                        aria-label="Toggle new password visibility"
+                    >👁</button>
+                </div>
             </div>
 
             <button type="submit" name="update_admin" class="btn btn-success">Update</button>
@@ -310,29 +354,8 @@ function confirmDelete(id) {
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
-</script>
 
-<script>
-function openCreateModal() {
-    document.getElementById('createModal').style.display = 'block';
-}
-function openEditModal(data) {
-    document.getElementById('edit_admin_id').value = data.admin_id;
-    document.getElementById('edit_name').value = data.name;
-    document.getElementById('edit_email').value = data.email;
-    document.getElementById('editModal').style.display = 'block';
-}
-function confirmDelete(id) {
-    if (confirm("Are you sure you want to delete this admin?")) {
-        document.getElementById('delete_admin_id').value = id;
-        document.getElementById('deleteForm').submit();
-    }
-}
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-/* ===== TABLE SORTING (CLIENT-SIDE) ===== */
+/* ===== TABLE SORTING (CLIENT-SIDE) + password toggles ===== */
 document.addEventListener('DOMContentLoaded', function () {
     const headers = document.querySelectorAll('th.sortable');
 
@@ -380,9 +403,27 @@ document.addEventListener('DOMContentLoaded', function () {
             rows.forEach(row => tbody.appendChild(row));
         });
     });
+
+    // 👁 Password eye toggles for Admins page
+    const createPwd = document.getElementById('create_admin_password');
+    const toggleCreatePwdBtn = document.getElementById('toggleCreateAdminPwd');
+
+    toggleCreatePwdBtn?.addEventListener('click', () => {
+        const show = createPwd.type === 'password';
+        createPwd.type = show ? 'text' : 'password';
+        toggleCreatePwdBtn.textContent = show ? '🙈' : '👁';
+    });
+
+    const editPwd = document.getElementById('edit_admin_password');
+    const toggleEditPwdBtn = document.getElementById('toggleEditAdminPwd');
+
+    toggleEditPwdBtn?.addEventListener('click', () => {
+        const show = editPwd.type === 'password';
+        editPwd.type = show ? 'text' : 'password';
+        toggleEditPwdBtn.textContent = show ? '🙈' : '👁';
+    });
 });
 </script>
-
 
 </body>
 </html>
