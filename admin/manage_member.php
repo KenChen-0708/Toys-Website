@@ -13,7 +13,6 @@ if (!$db_ok || !$conn) {
     die("Connection failed: Unable to connect to database");
 }
 
-
 $message = '';
 $message_type = '';
 
@@ -94,7 +93,7 @@ $sql = "SELECT * FROM Member WHERE 1=1";
 if (!empty($search)) {
     $sql .= " AND (name LIKE '%$search%' OR email LIKE '%$search%')";
 }
-$sql .= " ORDER BY member_id DESC";
+$sql .= " ORDER BY member_id ASC";
 
 $members = $conn->query($sql);
 
@@ -109,6 +108,25 @@ $members = $conn->query($sql);
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
     <link rel="stylesheet" href="../assets/css/manage_product.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <style>
+        /* Optional: nicer cursor + arrows */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+        th.sortable::after {
+            content: '';
+            margin-left: 4px;
+            font-size: 0.7rem;
+        }
+        th.sortable[data-order="asc"]::after {
+            content: '▲';
+        }
+        th.sortable[data-order="desc"]::after {
+            content: '▼';
+        }
+    </style>
 </head>
 <body>
 
@@ -146,12 +164,13 @@ $members = $conn->query($sql);
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Phone</th>
-                        <th>Address</th>
-                        <th>Register Date</th>
+                        <!-- data-column index must match the <td> order -->
+                        <th class="sortable" data-column="0" data-type="number">ID</th>
+                        <th class="sortable" data-column="1" data-type="string">Name</th>
+                        <th class="sortable" data-column="2" data-type="string">Email</th>
+                        <th class="sortable" data-column="3" data-type="string">Phone</th>
+                        <th class="sortable" data-column="4" data-type="string">Address</th>
+                        <th class="sortable" data-column="5" data-type="string">Register Date</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -299,6 +318,55 @@ function confirmDelete(id) {
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
+
+/* ===== TABLE SORTING (CLIENT-SIDE) ===== */
+document.addEventListener('DOMContentLoaded', function () {
+    const headers = document.querySelectorAll('th.sortable');
+
+    headers.forEach(function (header) {
+        header.addEventListener('click', function () {
+            const table   = header.closest('table');
+            const tbody   = table.querySelector('tbody');
+            const colIdx  = parseInt(header.getAttribute('data-column'), 10);
+            const type    = header.getAttribute('data-type') || 'string';
+
+            // toggle sort direction
+            const currentOrder = header.getAttribute('data-order') || 'asc';
+            const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            header.setAttribute('data-order', newOrder);
+
+            // clear order on other headers
+            headers.forEach(h => {
+                if (h !== header) h.removeAttribute('data-order');
+            });
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort(function (rowA, rowB) {
+                const cellA = rowA.children[colIdx].innerText.trim();
+                const cellB = rowB.children[colIdx].innerText.trim();
+
+                let valA = cellA;
+                let valB = cellB;
+
+                if (type === 'number') {
+                    valA = parseFloat(cellA) || 0;
+                    valB = parseFloat(cellB) || 0;
+                } else {
+                    valA = cellA.toLowerCase();
+                    valB = cellB.toLowerCase();
+                }
+
+                if (valA < valB) return newOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return newOrder === 'asc' ?  1 : -1;
+                return 0;
+            });
+
+            // re-attach sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
 </script>
 
 </body>

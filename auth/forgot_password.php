@@ -35,7 +35,7 @@ unset($_SESSION['errors'], $_SESSION['success']);
 
       <?php if ($success): ?>
         <div class="alert alert--success">
-          <?= htmlspecialchars($success) ?>
+          <?= $success ?>
         </div>
       <?php endif; ?>
 
@@ -58,6 +58,10 @@ unset($_SESSION['errors'], $_SESSION['success']);
 
         <p class="auth-sub" style="margin-top:1rem">
           Remembered it? <a href="./login.php" class="link">Back to login</a>
+        </p>
+
+        <p class="auth-sub" style="margin-top:-1rem; margin-bottom: -4px">
+          <a href="./forgot_username.php" class="link">Forgot your username?</a>
         </p>
       </form>
     </div>

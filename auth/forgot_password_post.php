@@ -47,7 +47,7 @@ $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
 if (!$user) {
-    $_SESSION['success'] = 'If that email is registered, a reset link has been sent.';
+    $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, a reset link has been sent.';
     header('Location: ./forgot_password.php');
     exit;
 }
@@ -116,7 +116,7 @@ try {
 
     $mail->send();
 
-    $_SESSION['success'] = 'If that email is registered, a reset link has been sent.';
+    $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, a reset link has been sent.';
 } catch (Exception $e) {
     $_SESSION['errors'] = ['We could not send the reset email. Please try again later.'];
 }
