@@ -5,6 +5,9 @@ $(document).ready(function() {
     setTimeout(function() {
         $('.alert').fadeOut('slow');
     }, 5000);
+    
+    // Initialize checkbox handlers
+    initCheckboxHandlers();
 });
 
 // Toggle Sidebar for Mobile
@@ -12,9 +15,118 @@ function toggleSidebar() {
     $('#sidebar').toggleClass('active');
 }
 
+// Checkbox Selection Handlers
+function initCheckboxHandlers() {
+    // Select All checkbox
+    $('#selectAll').on('change', function() {
+        const isChecked = $(this).prop('checked');
+        $('.product-checkbox').prop('checked', isChecked);
+        updateBatchActions();
+    });
+    
+    // Individual checkboxes
+    $(document).on('change', '.product-checkbox', function() {
+        updateBatchActions();
+        
+        // Update select all checkbox
+        const totalCheckboxes = $('.product-checkbox').length;
+        const checkedCheckboxes = $('.product-checkbox:checked').length;
+        $('#selectAll').prop('checked', totalCheckboxes === checkedCheckboxes);
+    });
+}
+
+// Update Batch Actions Visibility
+function updateBatchActions() {
+    const selectedCount = $('.product-checkbox:checked').length;
+    
+    if (selectedCount > 0) {
+        $('#batchActions').fadeIn(300);
+        $('.selected-count').text(selectedCount + ' selected');
+    } else {
+        $('#batchActions').fadeOut(300);
+    }
+}
+
+// Get Selected Product IDs
+function getSelectedProducts() {
+    const selected = [];
+    $('.product-checkbox:checked').each(function() {
+        selected.push($(this).val());
+    });
+    return selected;
+}
+
+// Batch Delete
+function batchDelete() {
+    const selected = getSelectedProducts();
+    
+    if (selected.length === 0) {
+        alert('Please select products to delete');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ${selected.length} product(s)? This action cannot be undone.`)) {
+        // Create form with selected products
+        const $form = $('#batchDeleteForm');
+        $form.find('input[name="selected_products[]"]').remove();
+        
+        selected.forEach(function(id) {
+            $form.append(`<input type="hidden" name="selected_products[]" value="${id}">`);
+        });
+        
+        $form.submit();
+    }
+}
+
+// Open Batch Status Modal
+function openBatchStatusModal() {
+    const selected = getSelectedProducts();
+    
+    if (selected.length === 0) {
+        alert('Please select products to update');
+        return;
+    }
+    
+    // Populate hidden inputs
+    $('#batchStatusForm').find('input[name="selected_products[]"]').remove();
+    selected.forEach(function(id) {
+        $('#batchStatusForm').append(`<input type="hidden" name="selected_products[]" value="${id}">`);
+    });
+    
+    $('#batchStatusModal').fadeIn(300);
+}
+
+// Open Batch Category Modal
+function openBatchCategoryModal() {
+    const selected = getSelectedProducts();
+    
+    if (selected.length === 0) {
+        alert('Please select products to update');
+        return;
+    }
+    
+    // Populate hidden inputs
+    $('#batchCategoryForm').find('input[name="selected_products[]"]').remove();
+    selected.forEach(function(id) {
+        $('#batchCategoryForm').append(`<input type="hidden" name="selected_products[]" value="${id}">`);
+    });
+    
+    $('#batchCategoryModal').fadeIn(300);
+}
+
+// Filter Low Stock
+function filterLowStock() {
+    window.location.href = 'manage_product.php?stock_alert=1';
+}
+
 // Open Create Modal
 function openCreateModal() {
     $('#createModal').fadeIn(300);
+}
+
+// Open CSV Modal
+function openCSVModal() {
+    $('#csvModal').fadeIn(300);
 }
 
 // Open Edit Modal
@@ -204,5 +316,47 @@ $('form').on('keypress', function(e) {
     if (e.which === 13 && e.target.tagName !== 'TEXTAREA') {
         e.preventDefault();
         return false;
+    }
+});
+
+// Form validation on submit
+$('form').on('submit', function(e) {
+    const $form = $(this);
+    let isValid = true;
+    
+    // Clear previous errors
+    $form.find('.error').removeClass('error');
+    $form.find('.error-message').remove();
+    
+    // Validate required fields
+    $form.find('[required]').each(function() {
+        const $field = $(this);
+        const value = $field.val().trim();
+        
+        if (!value) {
+            $field.addClass('error');
+            $field.after('<span class="error-message">This field is required</span>');
+            isValid = false;
+        }
+    });
+    
+    // Validate number fields
+    $form.find('input[type="number"]').each(function() {
+        const $field = $(this);
+        const value = parseFloat($field.val());
+        const min = parseFloat($field.attr('min'));
+        
+        if (!isNaN(min) && value < min) {
+            $field.addClass('error');
+            $field.after(`<span class="error-message">Value must be at least ${min}</span>`);
+            isValid = false;
+        }
+    });
+    
+    if (!isValid) {
+        e.preventDefault();
+        $('html, body').animate({
+            scrollTop: $form.find('.error').first().offset().top - 100
+        }, 500);
     }
 });
