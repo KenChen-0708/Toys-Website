@@ -72,7 +72,10 @@ $stmt->bind_param('sss', $user['email'], $tokenHash, $expiresAt);
 $stmt->execute();
 
 // Build reset link
-$baseUrl   = 'http://localhost:8000/auth';
+$scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+$host   = $_SERVER['HTTP_HOST']; // includes port automatically
+
+$baseUrl = $scheme . '://' . $host . '/auth';
 $resetLink = $baseUrl . '/reset_password.php?token=' . urlencode($rawToken) .
              '&email=' . urlencode($user['email']);
 

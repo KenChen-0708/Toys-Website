@@ -12,6 +12,16 @@ unset($_SESSION['errors'], $_SESSION['old']);
 ?>
 
 <style>
+  .alert--success {
+    background: #dcfce7;
+    color: #166534;
+    border-left: 4px solid #16a34a;
+    padding: 0.75rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 1rem;
+  }
+
+
   /* Modal styling – same style as register page */
 
   .modal-overlay {
@@ -130,6 +140,14 @@ unset($_SESSION['errors'], $_SESSION['old']);
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
+
+      <?php if (!empty($_SESSION['success'])): ?>
+        <div class="alert alert--success" role="alert" style="margin-bottom: 1rem;">
+          <?= htmlspecialchars($_SESSION['success']) ?>
+        </div>
+        <?php unset($_SESSION['success']); ?>
+      <?php endif; ?>
+
 
       <form id="loginForm" class="form grid" method="POST" action="./login_post.php" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
