@@ -42,11 +42,13 @@
             <?php if (is_logged_in()): ?>
               <div class="header__user-profile">
                 <button class="avatar-btn" aria-haspopup="true" aria-expanded="false">
-                  <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['name'])) ?></span>
+                  <span class="avatar-circle">
+                    <?= htmlspecialchars(user_initials($_SESSION['member']['name'])) ?>
+                  </span>
                 </button>
                 <div class="profile-menu">
                   <div class="profile-menu__header">
-                    <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong><br>
+                    <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong>
                     <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
                   </div>
                   <a href="/accounts.php">My Account</a>

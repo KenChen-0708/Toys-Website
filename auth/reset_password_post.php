@@ -21,13 +21,16 @@ $password_confirmation = $_POST['password_confirmation'] ?? '';
 
 $errors = [];
 
+// Password format pattern: at least 8 chars, one upper, one lower, one digit, one symbol
+$passwordPattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/';
+
 // Basic validation
 if (!$email || !$token) {
     $errors[] = "Invalid password reset link.";
 }
 
-if (strlen($password) < 6) {
-    $errors[] = "Password must be at least 6 characters.";
+if (!preg_match($passwordPattern, $password)) {
+    $errors[] = "Password must be at least 8 characters and include uppercase, lowercase, number and symbol.";
 }
 
 if ($password !== $password_confirmation) {
@@ -53,7 +56,6 @@ $stmt->bind_param("ss", $email, $tokenHash);
 $stmt->execute();
 $result = $stmt->get_result();
 $reset = $result->fetch_assoc();
-
 
 if (!$reset) {
     $_SESSION['errors'] = ["Invalid or expired password reset token."];
@@ -89,5 +91,3 @@ $_SESSION['success'] = "Your password has been successfully updated. Please log 
 
 header("Location: ../auth/login.php");
 exit;
-
-?>
