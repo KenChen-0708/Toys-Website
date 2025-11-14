@@ -9,7 +9,10 @@ $db_name = 'online_store';
 // Create connection
 // Disable mysqli exceptions locally and catch constructor failures to keep UI rendering
 mysqli_report(MYSQLI_REPORT_OFF);
+
+/** @var mysqli|null $conn */
 $conn = null;
+
 $db_ok = true;
 try {
     $conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
@@ -22,10 +25,3 @@ if (!$conn || $conn->connect_error) {
     $db_ok = false;
 }
 
-if (!$db_ok) {
-    echo "<p style='color:red;'>Database connection failed. Please check your configuration or try again later.</p>";
-
-    // Optionally, show detailed error info for debugging (not in production!)
-    // echo "<p>Error: " . $conn->connect_error . "</p>";
-    exit; // Stop further execution
-}
