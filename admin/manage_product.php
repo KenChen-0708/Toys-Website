@@ -1039,3 +1039,5 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
     <script src="../assets/js/manage_product.js"></script>
 </body>
 </html>
+l>
+l>
