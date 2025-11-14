@@ -10,6 +10,7 @@ $db_name = 'online_store';
 // Disable mysqli exceptions locally and catch constructor failures to keep UI rendering
 mysqli_report(MYSQLI_REPORT_OFF);
 
+/** @var mysqli|null $conn */
 $conn = null;
 
 $db_ok = true;

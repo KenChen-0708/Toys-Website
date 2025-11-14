@@ -1,43 +1,45 @@
-<?php 
-  require_once '/helper/connection.php';
+<?php
+require_once 'helper/connection.php';
 
-  // Get product ID from URL
-  $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
-  
-  // Fetch product details
-  $product = null;
-  $sub_images = [];
-  
-  if ($db_ok && $conn && $product_id > 0) {
-    // Fetch main product details
-    $stmt = $conn->prepare("SELECT * FROM Product WHERE product_id = ?");
+
+
+// Get product ID from URL
+$product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
+
+// Fetch product details
+$product = null;
+$sub_images = [];
+
+if ($db_ok && $conn && $product_id > 0) {
+  // Fetch main product details
+  $stmt = $conn->prepare("SELECT * FROM Product WHERE product_id = ?");
+  $stmt->bind_param("i", $product_id);
+  $stmt->execute();
+  $result = $stmt->get_result();
+  $product = $result->fetch_assoc();
+  $stmt->close();
+
+  // Fetch sub images
+  if ($product) {
+    $stmt = $conn->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = ?");
     $stmt->bind_param("i", $product_id);
     $stmt->execute();
     $result = $stmt->get_result();
-    $product = $result->fetch_assoc();
-    $stmt->close();
-    
-    // Fetch sub images
-    if ($product) {
-      $stmt = $conn->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = ?");
-      $stmt->bind_param("i", $product_id);
-      $stmt->execute();
-      $result = $stmt->get_result();
-      while ($row = $result->fetch_assoc()) {
-        $sub_images[] = $row['sub_image_path'];
-      }
-      $stmt->close();
+    while ($row = $result->fetch_assoc()) {
+      $sub_images[] = $row['sub_image_path'];
     }
+    $stmt->close();
   }
-  
-  // Redirect if product not found
-  if (!$product) {
-    header("Location: shop.php");
-    exit();
-  }
-  
-  $title = htmlspecialchars($product['name']) . " — Details";
-  include 'partials/header.php';
+}
+
+// Redirect if product not found
+if (!$product) {
+  header("Location: shop.php");
+  exit();
+}
+
+$title = htmlspecialchars($product['name']) . " — Details";
+include 'partials/header.php';
 ?>
 
 <main class="main">
@@ -116,7 +118,7 @@
         <ul class="details__meta">
           <li class="meta__list flex"><span>Product ID:</span> <?php echo $product['product_id']; ?></li>
           <li class="meta__list flex"><span>Category:</span> <?php echo htmlspecialchars($product['category']); ?></li>
-          <li class="meta__list flex"><span>Availability:</span> 
+          <li class="meta__list flex"><span>Availability:</span>
             <?php if ($product['status'] == 'Available'): ?>
               <?php echo $product['stock']; ?> Items in Stock
             <?php else: ?>
@@ -138,20 +140,62 @@
     <div class="details__tabs-content">
       <div class="details__tab-content active-tab" id="info">
         <table class="info__table">
-          <tr><th>Stand Up</th><td>35" L x 24"W x 37-45"H (front to back wheel)</td></tr>
-          <tr><th>Folded (w/o wheels)</th><td>32.5"L x 18.5"W x 16.5"H</td></tr>
-          <tr><th>Folded (with wheels)</th><td>32.5"L x 24"W x 18.5"H</td></tr>
-          <tr><th>Door Pass Through</th><td>24</td></tr>
-          <tr><th>Frame</th><td>Aluminum</td></tr>
-          <tr><th>Weight (w/o wheels)</th><td>20 LBS</td></tr>
-          <tr><th>Weight Capacity</th><td>60 LBS</td></tr>
-          <tr><th>Width</th><td>24</td></tr>
-          <tr><th>Handle Height (ground to handle)</th><td>37-45</td></tr>
-          <tr><th>Wheels</th><td>12" air / wide track slick tread</td></tr>
-          <tr><th>Seat back height</th><td>21.5</td></tr>
-          <tr><th>Head Room (inside canopy)</th><td>25"</td></tr>
-          <tr><th>Color</th><td>Black, Blue, Red, White</td></tr>
-          <tr><th>Size</th><td>M, S</td></tr>
+          <tr>
+            <th>Stand Up</th>
+            <td>35" L x 24"W x 37-45"H (front to back wheel)</td>
+          </tr>
+          <tr>
+            <th>Folded (w/o wheels)</th>
+            <td>32.5"L x 18.5"W x 16.5"H</td>
+          </tr>
+          <tr>
+            <th>Folded (with wheels)</th>
+            <td>32.5"L x 24"W x 18.5"H</td>
+          </tr>
+          <tr>
+            <th>Door Pass Through</th>
+            <td>24</td>
+          </tr>
+          <tr>
+            <th>Frame</th>
+            <td>Aluminum</td>
+          </tr>
+          <tr>
+            <th>Weight (w/o wheels)</th>
+            <td>20 LBS</td>
+          </tr>
+          <tr>
+            <th>Weight Capacity</th>
+            <td>60 LBS</td>
+          </tr>
+          <tr>
+            <th>Width</th>
+            <td>24</td>
+          </tr>
+          <tr>
+            <th>Handle Height (ground to handle)</th>
+            <td>37-45</td>
+          </tr>
+          <tr>
+            <th>Wheels</th>
+            <td>12" air / wide track slick tread</td>
+          </tr>
+          <tr>
+            <th>Seat back height</th>
+            <td>21.5</td>
+          </tr>
+          <tr>
+            <th>Head Room (inside canopy)</th>
+            <td>25"</td>
+          </tr>
+          <tr>
+            <th>Color</th>
+            <td>Black, Blue, Red, White</td>
+          </tr>
+          <tr>
+            <th>Size</th>
+            <td>M, S</td>
+          </tr>
         </table>
       </div>
 
@@ -234,37 +278,37 @@
       $stmt->bind_param("si", $product['category'], $product_id);
       $stmt->execute();
       $related_result = $stmt->get_result();
-      
+
       while ($related = $related_result->fetch_assoc()):
         $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
       ?>
-      <div class="product__item">
-        <div class="product__banner">
-          <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
-            <img src="<?php echo htmlspecialchars($related['main_image_path']); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img default" />
-            <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img hover" />
-          </a>
-          <div class="product__actions">
-            <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
-            <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
-            <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
+        <div class="product__item">
+          <div class="product__banner">
+            <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
+              <img src="<?php echo htmlspecialchars($related['main_image_path']); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img default" />
+              <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img hover" />
+            </a>
+            <div class="product__actions">
+              <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
+              <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
+              <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
+            </div>
+          </div>
+          <div class="product__content">
+            <span class="product__category"><?php echo htmlspecialchars($related['category']); ?></span>
+            <a href="product_details.php?id=<?php echo $related['product_id']; ?>">
+              <h3 class="product__title"><?php echo htmlspecialchars($related['name']); ?></h3>
+            </a>
+            <div class="product__rating">
+              <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
+            </div>
+            <div class="product__price flex">
+              <span class="new__price">$<?php echo number_format($related['price'], 2); ?></span>
+            </div>
+            <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
           </div>
         </div>
-        <div class="product__content">
-          <span class="product__category"><?php echo htmlspecialchars($related['category']); ?></span>
-          <a href="product_details.php?id=<?php echo $related['product_id']; ?>">
-            <h3 class="product__title"><?php echo htmlspecialchars($related['name']); ?></h3>
-          </a>
-          <div class="product__rating">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-          </div>
-          <div class="product__price flex">
-            <span class="new__price">$<?php echo number_format($related['price'], 2); ?></span>
-          </div>
-          <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
-        </div>
-      </div>
-      <?php endwhile; 
+      <?php endwhile;
       $stmt->close();
       ?>
     </div>
