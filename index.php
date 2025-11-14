@@ -1821,7 +1821,29 @@
     updateButtons();
   })();
 </script>
+    <!-- Chatbot Widget (use this for any page)-->
+    <link rel="stylesheet" href="../assets/css/chatbot.css" />
+  </head>
+  <body>
+    <div class="chat-widget" id="chat-widget">
+      <div class="chat-header">ToyWorld Assistant 🎁</div>
+      <div class="chat-body" id="chat-body"></div>
+      <div class="chat-input-area">
+        <input type="text" id="message" placeholder="Ask something..." />
+        <button onclick="sendMessage()">➤</button>
+      </div>
+    </div>
 
+    <button class="chat-launch-btn" onclick="toggleChat()">
+      <span class="chat-icon">💬</span>
+    </button>
+
+    <script src="../assets/js/chatbot.js"></script>
+    </body>
+    <!------------------------------------------->
+    
+</body>
+</html>
 
 
 <?php include 'partials/footer.php'; ?>
