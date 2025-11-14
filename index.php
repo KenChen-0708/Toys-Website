@@ -1,6 +1,7 @@
 <?php 
   $title = "Home";
   include 'partials/header.php';
+
 ?>
 
 <!--=============== MAIN ===============-->
@@ -16,7 +17,7 @@
         <p class="home__description">
           Save more with coupons & up tp 20% off
         </p>
-        <a href="shop.php" class="btn">Shop Now</a>
+        <a href="product_list.php" class="btn">Shop Now</a>
       </div>
       <img src="assets/img/home-img.png" class="home__img" alt="hats" />
     </div>
@@ -33,35 +34,35 @@
 
       <div class="categories__viewport" id="catViewport">
         <div class="categories__track" id="catTrack">
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-1.jpg" alt="" class="category__img" />
             <h3 class="category__title">T-Shirt</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-2.jpg" alt="" class="category__img" />
             <h3 class="category__title">Bags</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-3.jpg" alt="" class="category__img" />
             <h3 class="category__title">Sandal</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-4.jpg" alt="" class="category__img" />
             <h3 class="category__title">Scarf Cap</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-5.jpg" alt="" class="category__img" />
             <h3 class="category__title">Shoes</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-6.jpg" alt="" class="category__img" />
             <h3 class="category__title">Pillowcase</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-7.jpg" alt="" class="category__img" />
             <h3 class="category__title">Jumpsuit</h3>
           </a>
-          <a href="shop.php" class="category__item">
+          <a href="product_list.php" class="category__item">
             <img src="assets/img/category-8.jpg" alt="" class="category__img" />
             <h3 class="category__title">Hats</h3>
           </a>
@@ -90,7 +91,7 @@
         <div class="products__container grid">
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-1-1.jpg"
                   alt=""
@@ -121,7 +122,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -140,13 +141,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-2-1.jpg"
                   alt=""
@@ -177,7 +178,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -196,13 +197,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-3-1.jpg"
                   alt=""
@@ -233,7 +234,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -252,13 +253,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
@@ -289,7 +290,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -308,13 +309,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-5-1.jpg"
                   alt=""
@@ -345,7 +346,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -364,13 +365,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-6-1.jpg"
                   alt=""
@@ -401,7 +402,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -420,13 +421,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-7-1.jpg"
                   alt=""
@@ -457,7 +458,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -476,13 +477,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
@@ -512,7 +513,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -531,7 +532,7 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
@@ -541,7 +542,7 @@
         <div class="products__container grid">
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-9-1.jpg"
                   alt=""
@@ -572,7 +573,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -591,13 +592,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-2-1.jpg"
                   alt=""
@@ -628,7 +629,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -647,13 +648,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-10-1.jpg"
                   alt=""
@@ -684,7 +685,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -703,13 +704,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
@@ -740,7 +741,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -759,13 +760,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-5-1.jpg"
                   alt=""
@@ -796,7 +797,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -815,13 +816,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-11-1.jpg"
                   alt=""
@@ -852,7 +853,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -871,13 +872,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-7-1.jpg"
                   alt=""
@@ -908,7 +909,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -927,13 +928,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
@@ -963,7 +964,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -982,7 +983,7 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
@@ -992,7 +993,7 @@
         <div class="products__container grid">
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-1-1.jpg"
                   alt=""
@@ -1023,7 +1024,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1042,13 +1043,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-12-1.jpg"
                   alt=""
@@ -1079,7 +1080,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1098,13 +1099,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-13-1.jpg"
                   alt=""
@@ -1135,7 +1136,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1154,13 +1155,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
@@ -1191,7 +1192,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1210,13 +1211,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-10-1.jpg"
                   alt=""
@@ -1247,7 +1248,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1266,13 +1267,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-6-1.jpg"
                   alt=""
@@ -1303,7 +1304,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1322,13 +1323,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-9-1.jpg"
                   alt=""
@@ -1359,7 +1360,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1378,13 +1379,13 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
           <div class="product__item">
             <div class="product__banner">
-              <a href="details.php" class="product__images">
+              <a href="product_details.php" class="product__images">
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
@@ -1414,7 +1415,7 @@
             </div>
             <div class="product__content">
               <span class="product__category">Clothing</span>
-              <a href="details.php">
+              <a href="product_details.php">
                 <h3 class="product__title">Colorful Pattern Shirts</h3>
               </a>
               <div class="product__rating">
@@ -1433,7 +1434,7 @@
                 class="action__btn cart__btn"
                 aria-label="Add To Cart"
               >
-                <i class="fi fi-rs-shopping-bag-add"></i>
+                <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
           </div>
@@ -1477,7 +1478,7 @@
           </div>
         </div>
         <div class="deals__btn">
-          <a href="details.php" class="btn btn--md">Shop Now</a>
+          <a href="product_details.php" class="btn btn--md">Shop Now</a>
         </div>
       </div>
       <div class="deals__item">
@@ -1512,7 +1513,7 @@
           </div>
         </div>
         <div class="deals__btn">
-          <a href="details.php" class="btn btn--md">Shop Now</a>
+          <a href="product_details.php" class="btn btn--md">Shop Now</a>
         </div>
       </div>
     </div>
@@ -1524,7 +1525,7 @@
       <div class="showcase__wrapper">
         <h3 class="section__title">Hot Releases</h3>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-1.jpg"
               alt=""
@@ -1532,7 +1533,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Floral Print Casual Cotton Dress
               </h4>
@@ -1544,7 +1545,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-2.jpg"
               alt=""
@@ -1552,7 +1553,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Ruffled Solid Long Sleeve Blouse
               </h4>
@@ -1564,7 +1565,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-3.jpg"
               alt=""
@@ -1572,7 +1573,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Multi-Color Print V-neck T-shirt
               </h4>
@@ -1587,7 +1588,7 @@
       <div class="showcase__wrapper">
         <h3 class="section__title">Deals & Outlet</h3>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-4.jpg"
               alt=""
@@ -1595,7 +1596,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Fish Print Patched T-shirt</h4>
             </a>
             <div class="showcase__price flex">
@@ -1605,7 +1606,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-5.jpg"
               alt=""
@@ -1613,7 +1614,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Fintage Floral Print Dress</h4>
             </a>
             <div class="showcase__price flex">
@@ -1623,7 +1624,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-6.jpg"
               alt=""
@@ -1631,7 +1632,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Multi-Color Stripe Circle T-shirt
               </h4>
@@ -1646,7 +1647,7 @@
       <div class="showcase__wrapper">
         <h3 class="section__title">Top Selling</h3>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-7.jpg"
               alt=""
@@ -1654,7 +1655,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Geometric Printed Long Sleeve Blouse
               </h4>
@@ -1666,7 +1667,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-8.jpg"
               alt=""
@@ -1674,7 +1675,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Print Patchwork Maxi Dress</h4>
             </a>
             <div class="showcase__price flex">
@@ -1684,7 +1685,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-9.jpg"
               alt=""
@@ -1692,7 +1693,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">
                 Daisy Floral Print Straps Jumpsuit
               </h4>
@@ -1707,7 +1708,7 @@
       <div class="showcase__wrapper">
         <h3 class="section__title">Trendy</h3>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-7.jpg"
               alt=""
@@ -1715,7 +1716,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Floral Print Casual Cotton</h4>
             </a>
             <div class="showcase__price flex">
@@ -1725,7 +1726,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-8.jpg"
               alt=""
@@ -1733,7 +1734,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Ruffled Solid Long Sleeve</h4>
             </a>
             <div class="showcase__price flex">
@@ -1743,7 +1744,7 @@
           </div>
         </div>
         <div class="showcase__item">
-          <a href="details.php" class="showcase__img-box">
+          <a href="product_details.php" class="showcase__img-box">
             <img
               src="./assets/img/showcase-img-9.jpg"
               alt=""
@@ -1751,7 +1752,7 @@
             />
           </a>
           <div class="showcase__content">
-            <a href="details.php">
+            <a href="product_details.php">
               <h4 class="showcase__title">Multi-Color Print V-neck</h4>
             </a>
             <div class="showcase__price flex">
