@@ -1,18 +1,18 @@
 <?php
 session_start();
 
-// Database configuration
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'online_store';
+// Include database connection
+require_once '../helper/connection.php';
+require_once '../helper/auth.php';
 
-// Create connection
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name);
+// Ensure only admin can access
+require_admin();
 
-if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
+// Check connection
+if (!$db_ok || !$conn) {
+    die("Connection failed: Unable to connect to database");
 }
+
 
 $message = '';
 $message_type = '';
