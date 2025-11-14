@@ -7,24 +7,8 @@ if (!isset($_SESSION['admin_logged_in'])) {
 	$_SESSION['admin_name'] = 'Admin User';
 }
 
-// Database configuration
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'assignment';
-
-// Safe connection (do not break UI if DB down)
-mysqli_report(MYSQLI_REPORT_OFF);
-$conn = null;
-$db_ok = true;
-try {
-	$conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
-} catch (mysqli_sql_exception $e) {
-	$db_ok = false;
-}
-if (!$conn || $conn->connect_error) {
-	$db_ok = false;
-}
+// Include database connection
+include '../helper/connection.php';
 
 // Helpers
 function sanitize_string($value) {

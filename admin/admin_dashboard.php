@@ -2,26 +2,8 @@
 session_start();
 
 // Database configuration
-$db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-$db_name = 'assignment'; 
-
 // Create connection
-// Disable mysqli exceptions locally and catch constructor failures to keep UI rendering
-mysqli_report(MYSQLI_REPORT_OFF);
-$conn = null;
-$db_ok = true;
-try {
-    $conn = @new mysqli($db_host, $db_user, $db_pass, $db_name);
-} catch (mysqli_sql_exception $e) {
-    $db_ok = false;
-}
-
-// Check connection
-if (!$conn || $conn->connect_error) {
-    $db_ok = false;
-}
+include '../helper/connection.php';
 
 // Simulate login check
 if (!isset($_SESSION['admin_logged_in'])) {
@@ -166,6 +148,7 @@ if ($result) {
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
+
     <!-- Sidebar -->
     <?php include '../partials/admin_panel.php'; ?>
 
