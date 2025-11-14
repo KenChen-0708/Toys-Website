@@ -1,479 +1,307 @@
 <?php
 session_start();
 
-// Basic admin gate (reuse simulated login like dashboard)
-if (!isset($_SESSION['admin_logged_in'])) {
-	$_SESSION['admin_logged_in'] = true;
-	$_SESSION['admin_name'] = 'Admin User';
-}
-
 // Include database connection
-include '../helper/connection.php';
+require_once '../helper/connection.php';
+require_once '../helper/auth.php';
 
-// Helpers
-function sanitize_string($value) {
-	return trim((string)$value);
+// Ensure only admin can access
+require_admin();
+
+// Check connection
+if (!$db_ok || !$conn) {
+    die("Connection failed: Unable to connect to database");
 }
 
-function respond_redirect($location) {
-	header("Location: {$location}");
-	exit;
+
+$message = '';
+$message_type = '';
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+
+    /** CREATE MEMBER **/
+    if (isset($_POST['create_member'])) {
+        $name         = $conn->real_escape_string($_POST['name']);
+        $email        = $conn->real_escape_string($_POST['email']);
+        $phone        = $conn->real_escape_string($_POST['phone']);
+        $address      = $conn->real_escape_string($_POST['address']);
+        $password_raw = $_POST['password'];
+        $password     = password_hash($password_raw, PASSWORD_BCRYPT);
+
+        $sql = "INSERT INTO Member (name, email, phone_number, address, password, register_date)
+                VALUES ('$name', '$email', '$phone', '$address', '$password', NOW())";
+
+        if ($conn->query($sql)) {
+            $message = "Member created successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error: " . $conn->error;
+            $message_type = "error";
+        }
+    }
+
+    /** UPDATE MEMBER **/
+    if (isset($_POST['update_member'])) {
+        $id      = $conn->real_escape_string($_POST['member_id']);
+        $name    = $conn->real_escape_string($_POST['name']);
+        $email   = $conn->real_escape_string($_POST['email']);
+        $phone   = $conn->real_escape_string($_POST['phone']);
+        $address = $conn->real_escape_string($_POST['address']);
+
+        $sql = "UPDATE Member SET 
+                name='$name',
+                email='$email',
+                phone_number='$phone',
+                address='$address'
+                WHERE member_id='$id'";
+
+        if ($conn->query($sql)) {
+
+            // Optional password update
+            if (!empty($_POST['new_password'])) {
+                $new_password = password_hash($_POST['new_password'], PASSWORD_BCRYPT);
+                $conn->query("UPDATE Member SET password='$new_password' WHERE member_id='$id'");
+            }
+
+            $message = "Member updated successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error: " . $conn->error;
+            $message_type = "error";
+        }
+    }
+
+    /** DELETE MEMBER **/
+    if (isset($_POST['delete_member'])) {
+        $id = $conn->real_escape_string($_POST['member_id']);
+        $sql = "DELETE FROM Member WHERE member_id='$id'";
+
+        if ($conn->query($sql)) {
+            $message = "Member deleted successfully!";
+            $message_type = "success";
+        } else {
+            $message = "Error deleting member: " . $conn->error;
+            $message_type = "error";
+        }
+    }
 }
 
-// Flash messages
-if (!isset($_SESSION['flash'])) {
-	$_SESSION['flash'] = [];
+/** READ members with search **/
+$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+
+$sql = "SELECT * FROM Member WHERE 1=1";
+if (!empty($search)) {
+    $sql .= " AND (name LIKE '%$search%' OR email LIKE '%$search%')";
 }
-function flash_add($type, $message) {
-	$_SESSION['flash'][] = ['type' => $type, 'message' => $message];
-}
-function flash_take_all() {
-	$all = $_SESSION['flash'] ?? [];
-	$_SESSION['flash'] = [];
-	return $all;
-}
+$sql .= " ORDER BY member_id DESC";
 
-// CRUD actions
-$action = $_POST['action'] ?? $_GET['action'] ?? '';
-$now = date('Y-m-d H:i:s');
+$members = $conn->query($sql);
 
-if ($db_ok) {
-	// Create
-	if ($action === 'create' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-		$name = sanitize_string($_POST['name'] ?? '');
-		$email = sanitize_string($_POST['email'] ?? '');
-		$phone = sanitize_string($_POST['phone_number'] ?? '');
-		$address = sanitize_string($_POST['address'] ?? '');
-		$password_raw = $_POST['password'] ?? '';
-
-		if ($name === '' || $email === '' || $password_raw === '') {
-			flash_add('error', 'Name, Email and Password are required.');
-		} else {
-			$password_hashed = password_hash($password_raw, PASSWORD_DEFAULT);
-			$stmt = $conn->prepare("INSERT INTO Member (name, password, email, phone_number, address, register_date) VALUES (?, ?, ?, ?, ?, ?)");
-			if ($stmt) {
-				$stmt->bind_param('ssssss', $name, $password_hashed, $email, $phone, $address, $now);
-				if ($stmt->execute()) {
-					flash_add('success', 'Member created successfully.');
-				} else {
-					flash_add('error', 'Failed to create member: ' . htmlspecialchars($conn->error));
-				}
-				$stmt->close();
-			} else {
-				flash_add('error', 'Failed to prepare statement.');
-			}
-		}
-		respond_redirect('manage_member.php');
-	}
-
-	// Update
-	if ($action === 'update' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-		$member_id = intval($_POST['member_id'] ?? 0);
-		$name = sanitize_string($_POST['name'] ?? '');
-		$email = sanitize_string($_POST['email'] ?? '');
-		$phone = sanitize_string($_POST['phone_number'] ?? '');
-		$address = sanitize_string($_POST['address'] ?? '');
-		$password_raw = $_POST['password'] ?? '';
-
-		if ($member_id <= 0 || $name === '' || $email === '') {
-			flash_add('error', 'Member ID, Name and Email are required.');
-		} else {
-			if ($password_raw !== '') {
-				$password_hashed = password_hash($password_raw, PASSWORD_DEFAULT);
-				$stmt = $conn->prepare("UPDATE Member SET name=?, email=?, phone_number=?, address=?, password=? WHERE member_id=?");
-				if ($stmt) {
-					$stmt->bind_param('sssssi', $name, $email, $phone, $address, $password_hashed, $member_id);
-					if ($stmt->execute()) {
-						flash_add('success', 'Member updated successfully.');
-					} else {
-						flash_add('error', 'Failed to update member: ' . htmlspecialchars($conn->error));
-					}
-					$stmt->close();
-				} else {
-					flash_add('error', 'Failed to prepare statement.');
-				}
-			} else {
-				$stmt = $conn->prepare("UPDATE Member SET name=?, email=?, phone_number=?, address=? WHERE member_id=?");
-				if ($stmt) {
-					$stmt->bind_param('ssssi', $name, $email, $phone, $address, $member_id);
-					if ($stmt->execute()) {
-						flash_add('success', 'Member updated successfully.');
-					} else {
-						flash_add('error', 'Failed to update member: ' . htmlspecialchars($conn->error));
-					}
-					$stmt->close();
-				} else {
-					flash_add('error', 'Failed to prepare statement.');
-				}
-			}
-		}
-		respond_redirect('manage_member.php');
-	}
-
-	// Delete
-	if ($action === 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {
-		$member_id = intval($_POST['member_id'] ?? 0);
-		if ($member_id <= 0) {
-			flash_add('error', 'Invalid member ID.');
-		} else {
-			$stmt = $conn->prepare("DELETE FROM Member WHERE member_id=?");
-			if ($stmt) {
-				$stmt->bind_param('i', $member_id);
-				if ($stmt->execute()) {
-					flash_add('success', 'Member deleted.');
-				} else {
-					flash_add('error', 'Failed to delete member: ' . htmlspecialchars($conn->error));
-				}
-				$stmt->close();
-			} else {
-				flash_add('error', 'Failed to prepare statement.');
-			}
-		}
-		respond_redirect('manage_member.php');
-	}
-}
-
-// List, search, pagination
-$members = [];
-$total_members = 0;
-$q = sanitize_string($_GET['q'] ?? '');
-$page = max(1, intval($_GET['page'] ?? 1));
-// per_page: allow 10,25,50,100 or 'all'
-$per_page_raw = sanitize_string($_GET['per_page'] ?? '10');
-$per_page = 10;
-if (in_array($per_page_raw, ['10','25','50','100'], true)) {
-	$per_page = intval($per_page_raw);
-} elseif (strtolower($per_page_raw) === 'all') {
-	$per_page = -1; // sentinel for all
-}
-$total_pages = 1;
-$offset = 0;
-
-if ($db_ok) {
-	// Count total (with optional search)
-	if ($q !== '') {
-		$like = '%' . $q . '%';
-		$stmt = $conn->prepare("SELECT COUNT(*) AS c FROM Member WHERE name LIKE ? OR email LIKE ? OR phone_number LIKE ?");
-		if ($stmt) {
-			$stmt->bind_param('sss', $like, $like, $like);
-			if ($stmt->execute()) {
-				$res = $stmt->get_result()->fetch_assoc();
-				$total_members = intval($res['c'] ?? 0);
-			}
-			$stmt->close();
-		}
-	} else {
-		$res = $conn->query("SELECT COUNT(*) AS c FROM Member");
-		if ($res) {
-			$row = $res->fetch_assoc();
-			$total_members = intval($row['c'] ?? 0);
-		}
-	}
-	if ($per_page > 0) {
-		$total_pages = max(1, (int)ceil($total_members / $per_page));
-		$offset = ($page - 1) * $per_page;
-		if ($offset >= $total_members) {
-			$page = 1;
-			$offset = 0;
-		}
-	} else {
-		// 'all' case
-		$total_pages = 1;
-		$page = 1;
-		$offset = 0;
-	}
-
-	// Fetch paginated list
-	if ($q !== '') {
-		$like = '%' . $q . '%';
-		if ($per_page > 0) {
-			$stmt = $conn->prepare("
-				SELECT member_id, name, email, phone_number, address, register_date
-				FROM Member
-				WHERE name LIKE ? OR email LIKE ? OR phone_number LIKE ?
-				ORDER BY member_id DESC
-				LIMIT ? OFFSET ?
-			");
-			if ($stmt) {
-				$stmt->bind_param('sssii', $like, $like, $like, $per_page, $offset);
-				if ($stmt->execute()) {
-					$result = $stmt->get_result();
-					while ($row = $result->fetch_assoc()) {
-						$members[] = $row;
-					}
-				}
-				$stmt->close();
-			}
-		} else {
-			$stmt = $conn->prepare("
-				SELECT member_id, name, email, phone_number, address, register_date
-				FROM Member
-				WHERE name LIKE ? OR email LIKE ? OR phone_number LIKE ?
-				ORDER BY member_id DESC
-			");
-			if ($stmt) {
-				$stmt->bind_param('sss', $like, $like, $like);
-				if ($stmt->execute()) {
-					$result = $stmt->get_result();
-					while ($row = $result->fetch_assoc()) {
-						$members[] = $row;
-					}
-				}
-				$stmt->close();
-			}
-		}
-	} else {
-		if ($per_page > 0) {
-			$stmt = $conn->prepare("
-				SELECT member_id, name, email, phone_number, address, register_date
-				FROM Member
-				ORDER BY member_id DESC
-				LIMIT ? OFFSET ?
-			");
-			if ($stmt) {
-				$stmt->bind_param('ii', $per_page, $offset);
-				if ($stmt->execute()) {
-					$result = $stmt->get_result();
-					while ($row = $result->fetch_assoc()) {
-						$members[] = $row;
-					}
-				}
-				$stmt->close();
-			}
-		} else {
-			$result = $conn->query("
-				SELECT member_id, name, email, phone_number, address, register_date
-				FROM Member
-				ORDER BY member_id DESC
-			");
-			if ($result) {
-				while ($row = $result->fetch_assoc()) {
-					$members[] = $row;
-				}
-			}
-		}
-	}
-}
-
-$flashes = flash_take_all();
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Manage Members</title>
-	<link rel="stylesheet" href="../assets/css/admin_panel.css">
-	<link rel="stylesheet" href="../assets/css/admin_dashboard.css"> <!-- Overlap, need separte css file -->
-	<link rel="stylesheet" href="../assets/css/manage_member.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Members - Admin Panel</title>
+    <link rel="stylesheet" href="../assets/css/admin_panel.css">
+    <link rel="stylesheet" href="../assets/css/manage_product.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 </head>
 <body>
-	<?php include '../partials/admin_panel.php'; ?>
-	<div class="main-content">
-		<header class="header">
-			<div class="header-left">
-				<h1>Manage Members</h1>
-				<p class="subtitle">View, create, update and delete members.</p>
-			</div>
-			<div class="header-right">
-				<div class="user-info">
-					<span>Welcome, <?php echo htmlspecialchars($_SESSION['admin_name']); ?></span>
-					<div class="avatar">A</div>
-				</div>
-			</div>
-		</header>
 
-		<div class="mm-container">
-			<section class="mm-section" style="margin-top:0;">
-				<div class="mm-stat-grid">
-					<div class="mm-stat-card">
-						<div class="mm-stat-icon">👥</div>
-						<div>
-							<div class="mm-stat-value"><?php echo number_format($total_members); ?></div>
-							<div class="mm-stat-label">Total Members</div>
-						</div>
-					</div>
-					<div class="mm-stat-card">
-						<div class="mm-stat-icon">🆕</div>
-						<div>
-							<div class="mm-stat-value"><?php echo number_format(count($members)); ?></div>
-							<div class="mm-stat-label">On This Page</div>
-						</div>
-					</div>
-				</div>
-			</section>
-			<?php if (!$db_ok): ?>
-				<div class="mm-flash error">Database connection failed. You can still view the page, but data is unavailable.</div>
-			<?php endif; ?>
+<button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
 
-			<?php foreach ($flashes as $msg): ?>
-				<div class="mm-flash <?php echo htmlspecialchars($msg['type']); ?>"><?php echo htmlspecialchars($msg['message']); ?></div>
-			<?php endforeach; ?>
+<div class="admin-container">
 
-			<section class="mm-section">
-				<div class="mm-page-header">
-					<h2>Add New Member</h2>
-				</div>
-				<form method="post" action="manage_member.php">
-					<input type="hidden" name="action" value="create">
-					<div class="mm-form-grid">
-						<div>
-							<label>Name</label>
-							<input class="mm-input" type="text" name="name" required>
-						</div>
-						<div>
-							<label>Email</label>
-							<input class="mm-input" type="email" name="email" required>
-						</div>
-						<div>
-							<label>Password</label>
-							<input class="mm-input" type="password" name="password" required>
-						</div>
-						<div>
-							<label>Phone Number</label>
-							<input class="mm-input" type="text" name="phone_number">
-						</div>
-						<div class="full">
-							<label>Address</label>
-							<textarea class="mm-textarea" name="address" rows="2"></textarea>
-						</div>
-					</div>
-					<div style="margin-top: 12px;">
-						<button class="mm-btn primary" type="submit" <?php echo !$db_ok ? 'disabled' : ''; ?>>Create Member</button>
-						<a class="mm-btn light" href="admin-dashboard.php">Back to Dashboard</a>
-					</div>
-				</form>
-			</section>
+    <?php include '../partials/admin_panel.php'; ?>
 
-			<section class="mm-section">
-				<div class="mm-page-header">
-					<h2>Members</h2>
-					<div class="mm-actions">
-						<input id="mm-search" class="mm-input" type="search" placeholder="Search members..." value="<?php echo htmlspecialchars($q); ?>">
-						<select id="mm-per-page" class="mm-select">
-							<?php
-								$opts = ['10'=>'10 / page','25'=>'25 / page','50'=>'50 / page','100'=>'100 / page','all'=>'All'];
-								foreach ($opts as $key=>$label) {
-									$sel = ((string)$per_page_raw === (string)$key) ? 'selected' : '';
-									echo "<option value=\"{$key}\" {$sel}>{$label}</option>";
-								}
-							?>
-						</select>
-					</div>
-				</div>
-				<div class="mm-table-wrap">
-					<table class="mm-table">
-						<thead>
-							<tr>
-								<th>ID</th>
-								<th>Name</th>
-								<th>Email</th>
-								<th>Phone</th>
-								<th>Address</th>
-								<th>Registered</th>
-								<th>Actions</th>
-							</tr>
-						</thead>
-						<tbody>
-						<?php if (!$db_ok): ?>
-							<tr><td colspan="7" style="text-align:center;">Data unavailable</td></tr>
-						<?php elseif (empty($members)): ?>
-							<tr><td colspan="7" style="text-align:center;">No members found</td></tr>
-						<?php else: ?>
-							<?php foreach ($members as $m): ?>
-							<tr>
-								<td><?php echo (int)$m['member_id']; ?></td>
-								<td>
-									<div class="mm-user">
-										<div class="mm-avatar"><?php echo strtoupper(substr($m['name'], 0, 1)); ?></div>
-										<div class="mm-user-meta">
-											<div class="mm-user-name"><?php echo htmlspecialchars($m['name']); ?></div>
-										</div>
-									</div>
-								</td>
-								<td><?php echo htmlspecialchars($m['email']); ?></td>
-								<td><?php echo htmlspecialchars($m['phone_number']); ?></td>
-								<td><?php echo htmlspecialchars($m['address']); ?></td>
-								<td><?php echo htmlspecialchars(date('Y-m-d H:i', strtotime($m['register_date']))); ?></td>
-								<td>
-									<div class="mm-actions">
-										<button class="mm-btn light" type="button" onclick="mmOpenEdit({ id: <?php echo (int)$m['member_id']; ?>, name: '<?php echo htmlspecialchars(addslashes($m['name'])); ?>', email: '<?php echo htmlspecialchars(addslashes($m['email'])); ?>', phone: '<?php echo htmlspecialchars(addslashes($m['phone_number'])); ?>', address: `<?php echo htmlspecialchars($m['address']); ?>` })">Edit</button>
-										<form method="post" action="manage_member.php" data-confirm="Delete this member?">
-											<input type="hidden" name="action" value="delete">
-											<input type="hidden" name="member_id" value="<?php echo (int)$m['member_id']; ?>">
-											<button class="mm-btn danger" type="submit" <?php echo !$db_ok ? 'disabled' : ''; ?>>Delete</button>
-										</form>
-									</div>
-								</td>
-							</tr>
-							<?php endforeach; ?>
-						<?php endif; ?>
-						</tbody>
-					</table>
-				</div>
-				<?php if ($db_ok): ?>
-				<div class="mm-pagination">
-					<?php
-						$qs_parts = [];
-						if ($q !== '') $qs_parts[] = 'q=' . urlencode($q);
-						$qs_parts[] = 'per_page=' . urlencode($per_page_raw);
-						$qs = $qs_parts ? '&' . implode('&', $qs_parts) : '';
-						$prev = max(1, $page - 1);
-						$next = min($total_pages, $page + 1);
-					?>
-					<a class="mm-page-link <?php echo $page <= 1 ? 'disabled' : ''; ?>" href="manage_member.php?page=<?php echo $prev . $qs; ?>">Prev</a>
-					<span class="mm-page-status">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
-					<a class="mm-page-link <?php echo $page >= $total_pages ? 'disabled' : ''; ?>" href="manage_member.php?page=<?php echo $next . $qs; ?>">Next</a>
-				</div>
-				<?php endif; ?>
-			</section>
-		</div>
-	</div>
+    <div class="main-content">
 
-	<!-- Simple Edit Modal -->
-	<div id="editModal" class="mm-modal-overlay">
-		<div class="mm-modal">
-			<h3>Edit Member</h3>
-			<form method="post" action="manage_member.php">
-				<input type="hidden" name="action" value="update">
-				<input type="hidden" id="edit_member_id" name="member_id" value="">
-				<div class="mm-form-grid">
-					<div>
-						<label>Name</label>
-						<input class="mm-input" id="edit_name" type="text" name="name" required>
-					</div>
-					<div>
-						<label>Email</label>
-						<input class="mm-input" id="edit_email" type="email" name="email" required>
-					</div>
-					<div>
-						<label>New Password (leave blank to keep)</label>
-						<input class="mm-input" id="edit_password" type="password" name="password">
-					</div>
-					<div>
-						<label>Phone Number</label>
-						<input class="mm-input" id="edit_phone" type="text" name="phone_number">
-					</div>
-					<div class="full">
-						<label>Address</label>
-						<textarea class="mm-textarea" id="edit_address" name="address" rows="2"></textarea>
-					</div>
-				</div>
-				<div class="mm-actions" style="margin-top:12px;">
-					<button class="mm-btn primary" type="submit" <?php echo !$db_ok ? 'disabled' : ''; ?>>Save</button>
-					<button class="mm-btn light" type="button" onclick="mmCloseEdit()">Cancel</button>
-				</div>
-			</form>
-		</div>
-	</div>
+        <div class="header">
+            <h1>Manage Members</h1>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
+        </div>
 
-	<script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
-	<script src="assets/js/manage_member.js"></script>
+        <?php if (!empty($message)): ?>
+            <div class="alert alert-<?php echo $message_type; ?>">
+                <?php echo $message; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Search Bar -->
+        <div class="filter-bar">
+            <form method="GET" style="display:flex; gap:15px; flex:1;">
+                <input type="text" name="search" placeholder="Search members..." 
+                       value="<?php echo htmlspecialchars($search); ?>">
+                <button type="submit" class="btn btn-primary">Search</button>
+                <a href="manage_member.php" class="btn" style="background:#cbd5e0;">Clear</a>
+            </form>
+        </div>
+
+        <!-- Members Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Register Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if ($members->num_rows > 0): ?>
+                        <?php while ($m = $members->fetch_assoc()): ?>
+                        <tr>
+                            <td><?= $m['member_id'] ?></td>
+                            <td><?= htmlspecialchars($m['name']) ?></td>
+                            <td><?= htmlspecialchars($m['email']) ?></td>
+                            <td><?= htmlspecialchars($m['phone_number']) ?></td>
+                            <td><?= htmlspecialchars($m['address']) ?></td>
+                            <td><?= $m['register_date'] ?></td>
+
+                            <td>
+                                <button class="btn btn-warning btn-sm"
+                                    onclick='openEditModal(<?= json_encode($m) ?>)'>
+                                    Edit
+                                </button>
+                                <button class="btn btn-danger btn-sm"
+                                    onclick="confirmDelete(<?= $m['member_id'] ?>)">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    <?php else: ?>
+                        <tr><td colspan="7" style="text-align:center;padding:40px;">No members found.</td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+    </div>
+</div>
+
+<!-- CREATE MEMBER MODAL -->
+<div id="createModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Add Member</h2>
+            <button class="close" onclick="closeModal('createModal')">&times;</button>
+        </div>
+
+        <form method="POST">
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" name="phone">
+            </div>
+
+            <div class="form-group">
+                <label>Address</label>
+                <textarea name="address"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Password *</label>
+                <input type="password" name="password" required minlength="6">
+            </div>
+
+            <button type="submit" name="create_member" class="btn btn-primary">Create</button>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT MEMBER MODAL -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Edit Member</h2>
+            <button class="close" onclick="closeModal('editModal')">&times;</button>
+        </div>
+
+        <form method="POST">
+            <input type="hidden" name="member_id" id="edit_member_id">
+
+            <div class="form-group">
+                <label>Name *</label>
+                <input type="text" name="name" id="edit_name" required>
+            </div>
+
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" name="email" id="edit_email" required>
+            </div>
+
+            <div class="form-group">
+                <label>Phone</label>
+                <input type="text" name="phone" id="edit_phone">
+            </div>
+
+            <div class="form-group">
+                <label>Address</label>
+                <textarea name="address" id="edit_address"></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>New Password (optional)</label>
+                <input type="password" name="new_password" id="edit_password" placeholder="Leave blank to keep old password">
+            </div>
+
+            <button type="submit" name="update_member" class="btn btn-success">Update</button>
+        </form>
+    </div>
+</div>
+
+<!-- DELETE FORM -->
+<form method="POST" id="deleteForm" style="display:none;">
+    <input type="hidden" name="member_id" id="delete_member_id">
+    <input type="hidden" name="delete_member" value="1">
+</form>
+
+<script>
+function openCreateModal() {
+    document.getElementById('createModal').style.display = 'block';
+}
+
+function openEditModal(data) {
+    document.getElementById('edit_member_id').value = data.member_id;
+    document.getElementById('edit_name').value = data.name;
+    document.getElementById('edit_email').value = data.email;
+    document.getElementById('edit_phone').value = data.phone_number;
+    document.getElementById('edit_address').value = data.address;
+
+    document.getElementById('editModal').style.display = 'block';
+}
+
+function confirmDelete(id) {
+    if (confirm("Are you sure you want to delete this member?")) {
+        document.getElementById('delete_member_id').value = id;
+        document.getElementById('deleteForm').submit();
+    }
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+</script>
+
 </body>
 </html>
-<?php
-if ($db_ok && $conn) {
-	$conn->close();
-}
-?>
 
+<?php $conn->close(); ?>

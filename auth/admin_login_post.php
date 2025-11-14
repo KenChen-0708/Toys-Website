@@ -33,13 +33,7 @@ if (!$errors) {
   if ($admin) {
     $hash = $admin['password'];
 
-    // If your admin passwords are hashed with password_hash:
-    // if (password_get_info($hash)['algo'] !== 0) {
-    //   $valid = password_verify($password, $hash);
-    // } else {
-      // Legacy plaintext fallback (if you have old seed data)
-      $valid = hash_equals($hash, $password);
-    // }
+    $valid = password_verify($password, $hash);
   }
 
   if ($valid) {
