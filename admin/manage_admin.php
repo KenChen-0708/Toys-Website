@@ -19,7 +19,45 @@ $message_type = '';
 // Current admin ID from session
 $currentAdminId = $_SESSION['admin']['admin_id'] ?? 0;
 
-// Handle form submission
+/* ========== SORTING SETUP ========== */
+$allowedSortColumns = ['admin_id', 'name', 'email'];   // columns you allow sorting
+$sort = isset($_GET['sort']) ? $_GET['sort'] : 'admin_id';
+$order = isset($_GET['order']) ? strtolower($_GET['order']) : 'asc';
+
+// Validate sort column
+if (!in_array($sort, $allowedSortColumns)) {
+    $sort = 'admin_id';
+}
+
+// Normalize order
+$order = ($order === 'desc') ? 'DESC' : 'ASC';  // only ASC or DESC
+
+// Helper function to build sort link with arrow
+function sort_link($column, $label, $currentSort, $currentOrder, $search)
+{
+    // toggle order if clicking same column
+    $nextOrder = 'asc';
+    if ($currentSort === $column && $currentOrder === 'ASC') {
+        $nextOrder = 'desc';
+    }
+
+    // Arrow display
+    $arrow = '';
+    if ($currentSort === $column) {
+        $arrow = ($currentOrder === 'ASC') ? ' ▲' : ' ▼';
+    }
+
+    // keep search value
+    $query = http_build_query([
+        'sort'   => $column,
+        'order'  => $nextOrder,
+        'search' => $search,
+    ]);
+
+    return '<a href="?' . htmlspecialchars($query) . '">' . htmlspecialchars($label) . $arrow . '</a>';
+}
+
+/* ========== HANDLE FORM SUBMISSION ========== */
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** CREATE ADMIN **/
@@ -80,14 +118,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// READ admins with search
+/* ========== READ admins with search & sort ========== */
 $search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
 
 $sql = "SELECT * FROM Admin WHERE 1=1";
 if (!empty($search)) {
     $sql .= " AND (name LIKE '%$search%' OR email LIKE '%$search%')";
 }
-$sql .= " ORDER BY admin_id DESC";
+$sql .= " ORDER BY $sort $order";   // dynamic ORDER BY
 $admins = $conn->query($sql);
 
 ?>
@@ -101,6 +139,27 @@ $admins = $conn->query($sql);
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
     <link rel="stylesheet" href="../assets/css/manage_product.css">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        th.sortable::after {
+            content: '';
+            margin-left: 4px;
+            font-size: 0.7rem;
+        }
+
+        th.sortable[data-order="asc"]::after {
+            content: '▲';
+        }
+
+        th.sortable[data-order="desc"]::after {
+            content: '▼';
+        }
+
+    </style>
 </head>
 <body>
 
@@ -133,16 +192,17 @@ $admins = $conn->query($sql);
         <!-- Admins Table -->
         <div class="table-container">
             <table>
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
+               <thead>
+    <tr>
+        <th class="sortable" data-column="0" data-type="number">ID</th>
+        <th class="sortable" data-column="1" data-type="string">Name</th>
+        <th class="sortable" data-column="2" data-type="string">Email</th>
+        <th>Actions</th>
+    </tr>
+</thead>
+
                 <tbody>
-                    <?php if ($admins->num_rows > 0): ?>
+                    <?php if ($admins && $admins->num_rows > 0): ?>
                         <?php while ($a = $admins->fetch_assoc()): ?>
                         <tr>
                             <td><?= $a['admin_id'] ?></td>
@@ -251,6 +311,78 @@ function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
 }
 </script>
+
+<script>
+function openCreateModal() {
+    document.getElementById('createModal').style.display = 'block';
+}
+function openEditModal(data) {
+    document.getElementById('edit_admin_id').value = data.admin_id;
+    document.getElementById('edit_name').value = data.name;
+    document.getElementById('edit_email').value = data.email;
+    document.getElementById('editModal').style.display = 'block';
+}
+function confirmDelete(id) {
+    if (confirm("Are you sure you want to delete this admin?")) {
+        document.getElementById('delete_admin_id').value = id;
+        document.getElementById('deleteForm').submit();
+    }
+}
+function closeModal(modalId) {
+    document.getElementById(modalId).style.display = 'none';
+}
+
+/* ===== TABLE SORTING (CLIENT-SIDE) ===== */
+document.addEventListener('DOMContentLoaded', function () {
+    const headers = document.querySelectorAll('th.sortable');
+
+    headers.forEach(function (header) {
+        header.addEventListener('click', function () {
+            const table   = header.closest('table');
+            const tbody   = table.querySelector('tbody');
+            const colIdx  = parseInt(header.getAttribute('data-column'), 10);
+            const type    = header.getAttribute('data-type') || 'string';
+
+            // toggle sort direction
+            const currentOrder = header.getAttribute('data-order') || 'asc';
+            const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+            header.setAttribute('data-order', newOrder);
+
+            // remove sort class from other headers
+            headers.forEach(h => {
+                if (h !== header) h.removeAttribute('data-order');
+            });
+
+            // Get rows
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+
+            rows.sort(function (rowA, rowB) {
+                const cellA = rowA.children[colIdx].innerText.trim();
+                const cellB = rowB.children[colIdx].innerText.trim();
+
+                let valA = cellA;
+                let valB = cellB;
+
+                if (type === 'number') {
+                    valA = parseFloat(cellA) || 0;
+                    valB = parseFloat(cellB) || 0;
+                } else {
+                    valA = cellA.toLowerCase();
+                    valB = cellB.toLowerCase();
+                }
+
+                if (valA < valB) return newOrder === 'asc' ? -1 : 1;
+                if (valA > valB) return newOrder === 'asc' ?  1 : -1;
+                return 0;
+            });
+
+            // Re-attach sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
+</script>
+
 
 </body>
 </html>

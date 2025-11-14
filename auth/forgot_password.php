@@ -35,7 +35,7 @@ unset($_SESSION['errors'], $_SESSION['success']);
 
       <?php if ($success): ?>
         <div class="alert alert--success">
-          <?= htmlspecialchars($success) ?>
+          <?= $success ?>
         </div>
       <?php endif; ?>
 
