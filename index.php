@@ -1,8 +1,25 @@
 <?php 
   $title = "Home";
-  include 'partials/header.php';
-
 ?>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--=============== FLATICON ===============-->
+    <link
+      rel="stylesheet"
+      href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css"
+    />
+
+    <!--=============== CSS ===============-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+
+    <title><?= htmlspecialchars($title) ?></title>
+  </head>
+  <body>
+<?php include 'partials/header.php'; ?>
 
 <!--=============== MAIN ===============-->
 <main class="main">
@@ -1821,29 +1838,6 @@
     updateButtons();
   })();
 </script>
-    <!-- Chatbot Widget (use this for any page)-->
-    <link rel="stylesheet" href="../assets/css/chatbot.css" />
-  </head>
-  <body>
-    <div class="chat-widget" id="chat-widget">
-      <div class="chat-header">ToyWorld Assistant 🎁</div>
-      <div class="chat-body" id="chat-body"></div>
-      <div class="chat-input-area">
-        <input type="text" id="message" placeholder="Ask something..." />
-        <button onclick="sendMessage()">➤</button>
-      </div>
-    </div>
-
-    <button class="chat-launch-btn" onclick="toggleChat()">
-      <span class="chat-icon">💬</span>
-    </button>
-
-    <script src="../assets/js/chatbot.js"></script>
-    </body>
-    <!------------------------------------------->
-    
-</body>
-</html>
 
 
 <?php include 'partials/footer.php'; ?>
