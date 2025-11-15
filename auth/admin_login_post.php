@@ -42,8 +42,8 @@ if (strlen($password) < 6) {
 }
 
 if (!$errors) {
-  // Look up by Admin.name (your username column)
-  $stmt = $conn->prepare("SELECT admin_id, name, email, password FROM Admin WHERE BINARY name = ?");
+  // Look up by Admin.username (your username column)
+  $stmt = $conn->prepare("SELECT admin_id, username, email, password FROM Admin WHERE BINARY username = ?");
   $stmt->bind_param('s', $username);
   $stmt->execute();
   $admin = $stmt->get_result()->fetch_assoc();
@@ -57,7 +57,7 @@ if (!$errors) {
     // Store admin session separately from member
     $_SESSION['admin'] = [
       'id'    => $admin['admin_id'],
-      'name'  => $admin['name'],
+      'username'  => $admin['username'],
       'email' => $admin['email'],
     ];
 
