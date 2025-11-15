@@ -3,7 +3,7 @@
 session_start();
 require_once '../helper/connection.php';
 require_once '../helper/auth.php';
-//require_admin();
+require_admin();
 
 if (!$db_ok || !$conn) {
     die("Connection failed: Unable to connect to database");
