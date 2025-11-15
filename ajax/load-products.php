@@ -10,7 +10,7 @@ require_once '../helper/pdo_connection.php';
 try {
     // Get filter parameters
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-    $per_page = 20;
+    $per_page = 21; // Changed to 21 products per page
     $offset = ($page - 1) * $per_page;
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
@@ -22,6 +22,9 @@ try {
     // Build query conditions
     $where_conditions = [];
     $params = [];
+
+    // Only show available products
+    $where_conditions[] = "p.status = 'Available'";
 
     if (!empty($search)) {
         $where_conditions[] = "(p.name LIKE :search_name OR p.description LIKE :search_desc)";
@@ -44,7 +47,7 @@ try {
         $params[':max_price'] = $max_price;
     }
 
-    $where_sql = !empty($where_conditions) ? 'WHERE ' . implode(' AND ', $where_conditions) : '';
+    $where_sql = 'WHERE ' . implode(' AND ', $where_conditions);
 
     // Determine sorting
     $order_by = 'p.product_id DESC';
@@ -68,17 +71,21 @@ try {
     }
 
     // Get total count
-    $count_query = "SELECT COUNT(*) as total FROM Product p $where_sql";
+    $count_query = "SELECT COUNT(DISTINCT p.product_id) as total FROM Product p LEFT JOIN Review r ON p.product_id = r.product_id $where_sql";
     $count_stmt = $pdo->prepare($count_query);
     $count_stmt->execute($params);
     $total_products = $count_stmt->fetch()['total'];
     $total_pages = ceil($total_products / $per_page);
 
-    // Get products
+    // Get products with dynamic ratings
     $query = "SELECT p.*, 
-              (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
+              (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image,
+              COALESCE(AVG(r.rating), 0) as average_rating,
+              COUNT(r.rating) as review_count
               FROM Product p 
+              LEFT JOIN Review r ON p.product_id = r.product_id
               $where_sql
+              GROUP BY p.product_id
               ORDER BY $order_by
               LIMIT :limit OFFSET :offset";
 

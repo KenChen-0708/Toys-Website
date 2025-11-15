@@ -1156,7 +1156,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
 
         <div class="product-price-section">
           <div class="price-wrapper">
-            <span class="current-price">$<?= number_format($product['price'], 2) ?></span>
+            <span class="current-price">RM <?= number_format($product['price'], 2) ?></span>
           </div>
           <?php if ($product['status'] == 'Available'): ?>
             <span class="stock-badge in-stock">
@@ -1189,7 +1189,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
             </div>
             <div class="feature-text">
               <strong>Free Shipping</strong>
-              On orders over $50
+              On orders over RM15
             </div>
           </div>
         </div>
@@ -1294,21 +1294,25 @@ $title = htmlspecialchars($product['name']) . " — Details";
     </div>
 
     <!-- Related Products -->
+    <?php
+    // Fetch related products from same category (only available products)
+    $stmt = $pdo->prepare("SELECT p.*, 
+                          (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
+                          FROM Product p 
+                          WHERE p.category = ? AND p.product_id != ? AND p.status = 'Available'
+                          LIMIT 4");
+    $stmt->execute([$product['category'], $product_id]);
+    $related_products = $stmt->fetchAll();
+
+    // Only display section if there are related products
+    if (!empty($related_products)):
+    ?>
     <div class="related-section">
       <h2 class="related-title">Related Products</h2>
       <div class="products-grid">
         <?php
-        $stmt = $pdo->prepare("SELECT p.*, 
-                              (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
-                              FROM Product p 
-                              WHERE p.category = ? AND p.product_id != ? 
-                              LIMIT 4");
-        $stmt->execute([$product['category'], $product_id]);
-        $related_products = $stmt->fetchAll();
-
         foreach ($related_products as $related):
           $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
-          $isOutOfStock = $related['status'] === 'Out of Stock';
         ?>
           <article class="product-card">
             <div class="product-image-wrapper">
@@ -1320,10 +1324,6 @@ $title = htmlspecialchars($product['name']) . " — Details";
                   alt="<?= htmlspecialchars($related['name']) ?>"
                   class="product-image secondary" />
               </a>
-
-              <?php if ($isOutOfStock): ?>
-                <span class="product-badge-card">Sold Out</span>
-              <?php endif; ?>
 
               <div class="product-actions">
                 <button class="action-btn" data-product-id="<?= $related['product_id'] ?>">
@@ -1352,8 +1352,8 @@ $title = htmlspecialchars($product['name']) . " — Details";
               </div>
 
               <div class="product-footer">
-                <span class="product-price">$<?= number_format($related['price'], 2) ?></span>
-                <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>" <?= $isOutOfStock ? 'disabled' : '' ?>>
+                <span class="product-price">RM <?= number_format($related['price'], 2) ?></span>
+                <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>">
                   <i class="fi fi-rs-shopping-cart-add"></i>
                 </button>
               </div>
@@ -1362,6 +1362,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         <?php endforeach; ?>
       </div>
     </div>
+    <?php endif; ?>
   </main>
 
   <script>

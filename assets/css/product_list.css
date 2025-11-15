@@ -10,12 +10,12 @@
 }
 
 :root {
-  --primary-color: hsl(176, 88%, 27%);
-  --primary-dark: hsl(176, 88%, 20%);
-  --first-color-alt: hsl(129, 44%, 94%);
+  --primary-color: #0891b2;
+  --primary-dark: #0e7490;
+  --first-color-alt: #e0f2fe;
   --text-dark: #1f2937;
   --text-light: #6b7280;
-  --border-color: hsl(129, 36%, 85%);
+  --border-color: rgba(71, 71, 71, 0.2);
   --bg-light: #f9fafb;
   --white: #ffffff;
   --body-color: #ffffff;
@@ -289,7 +289,7 @@ body {
 
 .product-count {
   font-weight: 600;
-  color: var(--primary-color);
+  color: var(--text-dark);
 }
 
 .header-actions {
@@ -756,10 +756,17 @@ body {
 
 .product-rating {
   display: flex;
+  align-items: center;
   gap: 0.25rem;
   margin-bottom: 1rem;
   color: #fbbf24;
   font-size: 0.875rem;
+}
+
+.rating-count {
+  color: var(--text-light);
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
 }
 
 .product-footer {
@@ -783,7 +790,7 @@ body {
   background: var(--first-color-alt);
   border: 1px solid var(--border-color);
   border-radius: 50%;
-  color: var(--text-dark);
+  color: var(--primary-color);
   font-size: 1.125rem;
   cursor: pointer;
   transition: var(--transition);
@@ -873,7 +880,7 @@ body {
 }
 
 .pagination-number.active {
-  background: var(--primary-color);
+  background: var(--primary-dark);
   color: var(--white);
   border-color: var(--primary-color);
 }

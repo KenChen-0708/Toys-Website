@@ -179,10 +179,23 @@ $(document).ready(function() {
     let html = '';
     products.forEach(product => {
       const hoverImage = product.first_sub_image || product.main_image_path;
-      const isOutOfStock = product.status === 'Out of Stock';
+      const averageRating = parseFloat(product.average_rating) || 0;
+      const reviewCount = parseInt(product.review_count) || 0;
+      
+      // Generate dynamic star rating
+      let starsHtml = '';
+      for (let i = 1; i <= 5; i++) {
+        if (i <= Math.floor(averageRating)) {
+          starsHtml += '<i class="fi fi-ss-star"></i>';
+        } else if (i - 0.5 <= averageRating) {
+          starsHtml += '<i class="fi fi-rs-star-half"></i>';
+        } else {
+          starsHtml += '<i class="fi fi-rs-star"></i>';
+        }
+      }
       
       html += `
-        <article class="product-card ${isOutOfStock ? 'out-of-stock' : ''}">
+        <article class="product-card">
           <div class="product-image-wrapper">
             <a href="product_details.php?id=${product.product_id}" class="product-link">
               <img src="${escapeHtml(product.main_image_path)}" 
@@ -194,8 +207,6 @@ $(document).ready(function() {
                    class="product-image secondary" 
                    loading="lazy" />
             </a>
-            
-            ${isOutOfStock ? '<span class="product-badge badge-sold">Sold Out</span>' : ''}
             
             <div class="product-actions">
               <button class="action-btn wishlist-btn" data-product-id="${product.product_id}" aria-label="Add to Wishlist">
@@ -216,16 +227,13 @@ $(document).ready(function() {
             </h3>
             
             <div class="product-rating">
-              <i class="fi fi-ss-star"></i>
-              <i class="fi fi-ss-star"></i>
-              <i class="fi fi-ss-star"></i>
-              <i class="fi fi-ss-star"></i>
-              <i class="fi fi-rs-star"></i>
+              ${starsHtml}
+              ${reviewCount > 0 ? `<span class="rating-count">(${reviewCount})</span>` : ''}
             </div>
             
             <div class="product-footer">
-              <span class="product-price">${parseFloat(product.price).toFixed(2)}</span>
-              <button class="add-to-cart-btn" data-product-id="${product.product_id}" aria-label="Add to Cart" ${isOutOfStock ? 'disabled' : ''}>
+              <span class="product-price">RM ${parseFloat(product.price).toFixed(2)}</span>
+              <button class="add-to-cart-btn" data-product-id="${product.product_id}" aria-label="Add to Cart">
                 <i class="fi fi-rs-shopping-cart-add"></i>
               </button>
             </div>
