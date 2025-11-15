@@ -24,8 +24,9 @@ try {
     $params = [];
 
     if (!empty($search)) {
-        $where_conditions[] = "(p.name LIKE :search OR p.description LIKE :search)";
-        $params[':search'] = '%' . $search . '%';
+        $where_conditions[] = "(p.name LIKE :search_name OR p.description LIKE :search_desc)";
+        $params[':search_name'] = '%' . $search . '%';
+        $params[':search_desc'] = '%' . $search . '%';
     }
 
     if (!empty($category)) {
@@ -120,6 +121,7 @@ try {
     ]);
 
 } catch (Exception $e) {
+    
     echo json_encode([
         'success' => false,
         'message' => 'An error occurred while loading products',

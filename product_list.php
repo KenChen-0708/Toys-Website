@@ -1343,6 +1343,19 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
         addToCompare(productId, $btn);
       });
 
+      // Reset filters button (delegated - for dynamically created button in empty state)
+      $(document).on('click', '#resetFilters', function(e) {
+        e.preventDefault();
+        $('#searchInput').val('');
+        $('#categorySelect').val('');
+        $('#minPrice').val('');
+        $('#maxPrice').val('');
+        $('#sortSelect').val('newest');
+        currentPage = 1;
+        loadProducts();
+        closeMobileSidebar();
+      });
+
       /**
        * Close mobile sidebar
        */
