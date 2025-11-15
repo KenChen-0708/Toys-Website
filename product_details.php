@@ -1,7 +1,15 @@
 <?php
-require_once 'helper/connection.php';
+session_start();
+require_once 'helper/pdo_connection.php';
+require_once 'helper/auth.php';
 
-
+function user_initials($name)
+{
+  $parts = preg_split('/\s+/', trim((string)$name));
+  $first = mb_substr($parts[0] ?? '', 0, 1);
+  $second = mb_substr($parts[1] ?? '', 0, 1);
+  return mb_strtoupper($first . $second ?: $first);
+}
 
 // Get product ID from URL
 $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
@@ -10,328 +18,1391 @@ $product_id = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $product = null;
 $sub_images = [];
 
-if ($db_ok && $conn && $product_id > 0) {
-  // Fetch main product details
-  $stmt = $conn->prepare("SELECT * FROM Product WHERE product_id = ?");
-  $stmt->bind_param("i", $product_id);
-  $stmt->execute();
-  $result = $stmt->get_result();
-  $product = $result->fetch_assoc();
-  $stmt->close();
+if ($product_id > 0) {
+  $stmt = $pdo->prepare("SELECT * FROM Product WHERE product_id = ?");
+  $stmt->execute([$product_id]);
+  $product = $stmt->fetch();
 
-  // Fetch sub images
   if ($product) {
-    $stmt = $conn->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = ?");
-    $stmt->bind_param("i", $product_id);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    while ($row = $result->fetch_assoc()) {
-      $sub_images[] = $row['sub_image_path'];
-    }
-    $stmt->close();
+    $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = ?");
+    $stmt->execute([$product_id]);
+    $sub_images = $stmt->fetchAll(PDO::FETCH_COLUMN);
   }
 }
 
-// Redirect if product not found
 if (!$product) {
-  header("Location: shop.php");
+  header("Location: product_list.php");
   exit();
+}
+
+// Fetch reviews
+$reviews = [];
+$review_count = 0;
+$average_rating = 0;
+try {
+  $stmt = $pdo->prepare("SELECT r.*, m.username as member_name 
+                         FROM Review r 
+                         JOIN Member m ON r.member_id = m.member_id 
+                         WHERE r.product_id = ? 
+                         ORDER BY r.created_date DESC");
+  $stmt->execute([$product_id]);
+  $reviews = $stmt->fetchAll();
+  $review_count = count($reviews);
+  
+  if ($review_count > 0) {
+    $total_rating = array_sum(array_column($reviews, 'rating'));
+    $average_rating = round($total_rating / $review_count, 1);
+  }
+} catch (PDOException $e) {
+  $reviews = [];
+  $review_count = 0;
 }
 
 $title = htmlspecialchars($product['name']) . " — Details";
 ?>
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-solid-straight/css/uicons-solid-straight.css" />
+  <title><?= htmlspecialchars($title) ?></title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
-    <!--=============== FLATICON ===============-->
-    <link
-      rel="stylesheet"
-      href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css"
-    />
+    :root {
+      --primary: #0891b2;
+      --primary-dark: #0e7490;
+      --primary-light: #e0f2fe;
+      --success: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --dark: #1e293b;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --white: #ffffff;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+      --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+    }
 
-    <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="/assets/css/styles.css" />
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--dark);
+      background: var(--gray-50);
+      line-height: 1.6;
+    }
 
-    <title><?= htmlspecialchars($title) ?></title>
-  </head>
-  <body>
-<?php include 'partials/header.php'; ?>
+    /* Header Styles */
+    .header {
+      background: var(--white);
+      box-shadow: var(--shadow-sm);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
 
-<main class="main">
-  <!--=============== BREADCRUMB ===============-->
-  <section class="breadcrumb">
-    <ul class="breadcrumb__list flex container">
-      <li><a href="index.php" class="breadcrumb__link">Home</a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><a href="shop.php" class="breadcrumb__link"><?php echo htmlspecialchars($product['category']); ?></a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><span class="breadcrumb__link"><?php echo htmlspecialchars($product['name']); ?></span></li>
-    </ul>
-  </section>
+    .header__top {
+      background: var(--dark);
+      color: var(--white);
+      padding: 0.75rem 0;
+      font-size: 0.875rem;
+    }
 
-  <!--=============== DETAILS ===============-->
-  <section class="details section--lg">
-    <div class="details__container container grid">
-      <div class="details__group">
-        <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__img" />
-        <div class="details__small-images grid">
+    .header__container {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .header__contact {
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    .header__top-action {
+      color: var(--white);
+      text-decoration: none;
+      margin-left: 1rem;
+      transition: color 0.3s;
+    }
+
+    .header__top-action:hover {
+      color: var(--primary);
+    }
+
+    .header__user-profile {
+      position: relative;
+    }
+
+    .avatar-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .avatar-circle {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: var(--white);
+    }
+
+    .profile-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 0.5rem);
+      right: 0;
+      background: var(--white);
+      border-radius: 0.5rem;
+      box-shadow: var(--shadow-xl);
+      min-width: 220px;
+      overflow: hidden;
+    }
+
+    .profile-menu__header {
+      padding: 1rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .profile-menu a,
+    .profile-menu button {
+      display: block;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      text-decoration: none;
+      color: var(--dark);
+      border: none;
+      background: none;
+      text-align: left;
+      cursor: pointer;
+      transition: background 0.2s;
+      font-size: 0.875rem;
+    }
+
+    .profile-menu a:hover,
+    .profile-menu button:hover {
+      background: var(--gray-50);
+    }
+
+    .nav {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 2rem;
+    }
+
+    .nav__logo-img {
+      height: 40px;
+    }
+
+    .nav__menu {
+      display: flex;
+      align-items: center;
+      gap: 2rem;
+      flex: 1;
+    }
+
+    .nav__list {
+      display: flex;
+      list-style: none;
+      gap: 2rem;
+    }
+
+    .nav__link {
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 500;
+      transition: color 0.3s;
+    }
+
+    .nav__link:hover,
+    .nav__link.active-link {
+      color: var(--primary);
+    }
+
+    .header__search {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex: 1;
+      max-width: 400px;
+    }
+
+    .form__input {
+      flex: 1;
+      padding: 0.625rem 1rem;
+      border: 1px solid var(--gray-300);
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+    }
+
+    .search__btn {
+      background: var(--primary);
+      border: none;
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .search__btn:hover {
+      background: var(--primary-dark);
+    }
+
+    .search__btn img {
+      width: 20px;
+      height: 20px;
+      filter: brightness(0) invert(1);
+    }
+
+    .header__user-actions {
+      display: flex;
+      gap: 1rem;
+    }
+
+    .header__action-btn {
+      position: relative;
+      text-decoration: none;
+    }
+
+    .header__action-btn img {
+      width: 24px;
+      height: 24px;
+    }
+
+    .header__action-btn .count {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: var(--primary);
+      color: var(--white);
+      font-size: 0.75rem;
+      font-weight: 600;
+      min-width: 20px;
+      height: 20px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 0.375rem;
+    }
+
+    /* Breadcrumb - removed */
+
+    /* Main Content */
+    .main {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 2rem 1.5rem;
+    }
+
+    /* Product Section */
+    .product-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3rem;
+      margin-bottom: 3rem;
+    }
+
+    /* Image Gallery */
+    .gallery {
+      position: sticky;
+      top: 100px;
+      height: fit-content;
+    }
+
+    .gallery__main {
+      background: var(--white);
+      border-radius: 1rem;
+      overflow: hidden;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+    }
+
+    .gallery__main-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+    }
+
+    .gallery__thumbs {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+    }
+
+    .gallery__thumb {
+      background: var(--white);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+
+    .gallery__thumb:hover {
+      border-color: var(--primary);
+      transform: translateY(-2px);
+    }
+
+    .gallery__thumb-img {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+    }
+
+    /* Product Info */
+    .product-info {
+      background: var(--white);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+    }
+
+    .product-badge {
+      display: inline-block;
+      padding: 0.375rem 0.875rem;
+      background: var(--primary-light);
+      color: var(--primary-dark);
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 1rem;
+    }
+
+    .product-title {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .product-rating-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .rating-stars {
+      display: flex;
+      gap: 0.25rem;
+      color: #fbbf24;
+    }
+
+    .rating-text {
+      color: var(--gray-600);
+      font-size: 0.875rem;
+    }
+
+    .rating-number {
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    .product-price-section {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      background: var(--gray-50);
+      border-radius: 0.75rem;
+    }
+
+    .price-wrapper {
+      display: flex;
+      align-items: baseline;
+      gap: 0.75rem;
+    }
+
+    .current-price {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .stock-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+    }
+
+    .stock-badge.in-stock {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .stock-badge.out-of-stock {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .product-description {
+      color: var(--gray-600);
+      line-height: 1.8;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .product-features {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem;
+      background: var(--gray-50);
+      border-radius: 0.5rem;
+    }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border-radius: 0.5rem;
+      color: var(--primary);
+      font-size: 1.25rem;
+    }
+
+    .feature-text {
+      flex: 1;
+      font-size: 0.875rem;
+      color: var(--gray-600);
+    }
+
+    .feature-text strong {
+      color: var(--dark);
+      display: block;
+      margin-bottom: 0.125rem;
+    }
+
+    .quantity-section {
+      margin-bottom: 1.5rem;
+    }
+
+    .section-label {
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.75rem;
+      display: block;
+      font-size: 0.875rem;
+    }
+
+    .quantity-selector {
+      display: inline-flex;
+      align-items: center;
+      border: 2px solid var(--gray-200);
+      border-radius: 0.5rem;
+      overflow: hidden;
+      background: var(--white);
+    }
+
+    .qty-btn {
+      width: 44px;
+      height: 44px;
+      border: none;
+      background: var(--gray-50);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--dark);
+      transition: all 0.3s;
+    }
+
+    .qty-btn:hover:not(:disabled) {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .qty-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .quantity-input {
+      width: 60px;
+      height: 44px;
+      border: none;
+      text-align: center;
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--dark);
+    }
+
+    .action-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      padding: 0.875rem 1.5rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: var(--white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+      background: var(--dark);
+      color: var(--white);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--gray-700);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      background: var(--white);
+      border: 2px solid var(--gray-200);
+      color: var(--dark);
+    }
+
+    .btn-icon:hover {
+      background: var(--primary);
+      color: var(--white);
+      border-color: var(--primary);
+    }
+
+    .product-meta {
+      display: grid;
+      gap: 0.75rem;
+      padding: 1.5rem;
+      background: var(--gray-50);
+      border-radius: 0.75rem;
+    }
+
+    .meta-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.875rem;
+    }
+
+    .meta-label {
+      color: var(--gray-600);
+    }
+
+    .meta-value {
+      font-weight: 600;
+      color: var(--dark);
+    }
+
+    /* Reviews Section */
+    .reviews-section {
+      background: var(--white);
+      border-radius: 1rem;
+      padding: 2rem;
+      box-shadow: var(--shadow);
+      margin-bottom: 3rem;
+    }
+
+    .section-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 1.5rem;
+    }
+
+    .reviews-summary {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 2rem;
+      padding: 1.5rem;
+      background: var(--gray-50);
+      border-radius: 0.75rem;
+      margin-bottom: 2rem;
+    }
+
+    .rating-overview {
+      text-align: center;
+    }
+
+    .rating-score {
+      font-size: 3rem;
+      font-weight: 700;
+      color: var(--dark);
+      line-height: 1;
+    }
+
+    .rating-stars-large {
+      display: flex;
+      gap: 0.25rem;
+      color: #fbbf24;
+      font-size: 1.25rem;
+      justify-content: center;
+      margin: 0.5rem 0;
+    }
+
+    .rating-count {
+      color: var(--gray-600);
+      font-size: 0.875rem;
+    }
+
+    .reviews-list {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .review-card {
+      padding: 1.5rem;
+      border: 1px solid var(--gray-200);
+      border-radius: 0.75rem;
+      transition: all 0.3s;
+    }
+
+    .review-card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .review-avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--white);
+      font-weight: 700;
+      font-size: 1rem;
+    }
+
+    .review-author-info {
+      flex: 1;
+    }
+
+    .review-author {
+      font-weight: 600;
+      color: var(--dark);
+      margin-bottom: 0.25rem;
+    }
+
+    .review-date {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+    }
+
+    .review-rating {
+      display: flex;
+      gap: 0.25rem;
+      color: #fbbf24;
+      font-size: 0.875rem;
+    }
+
+    .review-text {
+      color: var(--gray-600);
+      line-height: 1.7;
+    }
+
+    .no-reviews {
+      text-align: center;
+      padding: 3rem;
+      color: var(--gray-500);
+    }
+
+    /* Related Products */
+    .related-section {
+      margin-bottom: 3rem;
+    }
+
+    .related-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--dark);
+      margin-bottom: 1.5rem;
+    }
+
+    .products-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+
+    .product-card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 0.75rem;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .product-card:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+    }
+
+    .product-image-wrapper {
+      position: relative;
+      overflow: hidden;
+      background: var(--gray-50);
+      aspect-ratio: 1;
+    }
+
+    .product-link {
+      display: block;
+      height: 100%;
+    }
+
+    .product-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: all 0.3s;
+    }
+
+    .product-image.secondary {
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+    }
+
+    .product-card:hover .product-image.primary {
+      opacity: 0;
+    }
+
+    .product-card:hover .product-image.secondary {
+      opacity: 1;
+    }
+
+    .product-card:hover .product-image {
+      transform: scale(1.05);
+    }
+
+    .product-badge-card {
+      position: absolute;
+      top: 0.75rem;
+      left: 0.75rem;
+      padding: 0.375rem 0.75rem;
+      background: var(--danger);
+      color: var(--white);
+      border-radius: 0.375rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .product-actions {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      display: flex;
+      gap: 0.5rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .product-card:hover .product-actions {
+      opacity: 1;
+    }
+
+    .action-btn {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--white);
+      border: none;
+      border-radius: 50%;
+      color: var(--dark);
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+    }
+
+    .action-btn:hover {
+      background: var(--primary);
+      color: var(--white);
+      transform: scale(1.1);
+    }
+
+    .product-card-info {
+      padding: 1rem;
+    }
+
+    .product-category {
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .product-name {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      line-height: 1.4;
+    }
+
+    .product-name a {
+      color: var(--dark);
+      text-decoration: none;
+      transition: color 0.3s;
+    }
+
+    .product-name a:hover {
+      color: var(--primary);
+    }
+
+    .product-rating-small {
+      display: flex;
+      gap: 0.125rem;
+      color: #fbbf24;
+      font-size: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .product-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .product-price {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--dark);
+    }
+
+    .add-cart-btn {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--primary-light);
+      border: none;
+      border-radius: 50%;
+      color: var(--primary);
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .add-cart-btn:hover:not(:disabled) {
+      background: var(--primary);
+      color: var(--white);
+      transform: scale(1.1);
+    }
+
+    .add-cart-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .product-section {
+        grid-template-columns: 1fr;
+      }
+
+      .gallery {
+        position: static;
+      }
+
+      .products-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav__list {
+        display: none;
+      }
+
+      .product-features {
+        grid-template-columns: 1fr;
+      }
+
+      .action-buttons {
+        grid-template-columns: 1fr;
+      }
+
+      .products-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .product-title {
+        font-size: 1.5rem;
+      }
+
+      .current-price {
+        font-size: 2rem;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .gallery__thumbs {
+        grid-template-columns: repeat(3, 1fr);
+      }
+
+      .reviews-summary {
+        grid-template-columns: 1fr;
+      }
+
+      .products-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header__top">
+      <div class="header__container">
+        <div class="header__contact">
+          <span>(+01) - 2345 - 6789</span>
+          <span>Our location</span>
+        </div>
+        <p class="header__alert-news">Super Values Deals - Save more coupons</p>
+        <div>
+          <?php if (is_logged_in()): ?>
+            <div class="header__user-profile">
+              <button class="avatar-btn">
+                <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['name'])) ?></span>
+              </button>
+              <div class="profile-menu">
+                <div class="profile-menu__header">
+                  <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong><br>
+                  <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
+                </div>
+                <a href="/accounts.php">My Account</a>
+                <a href="/orders.php">My Orders</a>
+                <form action="/auth/logout.php" method="post">
+                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                  <button type="submit">Log Out</button>
+                </form>
+              </div>
+            </div>
+          <?php else: ?>
+            <a href="/auth/login.php" class="header__top-action">Log In</a>
+            <a href="/auth/register.php" class="header__top-action">Register</a>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav">
+      <a href="/index.php" class="nav__logo">
+        <img class="nav__logo-img" src="/assets/img/logo.jpg" alt="website logo" />
+      </a>
+      <div class="nav__menu">
+        <ul class="nav__list">
+          <li><a href="/index.php" class="nav__link">Home</a></li>
+          <li><a href="/product_list.php" class="nav__link active-link">Product</a></li>
+          <li><a href="/accounts.php" class="nav__link">My Account</a></li>
+          <li><a href="/compare.php" class="nav__link">Compare</a></li>
+        </ul>
+        <div class="header__search">
+          <input type="text" placeholder="Search For Items..." class="form__input" />
+          <button class="search__btn">
+            <img src="/assets/img/search.png" alt="search icon" />
+          </button>
+        </div>
+      </div>
+      <div class="header__user-actions">
+        <a href="/wishlist.php" class="header__action-btn" title="Wishlist">
+          <img src="/assets/img/icon-heart.svg" alt="Wishlist" />
+          <span class="count">0</span>
+        </a>
+        <a href="/cart.php" class="header__action-btn" title="Cart">
+          <img src="/assets/img/icon-cart.svg" alt="Cart" />
+          <span class="count">0</span>
+        </a>
+      </div>
+    </nav>
+  </header>
+
+
+
+  <!-- Main Content -->
+  <main class="main">
+    <!-- Product Section -->
+    <div class="product-section">
+      <!-- Image Gallery -->
+      <div class="gallery">
+        <div class="gallery__main">
+          <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="gallery__main-img" id="mainImage" />
+        </div>
+        <div class="gallery__thumbs">
           <?php if (!empty($sub_images)): ?>
-            <?php foreach ($sub_images as $sub_image): ?>
-              <img src="<?php echo htmlspecialchars($sub_image); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__small-img" />
+            <div class="gallery__thumb">
+              <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+            </div>
+            <?php foreach (array_slice($sub_images, 0, 3) as $sub_image): ?>
+              <div class="gallery__thumb">
+                <img src="<?= htmlspecialchars($sub_image) ?>" alt="Product" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+              </div>
             <?php endforeach; ?>
           <?php else: ?>
-            <img src="<?php echo htmlspecialchars($product['main_image_path']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="details__small-img" />
+            <div class="gallery__thumb">
+              <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+            </div>
           <?php endif; ?>
         </div>
       </div>
 
-      <div class="details__group">
-        <h3 class="details__title"><?php echo htmlspecialchars($product['name']); ?></h3>
-        <p class="details__brand">Category: <span><?php echo htmlspecialchars($product['category']); ?></span></p>
-
-        <div class="details__price flex">
-          <span class="new__price">$<?php echo number_format($product['price'], 2); ?></span>
+      <!-- Product Info -->
+      <div class="product-info">
+        <span class="product-badge"><?= htmlspecialchars($product['category']) ?></span>
+        
+        <h1 class="product-title"><?= htmlspecialchars($product['name']) ?></h1>
+        
+        <div class="product-rating-row">
+          <div class="rating-stars">
+            <?php for ($i = 1; $i <= 5; $i++): ?>
+              <?php if ($i <= floor($average_rating)): ?>
+                <i class="fi fi-ss-star"></i>
+              <?php elseif ($i - 0.5 <= $average_rating): ?>
+                <i class="fi fi-rs-star-half"></i>
+              <?php else: ?>
+                <i class="fi fi-rs-star"></i>
+              <?php endif; ?>
+            <?php endfor; ?>
+          </div>
+          <span class="rating-text">
+            <span class="rating-number"><?= $average_rating > 0 ? number_format($average_rating, 1) : 'No rating' ?></span>
+            (<?= $review_count ?> review<?= $review_count != 1 ? 's' : '' ?>)
+          </span>
         </div>
 
-        <p class="short__description">
-          <?php echo nl2br(htmlspecialchars($product['description'])); ?>
+        <div class="product-price-section">
+          <div class="price-wrapper">
+            <span class="current-price">RM <?= number_format($product['price'], 2) ?></span>
+          </div>
+          <?php if ($product['status'] == 'Available'): ?>
+            <span class="stock-badge in-stock">
+              <i class="fi fi-rs-check-circle"></i> In Stock
+            </span>
+          <?php else: ?>
+            <span class="stock-badge out-of-stock">
+              <i class="fi fi-rs-cross-circle"></i> Out of Stock
+            </span>
+          <?php endif; ?>
+        </div>
+
+        <p class="product-description">
+          <?= nl2br(htmlspecialchars($product['description'])) ?>
         </p>
 
-        <ul class="products__list">
-          <li class="list__item flex"><i class="fi-rs-crown"></i> 1 Year Al Jazeera Brand Warranty</li>
-          <li class="list__item flex"><i class="fi-rs-refresh"></i> 30 Days Return Policy</li>
-          <li class="list__item flex"><i class="fi-rs-credit-card"></i> Cash on Delivery available</li>
-        </ul>
-
-        <div class="details__color flex">
-          <span class="details__color-title">Color</span>
-          <ul class="color__list">
-            <li><a href="#" class="color__link" style="background-color: hsl(37, 100%, 65%)"></a></li>
-            <li><a href="#" class="color__link" style="background-color: hsl(353, 100%, 65%)"></a></li>
-            <li><a href="#" class="color__link" style="background-color: hsl(49, 100%, 60%)"></a></li>
-            <li><a href="#" class="color__link" style="background-color: hsl(304, 100%, 78%)"></a></li>
-            <li><a href="#" class="color__link" style="background-color: hsl(126, 61%, 52%)"></a></li>
-          </ul>
-        </div>
-
-        <div class="details__size flex">
-          <span class="details__size-title">Size</span>
-          <ul class="size__list">
-            <li><a href="#" class="size__link size-active">M</a></li>
-            <li><a href="#" class="size__link">L</a></li>
-            <li><a href="#" class="size__link">XL</a></li>
-            <li><a href="#" class="size__link">XXL</a></li>
-          </ul>
-        </div>
-
-        <div class="details__action">
-          <input type="number" class="quantity" value="3" />
-          <a href="#" class="btn btn--sm">Add To Cart</a>
-          <a href="#" class="details__action-btn"><i class="fi fi-rs-heart"></i></a>
-        </div>
-
-        <ul class="details__meta">
-          <li class="meta__list flex"><span>Product ID:</span> <?php echo $product['product_id']; ?></li>
-          <li class="meta__list flex"><span>Category:</span> <?php echo htmlspecialchars($product['category']); ?></li>
-          <li class="meta__list flex"><span>Availability:</span>
-            <?php if ($product['status'] == 'Available'): ?>
-              <?php echo $product['stock']; ?> Items in Stock
-            <?php else: ?>
-              <span style="color: red;">Out of Stock</span>
-            <?php endif; ?>
-          </li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!--=============== DETAILS TAB ===============-->
-  <section class="details__tab container">
-    <div class="detail__tabs">
-      <span class="detail__tab active-tab" data-target="#info">Additional Info</span>
-      <span class="detail__tab" data-target="#reviews">Reviews(3)</span>
-    </div>
-
-    <div class="details__tabs-content">
-      <div class="details__tab-content active-tab" id="info">
-        <table class="info__table">
-          <tr>
-            <th>Stand Up</th>
-            <td>35" L x 24"W x 37-45"H (front to back wheel)</td>
-          </tr>
-          <tr>
-            <th>Folded (w/o wheels)</th>
-            <td>32.5"L x 18.5"W x 16.5"H</td>
-          </tr>
-          <tr>
-            <th>Folded (with wheels)</th>
-            <td>32.5"L x 24"W x 18.5"H</td>
-          </tr>
-          <tr>
-            <th>Door Pass Through</th>
-            <td>24</td>
-          </tr>
-          <tr>
-            <th>Frame</th>
-            <td>Aluminum</td>
-          </tr>
-          <tr>
-            <th>Weight (w/o wheels)</th>
-            <td>20 LBS</td>
-          </tr>
-          <tr>
-            <th>Weight Capacity</th>
-            <td>60 LBS</td>
-          </tr>
-          <tr>
-            <th>Width</th>
-            <td>24</td>
-          </tr>
-          <tr>
-            <th>Handle Height (ground to handle)</th>
-            <td>37-45</td>
-          </tr>
-          <tr>
-            <th>Wheels</th>
-            <td>12" air / wide track slick tread</td>
-          </tr>
-          <tr>
-            <th>Seat back height</th>
-            <td>21.5</td>
-          </tr>
-          <tr>
-            <th>Head Room (inside canopy)</th>
-            <td>25"</td>
-          </tr>
-          <tr>
-            <th>Color</th>
-            <td>Black, Blue, Red, White</td>
-          </tr>
-          <tr>
-            <th>Size</th>
-            <td>M, S</td>
-          </tr>
-        </table>
-      </div>
-
-      <div class="details__tab-content" id="reviews">
-        <div class="reviews__container grid">
-          <div class="review__single">
-            <div>
-              <img src="./assets/img/avatar-1.jpg" alt="" class="review__img" />
-              <h4 class="review__title">Jacky Chan</h4>
+        <div class="product-features">
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fi fi-rs-box"></i>
             </div>
-            <div class="review__data">
-              <div class="review__rating">
-                <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-              </div>
-              <p class="review__description">Thank you, very fast shipping from Poland only 3 days.</p>
-              <span class="review__date">December 4, 2022 at 3:12 pm</span>
+            <div class="feature-text">
+              <strong>Stock Available</strong>
+              <?= $product['stock'] ?> units in stock
             </div>
           </div>
-
-          <div class="review__single">
-            <div>
-              <img src="./assets/img/avatar-2.jpg" alt="" class="review__img" />
-              <h4 class="review__title">Meriem Js</h4>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <i class="fi fi-rs-truck-side"></i>
             </div>
-            <div class="review__data">
-              <div class="review__rating">
-                <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-              </div>
-              <p class="review__description">Great low price and works well</p>
-              <span class="review__date">August 23, 2022 at 19:45 pm</span>
-            </div>
-          </div>
-
-          <div class="review__single">
-            <div>
-              <img src="./assets/img/avatar-3.jpg" alt="" class="review__img" />
-              <h4 class="review__title">Moh Benz</h4>
-            </div>
-            <div class="review__data">
-              <div class="review__rating">
-                <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-              </div>
-              <p class="review__description">Authentic and beautiful. Great earphones.</p>
-              <span class="review__date">March 2, 2021 at 10:01 am</span>
+            <div class="feature-text">
+              <strong>Free Shipping</strong>
+              On orders over RM15
             </div>
           </div>
         </div>
 
-        <div class="review__form">
-          <h4 class="review__form-title">Add a review</h4>
-          <div class="rate__product">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
+        <div class="quantity-section">
+          <label class="section-label">Quantity:</label>
+          <div class="quantity-selector">
+            <button class="qty-btn qty-minus" type="button" onclick="decreaseQty()">
+              <i class="fi fi-rs-minus-small"></i>
+            </button>
+            <input type="number" class="quantity-input" id="quantity" value="1" min="1" max="<?= $product['stock'] ?>" />
+            <button class="qty-btn qty-plus" type="button" onclick="increaseQty()">
+              <i class="fi fi-rs-plus-small"></i>
+            </button>
           </div>
-          <form class="form grid">
-            <textarea class="form__input textarea" placeholder="Write Comment"></textarea>
-            <div class="form__group grid">
-              <input type="text" placeholder="Name" class="form__input">
-              <input type="email" placeholder="Email" class="form__input">
-            </div>
-            <div class="form__btn">
-              <button class="btn">Submit Review</button>
-            </div>
-          </form>
+        </div>
+
+        <div class="action-buttons">
+          <button class="btn btn-primary" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+            <i class="fi fi-rs-shopping-cart-add"></i>
+            Add to Cart
+          </button>
+          <button class="btn btn-secondary" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+            <i class="fi fi-rs-shopping-bag"></i>
+            Buy Now
+          </button>
+          <button class="btn btn-icon" title="Add to Wishlist">
+            <i class="fi fi-rs-heart"></i>
+          </button>
+        </div>
+
+        <div class="product-meta">
+          <div class="meta-item">
+            <span class="meta-label">SKU:</span>
+            <span class="meta-value">#<?= str_pad($product['product_id'], 6, '0', STR_PAD_LEFT) ?></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Category:</span>
+            <span class="meta-value"><?= htmlspecialchars($product['category']) ?></span>
+          </div>
+          <div class="meta-item">
+            <span class="meta-label">Availability:</span>
+            <span class="meta-value"><?= htmlspecialchars($product['status']) ?></span>
+          </div>
         </div>
       </div>
     </div>
-  </section>
 
-  <!--=============== PRODUCTS ===============-->
-  <section class="products container section--lg">
-    <h3 class="section__title"><span>Related</span> Products</h3>
-    <div class="products__container grid">
-      <?php
-      // Fetch related products from same category
-      $stmt = $conn->prepare("SELECT p.*, 
-                              (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
-                              FROM Product p 
-                              WHERE p.category = ? AND p.product_id != ? 
-                              LIMIT 4");
-      $stmt->bind_param("si", $product['category'], $product_id);
-      $stmt->execute();
-      $related_result = $stmt->get_result();
-
-      while ($related = $related_result->fetch_assoc()):
-        $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
-      ?>
-        <div class="product__item">
-          <div class="product__banner">
-            <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="product__images">
-              <img src="<?php echo htmlspecialchars($related['main_image_path']); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img default" />
-              <img src="<?php echo htmlspecialchars($hover_image); ?>" alt="<?php echo htmlspecialchars($related['name']); ?>" class="product__img hover" />
-            </a>
-            <div class="product__actions">
-              <a href="product_details.php?id=<?php echo $related['product_id']; ?>" class="action__btn" aria-label="Quick View"><i class="fi fi-rs-eye"></i></a>
-              <a href="#" class="action__btn" aria-label="Add to Wishlist"><i class="fi fi-rs-heart"></i></a>
-              <a href="#" class="action__btn" aria-label="Compare"><i class="fi fi-rs-shuffle"></i></a>
+    <!-- Reviews Section -->
+    <div class="reviews-section">
+      <h2 class="section-title">Customer Reviews</h2>
+      
+      <?php if ($review_count > 0): ?>
+        <div class="reviews-summary">
+          <div class="rating-overview">
+            <div class="rating-score"><?= number_format($average_rating, 1) ?></div>
+            <div class="rating-stars-large">
+              <?php for ($i = 1; $i <= 5; $i++): ?>
+                <?php if ($i <= floor($average_rating)): ?>
+                  <i class="fi fi-ss-star"></i>
+                <?php elseif ($i - 0.5 <= $average_rating): ?>
+                  <i class="fi fi-rs-star-half"></i>
+                <?php else: ?>
+                  <i class="fi fi-rs-star"></i>
+                <?php endif; ?>
+              <?php endfor; ?>
             </div>
-          </div>
-          <div class="product__content">
-            <span class="product__category"><?php echo htmlspecialchars($related['category']); ?></span>
-            <a href="product_details.php?id=<?php echo $related['product_id']; ?>">
-              <h3 class="product__title"><?php echo htmlspecialchars($related['name']); ?></h3>
-            </a>
-            <div class="product__rating">
-              <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-            </div>
-            <div class="product__price flex">
-              <span class="new__price">$<?php echo number_format($related['price'], 2); ?></span>
-            </div>
-            <a href="#" class="action__btn cart__btn" aria-label="Add To Cart"><i class="fi fi-rs-shopping-bag-add"></i></a>
+            <div class="rating-count">Based on <?= $review_count ?> review<?= $review_count != 1 ? 's' : '' ?></div>
           </div>
         </div>
-      <?php endwhile;
-      $stmt->close();
-      ?>
+
+        <div class="reviews-list">
+          <?php foreach ($reviews as $review): ?>
+            <div class="review-card">
+              <div class="review-header">
+                <div class="review-avatar">
+                  <?= htmlspecialchars(user_initials($review['member_name'])) ?>
+                </div>
+                <div class="review-author-info">
+                  <div class="review-author"><?= htmlspecialchars($review['member_name']) ?></div>
+                  <div class="review-date"><?= date('F j, Y', strtotime($review['created_date'])) ?></div>
+                </div>
+                <div class="review-rating">
+                  <?php for ($i = 1; $i <= 5; $i++): ?>
+                    <?php if ($i <= $review['rating']): ?>
+                      <i class="fi fi-ss-star"></i>
+                    <?php else: ?>
+                      <i class="fi fi-rs-star"></i>
+                    <?php endif; ?>
+                  <?php endfor; ?>
+                </div>
+              </div>
+              <p class="review-text"><?= nl2br(htmlspecialchars($review['review_text'])) ?></p>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <div class="no-reviews">
+          <p>No reviews yet. Be the first to review this product!</p>
+        </div>
+      <?php endif; ?>
     </div>
-  </section>
 
-</main>
+    <!-- Related Products -->
+    <?php
+    // Fetch related products from same category (only available products)
+    $stmt = $pdo->prepare("SELECT p.*, 
+                          (SELECT sub_image_path FROM Product_Sub_Image WHERE product_id = p.product_id LIMIT 1) as first_sub_image
+                          FROM Product p 
+                          WHERE p.category = ? AND p.product_id != ? AND p.status = 'Available'
+                          LIMIT 4");
+    $stmt->execute([$product['category'], $product_id]);
+    $related_products = $stmt->fetchAll();
 
-<?php include 'partials/footer.php'; ?>
+    // Only display section if there are related products
+    if (!empty($related_products)):
+    ?>
+    <div class="related-section">
+      <h2 class="related-title">Related Products</h2>
+      <div class="products-grid">
+        <?php
+        foreach ($related_products as $related):
+          $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
+        ?>
+          <article class="product-card">
+            <div class="product-image-wrapper">
+              <a href="product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
+                <img src="<?= htmlspecialchars($related['main_image_path']) ?>"
+                  alt="<?= htmlspecialchars($related['name']) ?>"
+                  class="product-image primary" />
+                <img src="<?= htmlspecialchars($hover_image) ?>"
+                  alt="<?= htmlspecialchars($related['name']) ?>"
+                  class="product-image secondary" />
+              </a>
+
+              <div class="product-actions">
+                <button class="action-btn" data-product-id="<?= $related['product_id'] ?>">
+                  <i class="fi fi-rs-heart"></i>
+                </button>
+                <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
+                  <i class="fi fi-rs-eye"></i>
+                </a>
+              </div>
+            </div>
+
+            <div class="product-card-info">
+              <span class="product-category"><?= htmlspecialchars($related['category']) ?></span>
+              <h3 class="product-name">
+                <a href="product_details.php?id=<?= $related['product_id'] ?>">
+                  <?= htmlspecialchars($related['name']) ?>
+                </a>
+              </h3>
+
+              <div class="product-rating-small">
+                <i class="fi fi-ss-star"></i>
+                <i class="fi fi-ss-star"></i>
+                <i class="fi fi-ss-star"></i>
+                <i class="fi fi-ss-star"></i>
+                <i class="fi fi-rs-star"></i>
+              </div>
+
+              <div class="product-footer">
+                <span class="product-price">RM <?= number_format($related['price'], 2) ?></span>
+                <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>">
+                  <i class="fi fi-rs-shopping-cart-add"></i>
+                </button>
+              </div>
+            </div>
+          </article>
+        <?php endforeach; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+  </main>
+
+  <script>
+    // Image gallery functionality
+    function changeImage(src) {
+      document.getElementById('mainImage').src = src;
+    }
+
+    // Quantity controls
+    function increaseQty() {
+      const input = document.getElementById('quantity');
+      const max = parseInt(input.max);
+      const current = parseInt(input.value);
+      if (current < max) {
+        input.value = current + 1;
+      }
+    }
+
+    function decreaseQty() {
+      const input = document.getElementById('quantity');
+      const min = parseInt(input.min);
+      const current = parseInt(input.value);
+      if (current > min) {
+        input.value = current - 1;
+      }
+    }
+
+    // Profile menu toggle
+    document.querySelector('.avatar-btn')?.addEventListener('click', function(e) {
+      e.stopPropagation();
+      const menu = this.nextElementSibling;
+      menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    });
+
+    document.addEventListener('click', function(e) {
+      const menu = document.querySelector('.profile-menu');
+      if (menu && !e.target.closest('.header__user-profile')) {
+        menu.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>
