@@ -85,13 +85,7 @@ $(document).ready(function() {
     addToWishlist(productId, $btn);
   });
 
-  // Add to compare (delegated)
-  $(document).on('click', '.compare-btn', function(e) {
-    e.preventDefault();
-    const productId = $(this).data('product-id');
-    const $btn = $(this);
-    addToCompare(productId, $btn);
-  });
+
 
   // Reset filters button (delegated - for dynamically created button in empty state)
   $(document).on('click', '#resetFilters', function(e) {
@@ -204,13 +198,10 @@ $(document).ready(function() {
             ${isOutOfStock ? '<span class="product-badge badge-sold">Sold Out</span>' : ''}
             
             <div class="product-actions">
-              <button class="action-btn wishlist-btn" data-product-id="${product.product_id}" title="Add to Wishlist">
+              <button class="action-btn wishlist-btn" data-product-id="${product.product_id}" aria-label="Add to Wishlist">
                 <i class="fi fi-rs-heart"></i>
               </button>
-              <button class="action-btn compare-btn" data-product-id="${product.product_id}" title="Compare">
-                <i class="fi fi-rs-shuffle"></i>
-              </button>
-              <a href="product_details.php?id=${product.product_id}" class="action-btn view-btn" title="Quick View">
+              <a href="product_details.php?id=${product.product_id}" class="action-btn view-btn" aria-label="Quick View">
                 <i class="fi fi-rs-eye"></i>
               </a>
             </div>
@@ -234,7 +225,7 @@ $(document).ready(function() {
             
             <div class="product-footer">
               <span class="product-price">${parseFloat(product.price).toFixed(2)}</span>
-              <button class="add-to-cart-btn" data-product-id="${product.product_id}" ${isOutOfStock ? 'disabled' : ''}>
+              <button class="add-to-cart-btn" data-product-id="${product.product_id}" aria-label="Add to Cart" ${isOutOfStock ? 'disabled' : ''}>
                 <i class="fi fi-rs-shopping-cart-add"></i>
               </button>
             </div>
@@ -397,31 +388,7 @@ $(document).ready(function() {
     });
   }
 
-  /**
-   * Add product to compare
-   */
-  function addToCompare(productId, $btn) {
-    $.ajax({
-      url: 'compare_actions.php',
-      method: 'POST',
-      data: {
-        action: 'add',
-        product_id: productId
-      },
-      dataType: 'json',
-      success: function(response) {
-        if (response.success) {
-          $btn.addClass('active');
-          showToast('Product added to compare!', 'success');
-        } else {
-          showToast(response.message || 'Failed to add to compare', 'error');
-        }
-      },
-      error: function() {
-        showToast('An error occurred. Please try again.', 'error');
-      }
-    });
-  }
+
 
   /**
    * Update cart count
