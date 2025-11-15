@@ -43,16 +43,6 @@ include 'partials/header.php';
 ?>
 
 <main class="main">
-  <!--=============== BREADCRUMB ===============-->
-  <section class="breadcrumb">
-    <ul class="breadcrumb__list flex container">
-      <li><a href="index.php" class="breadcrumb__link">Home</a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><a href="shop.php" class="breadcrumb__link"><?php echo htmlspecialchars($product['category']); ?></a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><span class="breadcrumb__link"><?php echo htmlspecialchars($product['name']); ?></span></li>
-    </ul>
-  </section>
 
   <!--=============== DETAILS ===============-->
   <section class="details section--lg">
@@ -133,71 +123,8 @@ include 'partials/header.php';
   <!--=============== DETAILS TAB ===============-->
   <section class="details__tab container">
     <div class="detail__tabs">
-      <span class="detail__tab active-tab" data-target="#info">Additional Info</span>
       <span class="detail__tab" data-target="#reviews">Reviews(3)</span>
     </div>
-
-    <div class="details__tabs-content">
-      <div class="details__tab-content active-tab" id="info">
-        <table class="info__table">
-          <tr>
-            <th>Stand Up</th>
-            <td>35" L x 24"W x 37-45"H (front to back wheel)</td>
-          </tr>
-          <tr>
-            <th>Folded (w/o wheels)</th>
-            <td>32.5"L x 18.5"W x 16.5"H</td>
-          </tr>
-          <tr>
-            <th>Folded (with wheels)</th>
-            <td>32.5"L x 24"W x 18.5"H</td>
-          </tr>
-          <tr>
-            <th>Door Pass Through</th>
-            <td>24</td>
-          </tr>
-          <tr>
-            <th>Frame</th>
-            <td>Aluminum</td>
-          </tr>
-          <tr>
-            <th>Weight (w/o wheels)</th>
-            <td>20 LBS</td>
-          </tr>
-          <tr>
-            <th>Weight Capacity</th>
-            <td>60 LBS</td>
-          </tr>
-          <tr>
-            <th>Width</th>
-            <td>24</td>
-          </tr>
-          <tr>
-            <th>Handle Height (ground to handle)</th>
-            <td>37-45</td>
-          </tr>
-          <tr>
-            <th>Wheels</th>
-            <td>12" air / wide track slick tread</td>
-          </tr>
-          <tr>
-            <th>Seat back height</th>
-            <td>21.5</td>
-          </tr>
-          <tr>
-            <th>Head Room (inside canopy)</th>
-            <td>25"</td>
-          </tr>
-          <tr>
-            <th>Color</th>
-            <td>Black, Blue, Red, White</td>
-          </tr>
-          <tr>
-            <th>Size</th>
-            <td>M, S</td>
-          </tr>
-        </table>
-      </div>
 
       <div class="details__tab-content" id="reviews">
         <div class="reviews__container grid">
@@ -242,23 +169,6 @@ include 'partials/header.php';
               <span class="review__date">March 2, 2021 at 10:01 am</span>
             </div>
           </div>
-        </div>
-
-        <div class="review__form">
-          <h4 class="review__form-title">Add a review</h4>
-          <div class="rate__product">
-            <i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i><i class="fi fi-rs-star"></i>
-          </div>
-          <form class="form grid">
-            <textarea class="form__input textarea" placeholder="Write Comment"></textarea>
-            <div class="form__group grid">
-              <input type="text" placeholder="Name" class="form__input">
-              <input type="email" placeholder="Email" class="form__input">
-            </div>
-            <div class="form__btn">
-              <button class="btn">Submit Review</button>
-            </div>
-          </form>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 session_start();
 $title = "Products";
 require_once 'helper/pdo_connection.php';
-require_once __DIR__ . '/helper/auth.php';
+require_once 'helper/auth.php';
 
 function user_initials($name) {
   $parts = preg_split('/\s+/', trim((string)$name));
