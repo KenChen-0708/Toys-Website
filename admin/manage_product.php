@@ -83,11 +83,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH UPDATE CATEGORY
     if (isset($_POST['batch_update_category'])) {
-        if (!empty($_POST['selected_products']) && !empty($_POST['batch_category'])) {
+        if (!empty($_POST['selected_products'])) {
             try {
+                $category = !empty(trim($_POST['batch_category'])) ? trim($_POST['batch_category']) : '-';
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
                 $stmt = $pdo->prepare("UPDATE Product SET category = ? WHERE product_id IN ($placeholders)");
-                $params = array_merge([$_POST['batch_category']], $_POST['selected_products']);
+                $params = array_merge([$category], $_POST['selected_products']);
                 $stmt->execute($params);
 
                 $message = count($_POST['selected_products']) . " product(s) category updated";
@@ -97,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 $message_type = "error";
             }
         } else {
-            $message = "No products selected or category not specified";
+            $message = "No products selected";
             $message_type = "error";
         }
     }
@@ -120,11 +121,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                             $stmt = $pdo->prepare("INSERT INTO Product (name, price, description, category, stock, status) 
                                                    VALUES (?, ?, ?, ?, ?, ?)");
                             $status = isset($data[5]) && !empty($data[5]) ? $data[5] : 'Available';
+                            $category = isset($data[3]) && !empty(trim($data[3])) ? trim($data[3]) : '-';
                             $stmt->execute([
                                 $data[0], // name
                                 $data[1], // price
                                 $data[2], // description
-                                $data[3], // category
+                                $category, // category (defaults to '-' if empty)
                                 $data[4], // stock
                                 $status
                             ]);
@@ -177,13 +179,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
 
+                $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
+                
                 $stmt = $pdo->prepare("INSERT INTO Product (name, price, description, category, stock, status, main_image_path) 
                                        VALUES (?, ?, ?, ?, ?, ?, ?)");
                 $stmt->execute([
                     $_POST['name'],
                     $_POST['price'],
                     $_POST['description'],
-                    $_POST['category'],
+                    $category,
                     $_POST['stock'],
                     $_POST['status'],
                     $main_image_path
@@ -249,13 +253,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     }
                 }
 
+                $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
+                
                 $stmt = $pdo->prepare("UPDATE Product SET name=?, price=?, description=?, category=?, stock=?, status=?, main_image_path=? 
                                        WHERE product_id=?");
                 $stmt->execute([
                     $_POST['name'],
                     $_POST['price'],
                     $_POST['description'],
-                    $_POST['category'],
+                    $category,
                     $_POST['stock'],
                     $_POST['status'],
                     $main_image_path,
@@ -768,8 +774,8 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
             <form method="POST" id="batchCategoryForm">
                 <input type="hidden" name="selected_products[]" id="batchCategoryProducts">
                 <div class="form-group">
-                    <label>Enter Category <span class="required">*</span></label>
-                    <input type="text" name="batch_category" list="categoryList" required>
+                    <label>Enter Category (leave empty for '-')</label>
+                    <input type="text" name="batch_category" list="categoryList" placeholder="Leave empty to set as '-'">
                     <datalist id="categoryList">
                         <?php foreach ($categories as $cat): ?>
                             <option value="<?php echo htmlspecialchars($cat['category']); ?>">

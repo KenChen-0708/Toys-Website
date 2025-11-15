@@ -597,6 +597,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       overflow: hidden;
       transition: var(--transition);
       position: relative;
+      z-index: 1;
     }
 
     .product-card:hover {
@@ -673,7 +674,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       opacity: 0;
       transform: translateX(10px);
       transition: var(--transition);
-      z-index: 2;
+      z-index: 10;
     }
 
     .product-card:hover .product-actions {
@@ -695,6 +696,8 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       cursor: pointer;
       transition: var(--transition);
       text-decoration: none;
+      position: relative;
+      z-index: 10;
     }
 
     .action-btn:hover {
@@ -768,6 +771,8 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       font-size: 1.125rem;
       cursor: pointer;
       transition: var(--transition);
+      position: relative;
+      z-index: 10;
     }
 
     .add-to-cart-btn:hover:not(:disabled) {
@@ -867,10 +872,12 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       z-index: 999;
       opacity: 0;
       transition: opacity 0.3s ease;
+      pointer-events: none;
     }
 
     .sidebar-overlay.active {
       opacity: 1;
+      pointer-events: auto;
     }
 
     /* ========== TOAST NOTIFICATIONS ========== */
@@ -981,6 +988,11 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
 
       .sidebar-overlay {
         display: block;
+        pointer-events: none;
+      }
+      
+      .sidebar-overlay.active {
+        pointer-events: auto;
       }
 
       .products-grid {
@@ -1058,6 +1070,11 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
         width: 36px;
         height: 36px;
         font-size: 0.875rem;
+        z-index: 10;
+      }
+      
+      .add-to-cart-btn {
+        z-index: 10;
       }
 
       .toast {
