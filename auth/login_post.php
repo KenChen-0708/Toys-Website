@@ -43,9 +43,9 @@ if (strlen($password) < 6) {
 
 if (!$errors) {
   $stmt = $conn->prepare("
-    SELECT member_id, name, email, password
+    SELECT member_id, username, email, password
     FROM Member
-    WHERE BINARY name = ?
+    WHERE BINARY username = ?
   ");
   $stmt->bind_param('s', $username);
   $stmt->execute();
@@ -55,7 +55,7 @@ if (!$errors) {
 
     $_SESSION['member'] = [
       'id'    => $user['member_id'],
-      'name'  => $user['name'],
+      'username'  => $user['username'],
       'email' => $user['email'],
     ];
 

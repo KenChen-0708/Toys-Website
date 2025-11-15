@@ -84,14 +84,14 @@ unset($_SESSION['errors'], $_SESSION['old']);
           <label class="form__label">
             <span>User Name *</span>
             <input
-              name="name"
+              name="username"
               type="text"
               class="form__input"
               required
               minlength="3"
-              autocomplete="name"
+              autocomplete="username"
               data-hint="nameHint"
-              value="<?= htmlspecialchars($old['name'] ?? '') ?>"
+              value="<?= htmlspecialchars($old['username'] ?? '') ?>"
             />
             <p id="nameHint" class="field-hint">
               3+ characters. Letters, numbers, and "_" only. No spaces.
@@ -315,7 +315,7 @@ unset($_SESSION['errors'], $_SESSION['old']);
     function validateForm() {
       let isValid = true;
 
-      const usernameField = form.querySelector('input[name="name"]');
+      const usernameField = form.querySelector('input[name="username"]');
       const emailField = form.querySelector('input[name="email"]');
       const phoneField = form.querySelector('input[name="phone"]');
       const addressField = form.querySelector('textarea[name="address"]');

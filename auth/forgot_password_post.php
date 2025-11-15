@@ -36,7 +36,7 @@ if ($errors) {
 }
 
 // Find user by email
-$sql = "SELECT member_id AS id, name AS username, email FROM member WHERE email = ?";
+$sql = "SELECT member_id AS id, username AS username, email FROM member WHERE email = ?";
 $stmt = $conn->prepare($sql);
 if (!$stmt) {
     die("SQL error: " . $conn->error); // dev debug
