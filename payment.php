@@ -63,6 +63,15 @@ try {
         'metadata' => [
             'member_id' => $member_id
         ],
+
+        // 1. Force collection of the full Billing Address
+        'billing_address_collection' => 'required', // or 'auto' (default)
+
+        // 2. Enable collection of the Shipping Address
+        'shipping_address_collection' => [
+            // Specify which countries you ship to using 2-letter ISO codes
+            'allowed_countries' => ['MY'],
+        ],
     ]);
 
     // Redirect user to Stripe-hosted Checkout page
