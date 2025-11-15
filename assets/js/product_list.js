@@ -1,9 +1,15 @@
 /**
- * Modern Product List - jQuery functionality
+ * Product List Page JavaScript
+ * Extracted from product_list.php
  */
 
 $(document).ready(function() {
-  
+  let currentPage = 1;
+  let isLoading = false;
+
+  // Initialize - load products on page load
+  loadProducts();
+
   // Mobile filter toggle
   $('#mobileFilterBtn').on('click', function() {
     $('#filterSidebar').addClass('active');
@@ -13,46 +19,55 @@ $(document).ready(function() {
 
   // Close sidebar
   $('#closeSidebar, #sidebarOverlay').on('click', function() {
-    $('#filterSidebar').removeClass('active');
-    $('#sidebarOverlay').removeClass('active');
-    $('body').css('overflow', '');
+    closeMobileSidebar();
   });
 
   // Apply filters
   $('#applyFilters').on('click', function() {
-    applyFilters();
+    currentPage = 1;
+    loadProducts();
     closeMobileSidebar();
   });
 
   // Clear filters
-  $('#clearFilters, #resetFilters').on('click', function() {
-    clearFilters();
+  $('#clearFilters').on('click', function() {
+    $('#searchInput').val('');
+    $('#categorySelect').val('');
+    $('#minPrice').val('');
+    $('#maxPrice').val('');
+    $('#sortSelect').val('newest');
+    currentPage = 1;
+    loadProducts();
+    closeMobileSidebar();
   });
 
   // Sort change
   $('#sortSelect').on('change', function() {
-    applyFilters();
+    currentPage = 1;
+    loadProducts();
   });
 
   // Search on Enter key
   $('#searchInput').on('keypress', function(e) {
     if (e.which === 13) {
-      applyFilters();
+      currentPage = 1;
+      loadProducts();
       closeMobileSidebar();
     }
   });
 
-  // Pagination clicks
+  // Pagination clicks (delegated)
   $(document).on('click', '.pagination-btn, .pagination-number', function(e) {
     e.preventDefault();
     const page = $(this).data('page');
-    if (page && !$(this).hasClass('active')) {
-      loadProducts(page);
+    if (page && !$(this).hasClass('active') && !isLoading) {
+      currentPage = page;
+      loadProducts();
       smoothScrollToTop();
     }
   });
 
-  // Add to cart
+  // Add to cart (delegated)
   $(document).on('click', '.add-to-cart-btn', function(e) {
     e.preventDefault();
     const $btn = $(this);
@@ -62,7 +77,7 @@ $(document).ready(function() {
     addToCart(productId, $btn);
   });
 
-  // Add to wishlist
+  // Add to wishlist (delegated)
   $(document).on('click', '.wishlist-btn', function(e) {
     e.preventDefault();
     const productId = $(this).data('product-id');
@@ -70,7 +85,7 @@ $(document).ready(function() {
     addToWishlist(productId, $btn);
   });
 
-  // Add to compare
+  // Add to compare (delegated)
   $(document).on('click', '.compare-btn', function(e) {
     e.preventDefault();
     const productId = $(this).data('product-id');
@@ -78,77 +93,245 @@ $(document).ready(function() {
     addToCompare(productId, $btn);
   });
 
-  /**
-   * Close mobile sidebar
-   */
-  function closeMobileSidebar() {
-    if (window.innerWidth <= 992) {
-      $('#filterSidebar').removeClass('active');
-      $('#sidebarOverlay').removeClass('active');
-      $('body').css('overflow', '');
-    }
-  }
-
-  /**
-   * Apply filters and reload products
-   */
-  function applyFilters() {
-    loadProducts(1);
-  }
-
-  /**
-   * Clear all filters
-   */
-  function clearFilters() {
+  // Reset filters button (delegated - for dynamically created button in empty state)
+  $(document).on('click', '#resetFilters', function(e) {
+    e.preventDefault();
     $('#searchInput').val('');
     $('#categorySelect').val('');
     $('#minPrice').val('');
     $('#maxPrice').val('');
     $('#sortSelect').val('newest');
-    applyFilters();
+    currentPage = 1;
+    loadProducts();
     closeMobileSidebar();
+  });
+
+  /**
+   * Close mobile sidebar
+   */
+  function closeMobileSidebar() {
+    $('#filterSidebar').removeClass('active');
+    $('#sidebarOverlay').removeClass('active');
+    $('body').css('overflow', '');
   }
 
   /**
-   * Load products with new parameters
+   * Load products via AJAX
    */
-  function loadProducts(page = 1) {
+  function loadProducts() {
+    if (isLoading) return;
+    isLoading = true;
+
     const params = {
-      page: page,
+      page: currentPage,
       search: $('#searchInput').val(),
       category: $('#categorySelect').val(),
       min_price: $('#minPrice').val(),
       max_price: $('#maxPrice').val(),
-      sort: $('#sortSelect').val()
+      sort: $('#sortSelect').val(),
+      ajax: 1
     };
 
-    // Remove empty parameters
+    // Show loading overlay
+    $('#loadingOverlay').addClass('active');
+
+    $.ajax({
+      url: 'ajax/load-products.php',
+      method: 'GET',
+      data: params,
+      dataType: 'json',
+      success: function(response) {
+        if (response.success) {
+          renderProducts(response.products);
+          renderPagination(response.pagination);
+          $('#productCount').text(response.total);
+          
+          // Update URL without reload
+          updateURL(params);
+        } else {
+          showToast(response.message || 'Failed to load products', 'error');
+        }
+      },
+      error: function() {
+        showToast('An error occurred while loading products', 'error');
+      },
+      complete: function() {
+        $('#loadingOverlay').removeClass('active');
+        isLoading = false;
+      }
+    });
+  }
+
+  /**
+   * Render products
+   */
+  function renderProducts(products) {
+    const $grid = $('#productsGrid');
+    
+    if (!products || products.length === 0) {
+      $grid.html(`
+        <div class="empty-state" style="grid-column: 1 / -1;">
+          <div class="empty-icon">
+            <i class="fi fi-rs-box-open"></i>
+          </div>
+          <h3 class="empty-title">No Products Found</h3>
+          <p class="empty-text">We couldn't find any products matching your criteria. Try adjusting your filters.</p>
+          <button class="btn btn-primary" id="resetFilters">Reset Filters</button>
+        </div>
+      `);
+      return;
+    }
+
+    let html = '';
+    products.forEach(product => {
+      const hoverImage = product.first_sub_image || product.main_image_path;
+      const isOutOfStock = product.status === 'Out of Stock';
+      
+      html += `
+        <article class="product-card ${isOutOfStock ? 'out-of-stock' : ''}">
+          <div class="product-image-wrapper">
+            <a href="product_details.php?id=${product.product_id}" class="product-link">
+              <img src="${escapeHtml(product.main_image_path)}" 
+                   alt="${escapeHtml(product.name)}" 
+                   class="product-image primary" 
+                   loading="lazy" />
+              <img src="${escapeHtml(hoverImage)}" 
+                   alt="${escapeHtml(product.name)}" 
+                   class="product-image secondary" 
+                   loading="lazy" />
+            </a>
+            
+            ${isOutOfStock ? '<span class="product-badge badge-sold">Sold Out</span>' : ''}
+            
+            <div class="product-actions">
+              <button class="action-btn wishlist-btn" data-product-id="${product.product_id}" title="Add to Wishlist">
+                <i class="fi fi-rs-heart"></i>
+              </button>
+              <button class="action-btn compare-btn" data-product-id="${product.product_id}" title="Compare">
+                <i class="fi fi-rs-shuffle"></i>
+              </button>
+              <a href="product_details.php?id=${product.product_id}" class="action-btn view-btn" title="Quick View">
+                <i class="fi fi-rs-eye"></i>
+              </a>
+            </div>
+          </div>
+          
+          <div class="product-info">
+            <span class="product-category">${escapeHtml(product.category)}</span>
+            <h3 class="product-name">
+              <a href="product_details.php?id=${product.product_id}">
+                ${escapeHtml(product.name)}
+              </a>
+            </h3>
+            
+            <div class="product-rating">
+              <i class="fi fi-ss-star"></i>
+              <i class="fi fi-ss-star"></i>
+              <i class="fi fi-ss-star"></i>
+              <i class="fi fi-ss-star"></i>
+              <i class="fi fi-rs-star"></i>
+            </div>
+            
+            <div class="product-footer">
+              <span class="product-price">${parseFloat(product.price).toFixed(2)}</span>
+              <button class="add-to-cart-btn" data-product-id="${product.product_id}" ${isOutOfStock ? 'disabled' : ''}>
+                <i class="fi fi-rs-shopping-cart-add"></i>
+              </button>
+            </div>
+          </div>
+        </article>
+      `;
+    });
+    
+    $grid.html(html);
+  }
+
+  /**
+   * Render pagination
+   */
+  function renderPagination(pagination) {
+    const $pagination = $('#pagination');
+    
+    if (!pagination || pagination.total_pages <= 1) {
+      $pagination.hide();
+      return;
+    }
+
+    let html = '';
+    
+    // Previous button
+    if (pagination.current_page > 1) {
+      html += `
+        <a href="#" class="pagination-btn" data-page="${pagination.current_page - 1}">
+          <i class="fi fi-rs-angle-left"></i>
+        </a>
+      `;
+    }
+
+    html += '<div class="pagination-numbers">';
+
+    // First page
+    if (pagination.start_page > 1) {
+      html += `<a href="#" class="pagination-number" data-page="1">1</a>`;
+      if (pagination.start_page > 2) {
+        html += '<span class="pagination-ellipsis">...</span>';
+      }
+    }
+
+    // Page numbers
+    for (let i = pagination.start_page; i <= pagination.end_page; i++) {
+      const activeClass = i === pagination.current_page ? 'active' : '';
+      html += `<a href="#" class="pagination-number ${activeClass}" data-page="${i}">${i}</a>`;
+    }
+
+    // Last page
+    if (pagination.end_page < pagination.total_pages) {
+      if (pagination.end_page < pagination.total_pages - 1) {
+        html += '<span class="pagination-ellipsis">...</span>';
+      }
+      html += `<a href="#" class="pagination-number" data-page="${pagination.total_pages}">${pagination.total_pages}</a>`;
+    }
+
+    html += '</div>';
+
+    // Next button
+    if (pagination.current_page < pagination.total_pages) {
+      html += `
+        <a href="#" class="pagination-btn" data-page="${pagination.current_page + 1}">
+          <i class="fi fi-rs-angle-right"></i>
+        </a>
+      `;
+    }
+
+    $pagination.html(html).show();
+  }
+
+  /**
+   * Update URL without reload
+   */
+  function updateURL(params) {
+    const cleanParams = {};
     Object.keys(params).forEach(key => {
-      if (!params[key]) delete params[key];
+      if (params[key] && key !== 'ajax') {
+        cleanParams[key] = params[key];
+      }
     });
 
-    // Build query string
-    const queryString = $.param(params);
-    
-    // Update URL without reload
+    const queryString = $.param(cleanParams);
     const newUrl = window.location.pathname + (queryString ? '?' + queryString : '');
     window.history.pushState({ path: newUrl }, '', newUrl);
-
-    // Reload page with new parameters
-    window.location.href = newUrl;
   }
 
   /**
    * Add product to cart
    */
   function addToCart(productId, $btn) {
-    // Disable button and show loading state
     $btn.prop('disabled', true);
     const originalHtml = $btn.html();
     $btn.html('<i class="fi fi-rs-spinner"></i>');
 
     $.ajax({
-      url: '/cart_actions.php',
+      url: 'cart_actions.php',
       method: 'POST',
       data: {
         action: 'add',
@@ -159,9 +342,10 @@ $(document).ready(function() {
       success: function(response) {
         if (response.success) {
           showToast('Product added to cart!', 'success');
-          updateCartCount(response.cart_count);
+          if (response.cart_count !== undefined) {
+            updateCartCount(response.cart_count);
+          }
           
-          // Animate button
           $btn.html('<i class="fi fi-rs-check"></i>');
           setTimeout(() => {
             $btn.html(originalHtml);
@@ -188,7 +372,7 @@ $(document).ready(function() {
     const isActive = $btn.hasClass('active');
     
     $.ajax({
-      url: '/wishlist_actions.php',
+      url: 'wishlist_actions.php',
       method: 'POST',
       data: {
         action: isActive ? 'remove' : 'add',
@@ -218,7 +402,7 @@ $(document).ready(function() {
    */
   function addToCompare(productId, $btn) {
     $.ajax({
-      url: '/compare_actions.php',
+      url: 'compare_actions.php',
       method: 'POST',
       data: {
         action: 'add',
@@ -240,50 +424,34 @@ $(document).ready(function() {
   }
 
   /**
-   * Update cart count in header
+   * Update cart count
    */
   function updateCartCount(count) {
-    const $cartCount = $('.header__action-btn[title="Cart"] .count, .cart-count');
-    if ($cartCount.length) {
-      $cartCount.text(count);
-      
-      // Animate the count
-      $cartCount.addClass('pulse');
-      setTimeout(() => $cartCount.removeClass('pulse'), 500);
-    }
+    $('.cart-count').text(count).addClass('pulse');
+    setTimeout(() => $('.cart-count').removeClass('pulse'), 500);
   }
 
   /**
-   * Update wishlist count in header
+   * Update wishlist count
    */
   function updateWishlistCount(count) {
-    const $wishlistCount = $('.header__action-btn[title="Wishlist"] .count, .wishlist-count');
-    if ($wishlistCount.length) {
-      $wishlistCount.text(count);
-      
-      // Animate the count
-      $wishlistCount.addClass('pulse');
-      setTimeout(() => $wishlistCount.removeClass('pulse'), 500);
-    }
+    $('.wishlist-count').text(count).addClass('pulse');
+    setTimeout(() => $('.wishlist-count').removeClass('pulse'), 500);
   }
 
   /**
    * Smooth scroll to top
    */
   function smoothScrollToTop() {
-    $('html, body').animate({ 
-      scrollTop: 0 
-    }, 400, 'swing');
+    $('html, body').animate({ scrollTop: 0 }, 400, 'swing');
   }
 
   /**
    * Show toast notification
    */
   function showToast(message, type = 'success') {
-    // Remove existing toasts
     $('.toast').remove();
 
-    // Create toast element
     const iconMap = {
       success: 'fi-rs-check-circle',
       error: 'fi-rs-cross-circle',
@@ -293,111 +461,45 @@ $(document).ready(function() {
     const $toast = $(`
       <div class="toast toast--${type}">
         <i class="fi ${iconMap[type]} toast-icon"></i>
-        <span class="toast-message">${message}</span>
+        <span class="toast-message">${escapeHtml(message)}</span>
       </div>
     `);
 
-    // Add to body
     $('body').append($toast);
-
-    // Trigger animation
     setTimeout(() => $toast.addClass('show'), 10);
 
-    // Auto remove after 3 seconds
     setTimeout(() => {
       $toast.removeClass('show');
       setTimeout(() => $toast.remove(), 300);
     }, 3000);
   }
 
-  // Inject toast styles if not present
-  if (!$('#toast-styles').length) {
-    $(`
-      <style id="toast-styles">
-        .toast {
-          position: fixed;
-          top: 20px;
-          right: 20px;
-          display: flex;
-          align-items: center;
-          gap: 0.75rem;
-          padding: 1rem 1.25rem;
-          background: white;
-          border-radius: 0.75rem;
-          box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-          z-index: 10000;
-          opacity: 0;
-          transform: translateX(100px);
-          transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-          min-width: 280px;
-          max-width: 400px;
-        }
-
-        .toast.show {
-          opacity: 1;
-          transform: translateX(0);
-        }
-
-        .toast-icon {
-          font-size: 1.25rem;
-          flex-shrink: 0;
-        }
-
-        .toast-message {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: #1f2937;
-        }
-
-        .toast--success {
-          border-left: 4px solid #10b981;
-        }
-
-        .toast--success .toast-icon {
-          color: #10b981;
-        }
-
-        .toast--error {
-          border-left: 4px solid #ef4444;
-        }
-
-        .toast--error .toast-icon {
-          color: #ef4444;
-        }
-
-        .toast--info {
-          border-left: 4px solid #3b82f6;
-        }
-
-        .toast--info .toast-icon {
-          color: #3b82f6;
-        }
-
-        /* Pulse animation for count badges */
-        @keyframes pulse {
-          0%, 100% { transform: scale(1); }
-          50% { transform: scale(1.2); }
-        }
-
-        .pulse {
-          animation: pulse 0.5s ease-in-out;
-        }
-
-        /* Responsive toast */
-        @media screen and (max-width: 576px) {
-          .toast {
-            right: 10px;
-            left: 10px;
-            min-width: auto;
-          }
-        }
-      </style>
-    `).appendTo('head');
+  /**
+   * Escape HTML to prevent XSS
+   */
+  function escapeHtml(text) {
+    const map = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    };
+    return String(text).replace(/[&<>"']/g, m => map[m]);
   }
 
-  // Handle browser back/forward buttons
+  // Handle browser back/forward
   window.addEventListener('popstate', function() {
     location.reload();
   });
 
+  // Profile menu toggle
+  document.addEventListener('click', function(e){
+    const prof = e.target.closest('.header__user-profile');
+    document.querySelectorAll('.header__user-profile .profile-menu').forEach(m => m.style.display = 'none');
+    if (prof && e.target.closest('.avatar-btn')) {
+      const menu = prof.querySelector('.profile-menu');
+      menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+    }
+  });
 });
