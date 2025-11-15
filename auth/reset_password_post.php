@@ -1,16 +1,20 @@
 <?php
-session_start();
 require_once '../helper/connection.php';
 require_once '../helper/auth.php';
 
 // Ensure guest only
 require_guest();
 
-// Validate CSRF
-if (!hash_equals($_SESSION['csrf_token'] ?? '', $_POST['csrf_token'] ?? '')) {
-    $_SESSION['errors'] = ["Invalid CSRF token."];
-    header("Location: ./reset_password.php");
+// Only accept POST
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ./reset_password.php');
     exit;
+}
+
+// Validate CSRF using the same helper as login_post.php
+if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    die('Invalid CSRF token');
 }
 
 // Collect POST data
@@ -21,13 +25,16 @@ $password_confirmation = $_POST['password_confirmation'] ?? '';
 
 $errors = [];
 
+// Password format pattern: at least 8 chars, one upper, one lower, one digit, one symbol
+$passwordPattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/';
+
 // Basic validation
 if (!$email || !$token) {
     $errors[] = "Invalid password reset link.";
 }
 
-if (strlen($password) < 6) {
-    $errors[] = "Password must be at least 6 characters.";
+if (!preg_match($passwordPattern, $password)) {
+    $errors[] = "Password must be at least 8 characters and include uppercase, lowercase, number and symbol.";
 }
 
 if ($password !== $password_confirmation) {
@@ -41,7 +48,7 @@ if (!empty($errors)) {
     exit;
 }
 
-// Step 1: Hash the raw token from URL before checking
+// Step 1: Hash the raw token from URL before checking (must match stored hash)
 $tokenHash = hash('sha256', $token);
 
 $stmt = $conn->prepare("
@@ -53,7 +60,6 @@ $stmt->bind_param("ss", $email, $tokenHash);
 $stmt->execute();
 $result = $stmt->get_result();
 $reset = $result->fetch_assoc();
-
 
 if (!$reset) {
     $_SESSION['errors'] = ["Invalid or expired password reset token."];
@@ -72,22 +78,23 @@ if ($current_time > $reset['expires_at']) {
 // Step 3: Hash new password
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
-// Step 4: Update Member table
+// Step 4: Update Member table (by email)
 $updateMember = $conn->prepare("
     UPDATE Member SET password = ? WHERE email = ?
 ");
 $updateMember->bind_param("ss", $hashed_password, $email);
 $updateMember->execute();
 
+// Optionally, you could check affected_rows to be extra safe:
+// if ($updateMember->affected_rows === 0) { ... }
+
 // Step 5: Delete token after use
 $deleteToken = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
 $deleteToken->bind_param("s", $email);
 $deleteToken->execute();
 
-// Step 6: Redirect with success message
+// Step 6: Redirect with success message to login page
 $_SESSION['success'] = "Your password has been successfully updated. Please log in.";
 
 header("Location: ../auth/login.php");
 exit;
-
-?>

@@ -5,33 +5,33 @@ require_once '../helper/auth.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: ./register.php'); exit; }
 if (!verify_csrf($_POST['csrf_token'] ?? '')) { http_response_code(403); die('Invalid CSRF token'); }
 
-$name = trim($_POST['name'] ?? '');
+$username = trim($_POST['username'] ?? '');
 $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 $password_confirm = $_POST['password_confirm'] ?? '';
 $phone = trim($_POST['phone'] ?? '');
 $address = trim($_POST['address'] ?? '');
 
-$_SESSION['old'] = compact('name','email','phone','address');
+$_SESSION['old'] = compact('username','email','phone','address');
 $errors = [];
 
 // Username 
-if (strlen($name) < 3) {
+if (strlen($username) < 3) {
     $errors[] = 'Username must be at least 3 characters.';
-}else if (preg_match('/\s/', $name)) {
+}else if (preg_match('/\s/', $username)) {
     $errors[] = 'Username cannot contain spaces. Use "_" instead.';
-}else if (!preg_match('/^[A-Za-z0-9_]+$/', $name)) {
+}else if (!preg_match('/^[A-Za-z0-9_]+$/', $username)) {
     $errors[] = 'Username can only contain letters, numbers, and underscores.';
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email.';
-if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters.';
+if (strlen($password) < 8) $errors[] = 'Password must be at least 8 characters.';
 if ($password !== $password_confirm) $errors[] = 'Passwords do not match.';
 
 if (!$errors) {
-  // --- name (case-sensitive) ---
-  $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY name = ?");
-  $checkName->bind_param('s', $name);
+  // --- username (case-sensitive) --- 
+  $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY username = ?");
+  $checkName->bind_param('s', $username);
   $checkName->execute();
   if ($checkName->get_result()->fetch_row()) {
     $errors[] = 'This username is already taken.';
@@ -49,10 +49,10 @@ if (!$errors) {
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $now = date('Y-m-d H:i:s');
     $stmt = $conn->prepare("
-      INSERT INTO Member (name, password, email, phone_number, address, register_date)
+      INSERT INTO Member (username, password, email, phone_number, address, register_date)
       VALUES (?, ?, ?, ?, ?, ?)
     ");
-    $stmt->bind_param('ssssss', $name, $hash, $email, $phone, $address, $now);
+    $stmt->bind_param('ssssss', $username, $hash, $email, $phone, $address, $now);
 
     if ($stmt->execute()) {
       $member_id = $stmt->insert_id;
@@ -61,11 +61,11 @@ if (!$errors) {
       $cart->execute();
 
       unset($_SESSION['old']);
-      $_SESSION['member'] = ['id'=>$member_id,'name'=>$name,'email'=>$email];
+      $_SESSION['member'] = ['id'=>$member_id,'username'=>$username,'email'=>$email];
       header('Location: ../index.php'); exit;
     } else {
       if ($conn->errno === 1062) {
-        // handles UNIQUE index collisions on name/email
+        // handles UNIQUE index collisions on username/email
         $errors[] = 'Username or email already exists.';
       } else {
         $errors[] = 'Something went wrong. Please try again.';

@@ -2,8 +2,8 @@
   $title = $title ?? 'Online Store';
   require_once  __DIR__ . '/../helper/auth.php';
 
-  function user_initials($name) {
-    $parts = preg_split('/\s+/', trim((string)$name));
+  function user_initials($username) {
+    $parts = preg_split('/\s+/', trim((string)$username));
     $first = mb_substr($parts[0] ?? '', 0, 1);
     $second = mb_substr($parts[1] ?? '', 0, 1);
     return mb_strtoupper($first . $second ?: $first);
@@ -42,11 +42,13 @@
             <?php if (is_logged_in()): ?>
               <div class="header__user-profile">
                 <button class="avatar-btn" aria-haspopup="true" aria-expanded="false">
-                  <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['name'])) ?></span>
+                  <span class="avatar-circle">
+                    <?= htmlspecialchars(user_initials($_SESSION['member']['username'])) ?>
+                  </span>
                 </button>
                 <div class="profile-menu">
                   <div class="profile-menu__header">
-                    <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong><br>
+                    <strong><?= htmlspecialchars($_SESSION['member']['username']) ?></strong>
                     <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
                   </div>
                   <a href="/accounts.php">My Account</a>

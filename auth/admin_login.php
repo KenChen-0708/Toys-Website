@@ -8,107 +8,11 @@ require_guest();
 
 $errors = $_SESSION['admin_errors'] ?? [];
 $old = $_SESSION['admin_old'] ?? [];
+$rememberedAdmin = $_COOKIE['remember_admin'] ?? '';
 unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
 ?>
 
 <style>
-  /* Admin modal styling – same base, slightly different accent */
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .modal-overlay.is-visible {
-    display: flex;
-  }
-
-  .modal {
-    background: white;
-    color: black;
-    max-width: 420px;
-    width: 90%;
-    border-radius: 12px;
-    padding: 1.5rem 1.75rem;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.65);
-    animation: modal-pop 0.2s ease-out;
-    border: 1px solid #1f2937;
-  }
-
-  .modal__title {
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .modal__body {
-    font-size: 0.95rem;
-    color: darkgrey;
-    max-height: 260px;
-    overflow-y: auto;
-  }
-
-  .modal__body ul {
-    padding-left: 1.1rem;
-    margin: 0.25rem 0 0;
-  }
-
-  .modal__body li {
-    margin-bottom: 0.25rem;
-  }
-
-  .modal__footer {
-    margin-top: 1.2rem;
-    text-align: right;
-  }
-
-  .modal__btn {
-    border: none;
-    padding: 0.45rem 1.1rem;
-    border-radius: 999px;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  .modal__btn--primary {
-    background: #f97316;
-    color: #111827;
-    font-weight: 500;
-  }
-
-  .modal__btn--primary:hover {
-    opacity: 0.95;
-  }
-
-  .modal__icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background: #f97316;
-    color: #111827;
-    margin-right: 0.5rem;
-    font-size: 1.1rem;
-  }
-
-  @keyframes modal-pop {
-    from {
-      opacity: 0;
-      transform: translateY(8px) scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
-
   /* Extra small visual tweaks for admin card */
   .auth-card--admin {
     border-top: 4px solid #f97316;
@@ -126,6 +30,50 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
     background: #111827;
     color: #f97316;
     margin-bottom: 0.5rem;
+  }
+
+  /* Input affix and password toggle */
+  .input-affix {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .input-affix button {
+    position: absolute;
+    right: 0.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+  }
+
+  /* Field hints & error state */
+  .field-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    line-height: 1.3;
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.18s ease, max-height 0.18s ease, transform 0.18s ease;
+  }
+
+  .field-hint--visible {
+    opacity: 1;
+    max-height: 80px;
+    transform: translateY(0);
+  }
+
+  .hint--error {
+    color: #b91c1c;
+  }
+
+  .form__input.input--error {
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.15);
   }
 </style>
 
@@ -169,11 +117,14 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
               type="text"
               class="form__input"
               required
-              minlength="3"
               autocomplete="username"
-              value="<?= htmlspecialchars($old['username'] ?? '') ?>"
+              data-hint="adminUsernameHint"
+              value="<?= htmlspecialchars($old['username'] ?? $rememberedAdmin) ?>"
             />
           </div>
+          <p id="adminUsernameHint" class="field-hint">
+            Enter your admin username.
+          </p>
         </div>
 
         <!-- Admin Password -->
@@ -188,15 +139,24 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
               required
               autocomplete="current-password"
               minlength="6"
+              data-hint="adminPasswordHint"
             />
             <button type="button" id="toggleAdminPwd" aria-label="Show password">👁</button>
           </div>
+          <p id="adminPasswordHint" class="field-hint">
+            Enter your admin password (minimum 6 characters).
+          </p>
         </div>
 
         <!-- Remember / Back to member -->
         <div class="auth-meta">
           <label class="checkbox">
-            <input type="checkbox" name="remember" value="1" />
+            <input
+              type="checkbox"
+              name="remember"
+              value="1"
+              <?= $rememberedAdmin ? 'checked' : '' ?>
+            />
             <span>Remember me</span>
           </label>
         </div>
@@ -215,80 +175,91 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
   </section>
 </main>
 
-<!-- ✅ Admin login error modal -->
-<div id="adminLoginErrorModal" class="modal-overlay" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="adminLoginModalTitle">
-    <div class="modal__header" style="display:flex;align-items:center;margin-bottom:0.5rem;">
-      <div class="modal__icon">!</div>
-      <h2 id="adminLoginModalTitle" class="modal__title">Unable to sign you in</h2>
-    </div>
-    <div class="modal__body">
-      <p>Please fix the following before continuing:</p>
-      <ul id="adminLoginModalErrorList"></ul>
-    </div>
-    <div class="modal__footer">
-      <button type="button" class="modal__btn modal__btn--primary" id="adminLoginModalCloseBtn">
-        OK, got it
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
-  // Password toggle (admin)
-  const adminPwdBtn = document.getElementById('toggleAdminPwd');
-  const adminPwd = document.getElementById('admin_password');
-  adminPwdBtn?.addEventListener('click', () => {
-    const show = adminPwd.type === 'password';
-    adminPwd.type = show ? 'text' : 'password';
-    adminPwdBtn.textContent = show ? '🙈' : '👁';
-  });
-
-  // Modal + client-side validation for admin login
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('adminLoginForm');
-    const modal = document.getElementById('adminLoginErrorModal');
-    const modalErrorList = document.getElementById('adminLoginModalErrorList');
-    const modalCloseBtn = document.getElementById('adminLoginModalCloseBtn');
-
     if (!form) return;
 
-    function showModal(errors) {
-      modalErrorList.innerHTML = '';
-      errors.forEach(msg => {
-        const li = document.createElement('li');
-        li.textContent = msg;
-        modalErrorList.appendChild(li);
-      });
-      modal.classList.add('is-visible');
-      modal.setAttribute('aria-hidden', 'false');
-    }
+    const usernameField = document.getElementById('admin_username');
+    const passwordField = document.getElementById('admin_password');
+    const usernameHint = document.getElementById('adminUsernameHint');
+    const passwordHint = document.getElementById('adminPasswordHint');
 
-    function hideModal() {
-      modal.classList.remove('is-visible');
-      modal.setAttribute('aria-hidden', 'true');
-    }
-
-    modalCloseBtn?.addEventListener('click', hideModal);
-    modal?.addEventListener('click', function(e) {
-      if (e.target === modal) hideModal();
+    // Store default hint texts
+    const hintDefaults = {};
+    document.querySelectorAll('.field-hint').forEach(function (hint) {
+      hintDefaults[hint.id] = hint.textContent;
     });
 
-    form.addEventListener('submit', function(e) {
-      const username = form.querySelector('input[name="username"]').value.trim();
-      const password = form.querySelector('input[name="password"]').value.trim();
+    function setError(field, hintEl, message) {
+      if (field) field.classList.add('input--error');
+      if (hintEl) {
+        hintEl.textContent = message;
+        hintEl.classList.add('field-hint--visible', 'hint--error');
+      }
+    }
 
-      let errors = [];
+    function clearError(field, hintEl, defaultMessage) {
+      if (field) field.classList.remove('input--error');
+      if (hintEl) {
+        hintEl.textContent = defaultMessage;
+        hintEl.classList.remove('hint--error');
+      }
+    }
 
-      if (!username) errors.push('Admin username is required.');
-      if (!password) errors.push('Password is required.');
-      if (password && password.length < 6) {
-        errors.push('Password must be at least 6 characters.');
+    // Password toggle
+    const adminPwdBtn = document.getElementById('toggleAdminPwd');
+    adminPwdBtn?.addEventListener('click', () => {
+      const show = passwordField.type === 'password';
+      passwordField.type = show ? 'text' : 'password';
+      adminPwdBtn.textContent = show ? '🙈' : '👁';
+    });
+
+    // Focus-based hints
+    document.querySelectorAll('[data-hint]').forEach(function (field) {
+      const hintId = field.getAttribute('data-hint');
+      const hintEl = document.getElementById(hintId);
+      if (!hintEl) return;
+
+      field.addEventListener('focus', function () {
+        hintEl.classList.add('field-hint--visible');
+      });
+
+      field.addEventListener('blur', function () {
+        if (hintEl.classList.contains('hint--error')) return;
+        hintEl.classList.remove('field-hint--visible');
+      });
+    });
+
+    function validateForm() {
+      let isValid = true;
+
+      const username = usernameField.value.trim();
+      const password = passwordField.value.trim();
+
+      // Username – only required
+      clearError(usernameField, usernameHint, 'Enter your admin username.');
+      if (!username) {
+        setError(usernameField, usernameHint, 'Admin username is required.');
+        isValid = false;
       }
 
-      if (errors.length > 0) {
+      // Password – required + min length
+      clearError(passwordField, passwordHint, 'Enter your admin password (minimum 6 characters).');
+      if (!password) {
+        setError(passwordField, passwordHint, 'Password is required.');
+        isValid = false;
+      } else if (password.length < 6) {
+        setError(passwordField, passwordHint, 'Password must be at least 6 characters.');
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    form.addEventListener('submit', function (e) {
+      if (!validateForm()) {
         e.preventDefault();
-        showModal(errors);
       }
     });
   });

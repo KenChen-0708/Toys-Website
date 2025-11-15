@@ -11,98 +11,49 @@ unset($_SESSION['errors'], $_SESSION['old']);
 ?>
 
 <style>
-  /* Simple modal styling – you can move this to your main CSS file */
-
-  .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.45);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-  }
-
-  .modal-overlay.is-visible {
+  /* Password toggle button */
+  .input-with-icon {
+    position: relative;
     display: flex;
-  }
-
-  .modal {
-    background: #fff;
-    max-width: 420px;
-    width: 90%;
-    border-radius: 12px;
-    padding: 1.5rem 1.75rem;
-    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.25);
-    animation: modal-pop 0.2s ease-out;
-  }
-
-  .modal__title {
-    font-size: 1.15rem;
-    font-weight: 600;
-    margin-bottom: 0.75rem;
-  }
-
-  .modal__body {
-    font-size: 0.95rem;
-    color: #444;
-    max-height: 260px;
-    overflow-y: auto;
-  }
-
-  .modal__body ul {
-    padding-left: 1.1rem;
-    margin: 0.25rem 0 0;
-  }
-
-  .modal__body li {
-    margin-bottom: 0.25rem;
-  }
-
-  .modal__footer {
-    margin-top: 1.2rem;
-    text-align: right;
-  }
-
-  .modal__btn {
-    border: none;
-    padding: 0.45rem 1.1rem;
-    border-radius: 999px;
-    font-size: 0.9rem;
-    cursor: pointer;
-  }
-
-  .modal__btn--primary {
-    background: #111827;
-    color: #fff;
-  }
-
-  .modal__btn--primary:hover {
-    opacity: 0.9;
-  }
-
-  .modal__icon {
-    display: inline-flex;
     align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    border-radius: 999px;
-    background: #fee2e2;
-    color: #b91c1c;
-    margin-right: 0.5rem;
-    font-size: 1.1rem;
   }
 
-  @keyframes modal-pop {
-    from {
-      opacity: 0;
-      transform: translateY(8px) scale(0.97);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
+  .password-toggle {
+    position: absolute;
+    right: 0.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0;
+  }
+
+  /* Field hints – only visible on focus / error */
+  .field-hint {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-top: 0.25rem;
+    line-height: 1.3;
+    opacity: 0;
+    max-height: 0;
+    transform: translateY(-2px);
+    transition: opacity 0.18s ease, max-height 0.18s ease, transform 0.18s ease;
+  }
+
+  .field-hint--visible {
+    opacity: 1;
+    max-height: 80px;
+    transform: translateY(0);
+  }
+
+  .hint--error {
+    color: #b91c1c;
+  }
+
+  .form__input.input--error {
+    border-color: #b91c1c;
+    box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.15);
   }
 </style>
 
@@ -131,147 +82,333 @@ unset($_SESSION['errors'], $_SESSION['old']);
           <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
           <label class="form__label">
-            <span>User Name</span>
-            <input name="name" type="text" class="form__input"
-              required minlength="3" autocomplete="name"
-              value="<?= htmlspecialchars($old['name'] ?? '') ?>"/>
+            <span>User Name *</span>
+            <input
+              name="username"
+              type="text"
+              class="form__input"
+              required
+              minlength="3"
+              autocomplete="username"
+              data-hint="nameHint"
+              value="<?= htmlspecialchars($old['username'] ?? '') ?>"
+            />
+            <p id="nameHint" class="field-hint">
+              3+ characters. Letters, numbers, and "_" only. No spaces.
+            </p>
           </label>
 
           <label class="form__label">
-            <span>Email</span>
+            <span>Email *</span>
             <div class="input-with-icon">
-              <input name="email" type="email" class="form__input"
-                required autocomplete="email"
-                value="<?= htmlspecialchars($old['email'] ?? '') ?>"/>
+              <input
+                name="email"
+                type="email"
+                class="form__input"
+                required
+                autocomplete="email"
+                data-hint="emailHint"
+                value="<?= htmlspecialchars($old['email'] ?? '') ?>"
+              />
             </div>
+            <p id="emailHint" class="field-hint">
+              Use a valid email like <em>name@example.com</em>.
+            </p>
           </label>
 
           <div class="grid two">
             <label class="form__label">
-              <span>Password</span>
+              <span>Password *</span>
               <div class="input-with-icon">
-                <input id="pwd" name="password" type="password" class="form__input"
-                  required minlength="6" autocomplete="new-password"/>
+                <input
+                  id="pwd"
+                  name="password"
+                  type="password"
+                  class="form__input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                  pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$"
+                  title="At least 8 characters, including uppercase, lowercase, number and symbol."
+                  data-hint="pwdHint"
+                />
+                <button
+                  type="button"
+                  id="togglePwd"
+                  class="password-toggle"
+                  aria-label="Toggle password visibility"
+                >👁</button>
               </div>
+              <p id="pwdHint" class="field-hint">
+                Use at least 8 characters with uppercase, lowercase, number and symbol.
+              </p>
             </label>
 
             <label class="form__label">
-              <span>Confirm Password</span>
-              <input id="pwd2" name="password_confirm" type="password" class="form__input"
-                required minlength="6" autocomplete="new-password"/>
+              <span>Confirm Password *</span>
+              <div class="input-with-icon">
+                <input
+                  id="pwd2"
+                  name="password_confirm"
+                  type="password"
+                  class="form__input"
+                  required
+                  minlength="8"
+                  autocomplete="new-password"
+                  data-hint="pwd2Hint"
+                />
+                <button
+                  type="button"
+                  id="togglePwd2"
+                  class="password-toggle"
+                  aria-label="Toggle confirm password visibility"
+                >👁</button>
+              </div>
+              <p id="pwd2Hint" class="field-hint">
+                Re-enter the same password as above.
+              </p>
             </label>
           </div>
 
           <label class="form__label">
-            <span>Phone (optional)</span>
-            <input name="phone" type="tel" class="form__input" placeholder="012-3456789" autocomplete="tel"
-              value="<?= htmlspecialchars($old['phone'] ?? '') ?>"/>
+            <span>Phone</span>
+            <input
+              name="phone"
+              type="tel"
+              class="form__input"
+              autocomplete="tel"
+              data-hint="phoneHint"
+              value="<?= htmlspecialchars($old['phone'] ?? '') ?>"
+            />
+            <p id="phoneHint" class="field-hint">
+              Optional. Use 012-3456789 or 0123456789 format.
+            </p>
           </label>
 
           <label class="form__label">
-            <span>Address (optional)</span>
-            <textarea name="address" class="form__input" rows="3"
-              ><?= htmlspecialchars($old['address'] ?? '') ?></textarea>
+            <span>Address</span>
+            <textarea
+              name="address"
+              class="form__input"
+              rows="3"
+              data-hint="addressHint"
+            ><?= htmlspecialchars($old['address'] ?? '') ?></textarea>
+            <p id="addressHint" class="field-hint">
+              Optional. Apartment, street, city, and postcode.
+            </p>
           </label>
 
           <button class="btn btn--primary btn--block" type="submit">Create account</button>
-          <p class="auth-sub" style="margin-bottom: -5px;">Already have an account? <a href="./login.php" class="link">Login</a></p>
+          <p class="auth-sub" style="margin-bottom: -5px;">
+            Already have an account?
+            <a href="./login.php" class="link">Login</a>
+          </p>
         </form>
       </div>
   </section>
 </main>
 
-<!-- ✅ Modal markup -->
-<div id="errorModal" class="modal-overlay" aria-hidden="true">
-  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="modal__header" style="display:flex;align-items:center;margin-bottom:0.5rem;">
-      <div class="modal__icon">!</div>
-      <h2 id="modalTitle" class="modal__title">Please fix these issues</h2>
-    </div>
-    <div class="modal__body">
-      <p>We couldn't submit your form because of the following:</p>
-      <ul id="modalErrorList"></ul>
-    </div>
-    <div class="modal__footer">
-      <button type="button" class="modal__btn modal__btn--primary" id="modalCloseBtn">
-        OK, got it
-      </button>
-    </div>
-  </div>
-</div>
-
 <script>
-  // Password match hint – optional, but leaving it here if you add #pwdHint later
-  const pwd = document.getElementById('pwd');
-  const pwd2 = document.getElementById('pwd2');
-  const hint = document.getElementById('pwdHint'); // only used if element exists
+  const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/;
 
-  function checkMatch() {
-    if (!hint) return;
-    if (pwd.value && pwd2.value && pwd.value !== pwd2.value) {
-      hint.textContent = 'Passwords do not match.';
-      hint.classList.add('hint--error');
-    } else {
-      hint.textContent = 'Use at least 6 characters.';
-      hint.classList.remove('hint--error');
-    }
-  }
-  pwd?.addEventListener('input', checkMatch);
-  pwd2?.addEventListener('input', checkMatch);
-
-  // ✅ Modal logic + client-side validation
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('registerForm');
-    const modal = document.getElementById('errorModal');
-    const modalErrorList = document.getElementById('modalErrorList');
-    const modalCloseBtn = document.getElementById('modalCloseBtn');
-
     if (!form) return;
 
-    function showModal(errors) {
-      // Clear old errors
-      modalErrorList.innerHTML = '';
-      errors.forEach(msg => {
-        const li = document.createElement('li');
-        li.textContent = msg;
-        modalErrorList.appendChild(li);
-      });
+    const pwd = document.getElementById('pwd');
+    const pwd2 = document.getElementById('pwd2');
+    const pwdHint = document.getElementById('pwdHint');
+    const pwd2Hint = document.getElementById('pwd2Hint');
 
-      modal.classList.add('is-visible');
-      modal.setAttribute('aria-hidden', 'false');
-    }
-
-    function hideModal() {
-      modal.classList.remove('is-visible');
-      modal.setAttribute('aria-hidden', 'true');
-    }
-
-    modalCloseBtn?.addEventListener('click', hideModal);
-
-    // Close when clicking outside the modal box
-    modal?.addEventListener('click', function(e) {
-      if (e.target === modal) hideModal();
+    // Save default hint texts so we can restore them after errors
+    const hintDefaults = {};
+    document.querySelectorAll('.field-hint').forEach(function (hint) {
+      hintDefaults[hint.id] = hint.textContent;
     });
 
-    form.addEventListener('submit', function(e) {
-      const username = form.querySelector('input[name="name"]').value.trim();
-      const email = form.querySelector('input[name="email"]').value.trim();
-      const password = form.querySelector('input[name="password"]').value.trim();
-      const passwordConfirm = form.querySelector('input[name="password_confirm"]').value.trim();
+    function resetHint(hintEl) {
+      if (!hintEl) return;
+      if (hintDefaults[hintEl.id]) {
+        hintEl.textContent = hintDefaults[hintEl.id];
+      }
+      hintEl.classList.remove('hint--error');
+    }
 
-      let errors = [];
+    function setError(field, hintEl, message) {
+      if (field) {
+        field.classList.add('input--error');
+      }
+      if (hintEl) {
+        hintEl.textContent = message;
+        hintEl.classList.add('field-hint--visible', 'hint--error');
+      }
+    }
 
-      if (!username) errors.push('Username is required.');
-      if (!email) errors.push('Email is required.');
-      if (!password) errors.push('Password is required.');
-      if (!passwordConfirm) errors.push('Confirm Password is required.');
-      if (password && passwordConfirm && password !== passwordConfirm) {
-        errors.push('Passwords do not match.');
+    function clearError(field, hintEl) {
+      if (field) {
+        field.classList.remove('input--error');
+      }
+      if (hintEl) {
+        resetHint(hintEl);
+      }
+    }
+
+    // 👁 Password eye toggles for both fields
+    const togglePwdBtn = document.getElementById('togglePwd');
+    const togglePwd2Btn = document.getElementById('togglePwd2');
+
+    togglePwdBtn?.addEventListener('click', () => {
+      const show = pwd.type === 'password';
+      pwd.type = show ? 'text' : 'password';
+      togglePwdBtn.textContent = show ? '🙈' : '👁';
+    });
+
+    togglePwd2Btn?.addEventListener('click', () => {
+      const show = pwd2.type === 'password';
+      pwd2.type = show ? 'text' : 'password';
+      togglePwd2Btn.textContent = show ? '🙈' : '👁';
+    });
+
+    // ✅ Generic focus-based hints for all fields with data-hint attribute
+    document.querySelectorAll('[data-hint]').forEach(function (field) {
+      const hintId = field.getAttribute('data-hint');
+      const hintEl = document.getElementById(hintId);
+      if (!hintEl) return;
+
+      field.addEventListener('focus', function () {
+        hintEl.classList.add('field-hint--visible');
+      });
+
+      field.addEventListener('blur', function () {
+        // Keep visible if currently showing an error
+        if (hintEl.classList.contains('hint--error')) return;
+        hintEl.classList.remove('field-hint--visible');
+      });
+    });
+
+    // Live password feedback while typing
+    function checkMatch() {
+      if (!pwdHint) return;
+
+      clearError(pwd, pwdHint);
+      clearError(pwd2, pwd2Hint);
+
+      pwdHint.classList.add('field-hint--visible');
+      if (pwd2Hint) pwd2Hint.classList.add('field-hint--visible');
+
+      if (pwd.value && !passwordPattern.test(pwd.value)) {
+        setError(pwd, pwdHint, 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
       }
 
-      if (errors.length > 0) {
+      if (pwd.value && pwd2.value && pwd.value !== pwd2.value) {
+        if (pwd2Hint) {
+          setError(pwd2, pwd2Hint, 'Passwords do not match.');
+        } else if (pwdHint) {
+          setError(pwd2, pwdHint, 'Passwords do not match.');
+        }
+      }
+    }
+
+    pwd?.addEventListener('input', checkMatch);
+    pwd2?.addEventListener('input', checkMatch);
+
+    function validateForm() {
+      let isValid = true;
+
+      const usernameField = form.querySelector('input[name="username"]');
+      const emailField = form.querySelector('input[name="email"]');
+      const phoneField = form.querySelector('input[name="phone"]');
+      const addressField = form.querySelector('textarea[name="address"]');
+
+      const nameHint = document.getElementById('nameHint');
+      const emailHint = document.getElementById('emailHint');
+      const phoneHint = document.getElementById('phoneHint');
+      const addressHint = document.getElementById('addressHint');
+
+      // Username
+      const username = usernameField.value.trim();
+      clearError(usernameField, nameHint);
+
+      if (!username) {
+        setError(usernameField, nameHint, 'Username is required.');
+        isValid = false;
+      } else if (username.length < 3) {
+        setError(usernameField, nameHint, 'Username must be at least 3 characters.');
+        isValid = false;
+      } else if (/\s/.test(username)) {
+        setError(usernameField, nameHint, 'Username cannot contain spaces. Use "_" instead.');
+        isValid = false;
+      } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
+        setError(usernameField, nameHint, 'Username can only contain letters, numbers, and underscores.');
+        isValid = false;
+      }
+
+      // Email
+      const email = emailField.value.trim();
+      clearError(emailField, emailHint);
+
+      if (!email) {
+        setError(emailField, emailHint, 'Email is required.');
+        isValid = false;
+      } else if (!emailField.checkValidity()) {
+        setError(emailField, emailHint, 'Please enter a valid email address.');
+        isValid = false;
+      }
+
+      // Password
+      clearError(pwd, pwdHint);
+      clearError(pwd2, pwd2Hint);
+
+      const password = pwd.value.trim();
+      const passwordConfirm = pwd2.value.trim();
+
+      if (!password) {
+        setError(pwd, pwdHint, 'Password is required.');
+        isValid = false;
+      } else if (!passwordPattern.test(password)) {
+        setError(pwd, pwdHint, 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
+        isValid = false;
+      }
+
+      if (!passwordConfirm) {
+        if (pwd2Hint) {
+          setError(pwd2, pwd2Hint, 'Confirm Password is required.');
+        } else {
+          setError(pwd2, pwdHint, 'Confirm Password is required.');
+        }
+        isValid = false;
+      } else if (password && passwordConfirm && password !== passwordConfirm) {
+        if (pwd2Hint) {
+          setError(pwd2, pwd2Hint, 'Passwords do not match.');
+        } else {
+          setError(pwd2, pwdHint, 'Passwords do not match.');
+        }
+        isValid = false;
+      }
+
+      // Phone (optional) – simple pattern if user fills it
+      const phone = phoneField.value.trim();
+      clearError(phoneField, phoneHint);
+      if (phone && !/^0\d{1,2}-?\d{6,8}$/.test(phone)) {
+        setError(phoneField, phoneHint, 'Please enter a valid phone format, e.g. 012-3456789.');
+        isValid = false;
+      }
+
+      // Address (optional) – no strict validation, just show hint if filled but extremely short
+      const address = addressField.value.trim();
+      clearError(addressField, addressHint);
+      if (address && address.length < 5) {
+        setError(addressField, addressHint, 'Address looks too short. Please add more details.');
+        isValid = false;
+      }
+
+      return isValid;
+    }
+
+    // On submit, only allow if all client-side checks pass
+    form.addEventListener('submit', function (e) {
+      if (!validateForm()) {
         e.preventDefault();
-        showModal(errors);
       }
     });
   });

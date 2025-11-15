@@ -6,6 +6,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   header('Location: ./admin_login.php'); 
   exit; 
 }
+
 if (!verify_csrf($_POST['csrf_token'] ?? '')) { 
   http_response_code(403); 
   die('Invalid CSRF token'); 
@@ -17,42 +18,54 @@ $password = $_POST['password'] ?? '';
 $_SESSION['admin_old'] = ['username' => $username];
 $errors = [];
 
-/* Validation: username min 3 */
-if (strlen($username) < 3) $errors[] = 'Username must be at least 3 characters.';
-/* Validation: password min 6 */
-if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters.';
+/**
+ * Handle Remember Me cookie for admin:
+ * - If checked: always remember this username (even if login fails)
+ * - If unchecked: always delete the cookie (even if login fails)
+ */
+if (!empty($_POST['remember'])) {
+    // Set / update cookie for 30 days
+    setcookie('remember_admin', $username, time() + 60*60*24*30, '/', '', false, true);
+} else {
+    // Remove cookie if exists
+    if (isset($_COOKIE['remember_admin'])) {
+        setcookie('remember_admin', '', time() - 3600, '/', '', false, true);
+    }
+}
+
+// Minimal validation with generic error messages
+if (!$username) {
+  $errors[] = 'Invalid admin username or password.';
+}
+if (strlen($password) < 6) {
+  $errors[] = 'Invalid admin username or password.';
+}
 
 if (!$errors) {
-  // Look up by Admin.username
-  $stmt = $conn->prepare("SELECT admin_id, name, email, password FROM Admin WHERE BINARY name = ?");
+  // Look up by Admin.username (your username column)
+  $stmt = $conn->prepare("SELECT admin_id, username, email, password FROM Admin WHERE BINARY username = ?");
   $stmt->bind_param('s', $username);
   $stmt->execute();
   $admin = $stmt->get_result()->fetch_assoc();
 
   $valid = false;
-  if ($admin) {
-    $hash = $admin['password'];
-
-    $valid = password_verify($password, $hash);
+  if ($admin && password_verify($password, $admin['password'])) {
+    $valid = true;
   }
 
   if ($valid) {
     // Store admin session separately from member
     $_SESSION['admin'] = [
       'id'    => $admin['admin_id'],
-      'name'  => $admin['name'],
+      'username'  => $admin['username'],
       'email' => $admin['email'],
     ];
 
-    // Optional: admin "remember me" (simple username cookie, or implement token like we discussed for members)
-    if (!empty($_POST['remember'])) {
-      setcookie('remember_admin', $username, time()+60*60*24*30, '/', '', false, true);
-    }
-
     unset($_SESSION['admin_old']);
-    header('Location: ../admin/admin_dashboard.php'); // change to your admin dashboard
+    header('Location: ../admin/admin_dashboard.php');
     exit;
   } else {
+    // Generic message to avoid user enumeration
     $errors[] = 'Invalid admin username or password.';
   }
 }
