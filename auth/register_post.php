@@ -25,11 +25,11 @@ if (strlen($name) < 3) {
 }
 
 if (!filter_var($email, FILTER_VALIDATE_EMAIL)) $errors[] = 'Please enter a valid email.';
-if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters.';
+if (strlen($password) < 8) $errors[] = 'Password must be at least 8 characters.';
 if ($password !== $password_confirm) $errors[] = 'Passwords do not match.';
 
 if (!$errors) {
-  // --- name (case-sensitive) ---
+  // --- name (case-sensitive) --- 
   $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY name = ?");
   $checkName->bind_param('s', $name);
   $checkName->execute();

@@ -29,6 +29,27 @@ $token = $_GET['token'] ?? '';
     line-height: 1;
     padding: 0;
   }
+
+  /* Hints */
+  .field-hint {
+    font-size: .8rem;
+    color: #6b7280;
+    margin-top: .25rem;
+    opacity: 0;
+    max-height: 0;
+    transition: .18s;
+  }
+  .field-hint--visible {
+    opacity: 1;
+    max-height: 80px;
+  }
+  .hint--error {
+    color: #b91c1c;
+  }
+
+  .form__input.input--error {
+    border-color: #b91c1c;
+  }
 </style>
 
 <main class="main">
@@ -43,6 +64,7 @@ $token = $_GET['token'] ?? '';
   <section class="auth-hero">
     <div class="auth-card">
       <h1 class="auth-title">Set a new password</h1>
+      <p class="auth-sub">Choose a strong password to secure your account.</p>
 
       <?php if ($errors): ?>
         <div class="alert alert--danger">
@@ -52,11 +74,12 @@ $token = $_GET['token'] ?? '';
         </div>
       <?php endif; ?>
 
-      <form class="form grid" id="resetForm" action="./reset_password_post.php" method="POST">
+      <form class="form grid" id="resetForm" action="./reset_password_post.php" method="POST" novalidate>
         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
         <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
 
+        <!-- New password -->
         <div class="form__row">
           <label class="form__label" for="password">New password</label>
           <div class="input-with-icon">
@@ -70,6 +93,7 @@ $token = $_GET['token'] ?? '';
               autocomplete="new-password"
               pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$"
               title="At least 8 characters, including uppercase, lowercase, number and symbol."
+              data-hint="passwordHint"
             />
             <button
               type="button"
@@ -78,8 +102,12 @@ $token = $_GET['token'] ?? '';
               aria-label="Toggle password visibility"
             >👁</button>
           </div>
+          <p id="passwordHint" class="field-hint">
+            At least 8 characters, including uppercase, lowercase, number and symbol.
+          </p>
         </div>
 
+        <!-- Confirm password -->
         <div class="form__row">
           <label class="form__label" for="password_confirmation">Confirm password</label>
           <div class="input-with-icon">
@@ -91,6 +119,7 @@ $token = $_GET['token'] ?? '';
               required
               minlength="8"
               autocomplete="new-password"
+              data-hint="passwordConfirmHint"
             />
             <button
               type="button"
@@ -99,6 +128,9 @@ $token = $_GET['token'] ?? '';
               aria-label="Toggle confirm password visibility"
             >👁</button>
           </div>
+          <p id="passwordConfirmHint" class="field-hint">
+            Re-enter your new password.
+          </p>
         </div>
 
         <button type="submit" class="btn">Update password</button>
@@ -108,48 +140,100 @@ $token = $_GET['token'] ?? '';
 </main>
 
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+  const form = document.getElementById('resetForm');
   const passwordInput = document.getElementById('password');
   const confirmInput = document.getElementById('password_confirmation');
   const togglePwdBtn = document.getElementById('togglePwd');
   const togglePwd2Btn = document.getElementById('togglePwd2');
-  const form = document.getElementById('resetForm');
 
-  // Same pattern as register page
+  const passwordHint = document.getElementById('passwordHint');
+  const confirmHint = document.getElementById('passwordConfirmHint');
+
+  // Same pattern as on the server / register page
   const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/;
 
-  // 👁 Eye toggle for New password
+  function setError(field, hintEl, message) {
+    field.classList.add('input--error');
+    hintEl.textContent = message;
+    hintEl.classList.add('field-hint--visible', 'hint--error');
+  }
+
+  function clearError(field, hintEl, defaultMessage) {
+    field.classList.remove('input--error');
+    hintEl.textContent = defaultMessage;
+    hintEl.classList.remove('hint--error');
+  }
+
+  // Eye toggle for new password
   togglePwdBtn?.addEventListener('click', () => {
     const show = passwordInput.type === 'password';
     passwordInput.type = show ? 'text' : 'password';
     togglePwdBtn.textContent = show ? '🙈' : '👁';
   });
 
-  // 👁 Eye toggle for Confirm password
+  // Eye toggle for confirm password
   togglePwd2Btn?.addEventListener('click', () => {
     const show = confirmInput.type === 'password';
     confirmInput.type = show ? 'text' : 'password';
     togglePwd2Btn.textContent = show ? '🙈' : '👁';
   });
 
-  // Basic client-side validation for pattern + match
-  form?.addEventListener('submit', function(e) {
+  // Show hints on focus like login page
+  document.querySelectorAll('[data-hint]').forEach(field => {
+    const hint = document.getElementById(field.dataset.hint);
+    field.addEventListener('focus', () => hint.classList.add('field-hint--visible'));
+    field.addEventListener('blur', () => {
+      if (!hint.classList.contains('hint--error')) {
+        hint.classList.remove('field-hint--visible');
+      }
+    });
+  });
+
+  form?.addEventListener('submit', function (e) {
     const pwd = passwordInput.value.trim();
     const pwd2 = confirmInput.value.trim();
-    let errors = [];
+    let valid = true;
 
-    if (!passwordPattern.test(pwd)) {
-      errors.push('Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
+    // Reset to default messages
+    clearError(
+      passwordInput,
+      passwordHint,
+      "At least 8 characters, including uppercase, lowercase, number and symbol."
+    );
+    clearError(
+      confirmInput,
+      confirmHint,
+      "Re-enter your new password."
+    );
+
+    // New password validation
+    if (!pwd) {
+      setError(passwordInput, passwordHint, "Password is required.");
+      valid = false;
+    } else if (!passwordPattern.test(pwd)) {
+      setError(
+        passwordInput,
+        passwordHint,
+        "Password must be at least 8 characters and include uppercase, lowercase, number and symbol."
+      );
+      valid = false;
     }
 
-    if (pwd !== pwd2) {
-      errors.push('Passwords do not match.');
+    // Confirm password validation
+    if (!pwd2) {
+      setError(confirmInput, confirmHint, "Please confirm your new password.");
+      valid = false;
+    } else if (pwd !== pwd2) {
+      setError(confirmInput, confirmHint, "Passwords do not match.");
+      valid = false;
     }
 
-    if (errors.length > 0) {
+    if (!valid) {
       e.preventDefault();
-      alert(errors.join("\n"));
     }
   });
+});
 </script>
 
 <?php include '../partials/footer.php'; ?>
