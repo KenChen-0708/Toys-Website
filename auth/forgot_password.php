@@ -1,9 +1,29 @@
 <?php
 $title = "Forgot Password";
-include '../partials/header.php';
 require_once '../helper/connection.php';
 require_once '../helper/auth.php';
 require_guest();
+?>
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!--=============== FLATICON ===============-->
+    <link
+      rel="stylesheet"
+      href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css"
+    />
+
+    <!--=============== CSS ===============-->
+    <link rel="stylesheet" href="/assets/css/styles.css" />
+
+    <title><?= htmlspecialchars($title) ?></title>
+  </head>
+  <body>
+<?php 
+include '../partials/header.php';
 
 $errors = $_SESSION['errors'] ?? [];
 $success = $_SESSION['success'] ?? null;
