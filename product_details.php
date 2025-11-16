@@ -1517,43 +1517,60 @@ $title = htmlspecialchars($product['name']) . " — Details";
         });
       }
 
-      // Toast notification
+      // Toast notification (matching product_list.js style)
       function showToast(message, type = 'success') {
         $('.toast').remove();
 
-        const bgColor = type === 'success' ? '#10b981' : '#ef4444';
+        const iconMap = {
+          success: 'fi-rs-check-circle',
+          error: 'fi-rs-cross-circle',
+          info: 'fi-rs-info'
+        };
+
         const $toast = $(`
-          <div class="toast" style="
+          <div class="toast toast--${type}" style="
             position: fixed;
             top: 20px;
             right: 20px;
-            background: ${bgColor};
-            color: white;
-            padding: 1rem 1.5rem;
-            border-radius: 0.5rem;
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-            z-index: 9999;
             display: flex;
             align-items: center;
-            gap: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            z-index: 10000;
             opacity: 0;
-            transform: translateY(-10px);
-            transition: all 0.3s ease;
+            transform: translateX(100px);
+            transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            min-width: 280px;
+            max-width: 400px;
+            border-left: 4px solid ${type === 'success' ? '#10b981' : '#ef4444'};
           ">
-            <i class="fi ${type === 'success' ? 'fi-rs-check-circle' : 'fi-rs-cross-circle'}"></i>
-            <span>${message}</span>
+            <i class="fi ${iconMap[type]}" style="font-size: 1.25rem; flex-shrink: 0; color: ${type === 'success' ? '#10b981' : '#ef4444'};"></i>
+            <span style="font-size: 0.875rem; font-weight: 500; color: #1f2937;">${escapeHtml(message)}</span>
           </div>
         `);
 
         $('body').append($toast);
-        setTimeout(() => $toast.css({ opacity: 1, transform: 'translateY(0)' }), 10);
+        setTimeout(() => $toast.css({ opacity: 1, transform: 'translateX(0)' }), 10);
 
         setTimeout(() => {
-          $toast.css({ opacity: 0, transform: 'translateY(-10px)' });
+          $toast.css({ opacity: 0, transform: 'translateX(100px)' });
           setTimeout(() => $toast.remove(), 300);
         }, 3000);
+      }
+
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return String(text).replace(/[&<>"']/g, m => map[m]);
       }
     });
   </script>
