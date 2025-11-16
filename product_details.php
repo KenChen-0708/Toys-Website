@@ -1208,7 +1208,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         </div>
 
         <div class="action-buttons">
-          <button class="btn btn-primary" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-primary" id="addToCartBtn" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
             <i class="fi fi-rs-shopping-cart-add"></i>
             Add to Cart
           </button>
@@ -1365,6 +1365,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
     <?php endif; ?>
   </main>
 
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script>
     // Image gallery functionality
     function changeImage(src) {
@@ -1401,6 +1402,158 @@ $title = htmlspecialchars($product['name']) . " — Details";
       const menu = document.querySelector('.profile-menu');
       if (menu && !e.target.closest('.header__user-profile')) {
         menu.style.display = 'none';
+      }
+    });
+
+    // Add to Cart functionality
+    $(document).ready(function() {
+      // Load cart count on page load
+      loadCartCount();
+
+      $('#addToCartBtn').on('click', function() {
+        const $btn = $(this);
+        if ($btn.is(':disabled')) return;
+
+        const productId = <?= $product_id ?>;
+        const quantity = parseInt($('#quantity').val());
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Adding...');
+
+        $.ajax({
+          url: 'cart_actions.php',
+          method: 'POST',
+          data: {
+            action: 'add',
+            product_id: productId,
+            quantity: quantity
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              showToast('Product added to cart!', 'success');
+              if (response.cart_count !== undefined) {
+                $('.count.cart-count').text(response.cart_count);
+              }
+              $btn.html('<i class="fi fi-rs-check"></i> Added!');
+              setTimeout(() => {
+                $btn.html(originalHtml).prop('disabled', false);
+              }, 1500);
+            } else {
+              showToast(response.message || 'Failed to add to cart', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              }
+              $btn.html(originalHtml).prop('disabled', false);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
+      // Add to cart for related products
+      $(document).on('click', '.add-cart-btn', function(e) {
+        e.preventDefault();
+        const $btn = $(this);
+        if ($btn.is(':disabled')) return;
+
+        const productId = $btn.data('product-id');
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
+
+        $.ajax({
+          url: 'cart_actions.php',
+          method: 'POST',
+          data: {
+            action: 'add',
+            product_id: productId,
+            quantity: 1
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              showToast('Product added to cart!', 'success');
+              if (response.cart_count !== undefined) {
+                $('.count.cart-count').text(response.cart_count);
+              }
+              $btn.html('<i class="fi fi-rs-check"></i>');
+              setTimeout(() => {
+                $btn.html(originalHtml).prop('disabled', false);
+              }, 1000);
+            } else {
+              showToast(response.message || 'Failed to add to cart', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              }
+              $btn.html(originalHtml).prop('disabled', false);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
+      // Load cart count
+      function loadCartCount() {
+        $.ajax({
+          url: 'get_cart_count.php',
+          method: 'GET',
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              $('.count.cart-count').text(response.cart_count || 0);
+              $('.count:not(.cart-count)').text(response.wishlist_count || 0);
+            }
+          },
+          error: function() {
+            // Silently fail
+          }
+        });
+      }
+
+      // Toast notification
+      function showToast(message, type = 'success') {
+        $('.toast').remove();
+
+        const bgColor = type === 'success' ? '#10b981' : '#ef4444';
+        const $toast = $(`
+          <div class="toast" style="
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${bgColor};
+            color: white;
+            padding: 1rem 1.5rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+          ">
+            <i class="fi ${type === 'success' ? 'fi-rs-check-circle' : 'fi-rs-cross-circle'}"></i>
+            <span>${message}</span>
+          </div>
+        `);
+
+        $('body').append($toast);
+        setTimeout(() => $toast.css({ opacity: 1, transform: 'translateY(0)' }), 10);
+
+        setTimeout(() => {
+          $toast.css({ opacity: 0, transform: 'translateY(-10px)' });
+          setTimeout(() => $toast.remove(), 300);
+        }, 3000);
       }
     });
   </script>
