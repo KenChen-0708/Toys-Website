@@ -1,7 +1,8 @@
 <?php
 session_start();
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
+require_admin();
 
 // Check if admin is logged in
 if (!isset($_SESSION['admin'])) {
@@ -13,13 +14,17 @@ $success_message = '';
 $error_message = '';
 
 // Check if Feedback table exists
-$table_check = $conn->query("SHOW TABLES LIKE 'Feedback'");
-if ($table_check && $table_check->num_rows == 0) {
-    // Try lowercase
-    $table_check = $conn->query("SHOW TABLES LIKE 'feedback'");
-    if ($table_check && $table_check->num_rows == 0) {
-        $error_message = 'Feedback table does not exist. Please run the SQL script to create it: /sql/create_feedback_table.sql';
+try {
+    $table_check = $pdo->query("SHOW TABLES LIKE 'Feedback'");
+    if ($table_check && $table_check->rowCount() == 0) {
+        // Try lowercase
+        $table_check = $pdo->query("SHOW TABLES LIKE 'feedback'");
+        if ($table_check && $table_check->rowCount() == 0) {
+            $error_message = 'Feedback table does not exist. Please run the SQL script to create it: /sql/create_feedback_table.sql';
+        }
     }
+} catch (PDOException $e) {
+    $error_message = 'Database error: ' . $e->getMessage();
 }
 
 // Handle status update
@@ -28,20 +33,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
     $new_status = $_POST['status'];
     $admin_response = trim($_POST['admin_response'] ?? '');
     
-    $sql = "UPDATE Feedback SET status = ?, admin_response = ?, updated_at = NOW() WHERE feedback_id = ?";
-    $stmt = $conn->prepare($sql);
-    
-    if ($stmt === false) {
-        $error_message = 'Database error: ' . $conn->error;
-    } else {
-        $stmt->bind_param('ssi', $new_status, $admin_response, $feedback_id);
-        
-        if ($stmt->execute()) {
-            $success_message = 'Feedback updated successfully!';
-        } else {
-            $error_message = 'Failed to update feedback: ' . $stmt->error;
-        }
-        $stmt->close();
+    try {
+        $sql = "UPDATE Feedback SET status = ?, admin_response = ?, updated_at = NOW() WHERE feedback_id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$new_status, $admin_response, $feedback_id]);
+        $success_message = 'Feedback updated successfully!';
+    } catch (PDOException $e) {
+        $error_message = 'Failed to update feedback: ' . $e->getMessage();
     }
 }
 
@@ -49,20 +47,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
     $feedback_id = intval($_POST['feedback_id']);
     
-    $sql = "DELETE FROM Feedback WHERE feedback_id = ?";
-    $stmt = $conn->prepare($sql);
-    
-    if ($stmt === false) {
-        $error_message = 'Database error: ' . $conn->error;
-    } else {
-        $stmt->bind_param('i', $feedback_id);
-        
-        if ($stmt->execute()) {
-            $success_message = 'Feedback deleted successfully!';
-        } else {
-            $error_message = 'Failed to delete feedback: ' . $stmt->error;
-        }
-        $stmt->close();
+    try {
+        $sql = "DELETE FROM Feedback WHERE feedback_id = ?";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$feedback_id]);
+        $success_message = 'Feedback deleted successfully!';
+    } catch (PDOException $e) {
+        $error_message = 'Failed to delete feedback: ' . $e->getMessage();
     }
 }
 
@@ -74,31 +65,36 @@ $search = trim($_GET['search'] ?? '');
 
 // Build query - Detect which Member table columns exist
 $member_name_col = 'name'; // default
-$member_columns_result = $conn->query("SHOW COLUMNS FROM Member");
-if ($member_columns_result) {
-    $member_columns = [];
-    while ($col = $member_columns_result->fetch_assoc()) {
-        $member_columns[] = $col['Field'];
+$member_email_col = 'email'; // default
+
+try {
+    $member_columns_result = $pdo->query("SHOW COLUMNS FROM Member");
+    if ($member_columns_result) {
+        $member_columns = [];
+        while ($col = $member_columns_result->fetch()) {
+            $member_columns[] = $col['Field'];
+        }
+        
+        // Check for common name column variations
+        if (in_array('member_name', $member_columns)) {
+            $member_name_col = 'member_name';
+        } elseif (in_array('name', $member_columns)) {
+            $member_name_col = 'name';
+        } elseif (in_array('full_name', $member_columns)) {
+            $member_name_col = 'full_name';
+        } elseif (in_array('username', $member_columns)) {
+            $member_name_col = 'username';
+        }
+        
+        // Check for email column
+        if (in_array('member_email', $member_columns)) {
+            $member_email_col = 'member_email';
+        } elseif (!in_array('email', $member_columns) && in_array('email_address', $member_columns)) {
+            $member_email_col = 'email_address';
+        }
     }
-    
-    // Check for common name column variations
-    if (in_array('member_name', $member_columns)) {
-        $member_name_col = 'member_name';
-    } elseif (in_array('name', $member_columns)) {
-        $member_name_col = 'name';
-    } elseif (in_array('full_name', $member_columns)) {
-        $member_name_col = 'full_name';
-    } elseif (in_array('username', $member_columns)) {
-        $member_name_col = 'username';
-    }
-    
-    // Check for email column
-    $member_email_col = 'email';
-    if (in_array('member_email', $member_columns)) {
-        $member_email_col = 'member_email';
-    } elseif (!in_array('email', $member_columns) && in_array('email_address', $member_columns)) {
-        $member_email_col = 'email_address';
-    }
+} catch (PDOException $e) {
+    // Continue with defaults
 }
 
 $sql = "SELECT f.*, m.{$member_name_col} as member_name, m.{$member_email_col} as member_email 
@@ -107,24 +103,20 @@ $sql = "SELECT f.*, m.{$member_name_col} as member_name, m.{$member_email_col} a
         WHERE 1=1";
 
 $params = [];
-$types = '';
 
 if ($status_filter !== 'all') {
     $sql .= " AND f.status = ?";
     $params[] = $status_filter;
-    $types .= 's';
 }
 
 if ($category_filter !== 'all') {
     $sql .= " AND f.category = ?";
     $params[] = $category_filter;
-    $types .= 's';
 }
 
 if ($rating_filter !== 'all') {
     $sql .= " AND f.rating = ?";
     $params[] = intval($rating_filter);
-    $types .= 'i';
 }
 
 if (!empty($search)) {
@@ -133,41 +125,35 @@ if (!empty($search)) {
     $params[] = $search_param;
     $params[] = $search_param;
     $params[] = $search_param;
-    $types .= 'sss';
 }
 
 $sql .= " ORDER BY f.created_at DESC";
 
-$stmt = $conn->prepare($sql);
-
-if ($stmt === false) {
-    $error_message = 'Database query error: ' . $conn->error . '<br>Please make sure the Feedback table exists and is properly configured.';
-    $feedback_list = null;
-} else {
-    if (!empty($params)) {
-        $stmt->bind_param($types, ...$params);
-    }
-    
-    if ($stmt->execute()) {
-        $feedback_list = $stmt->get_result();
-    } else {
-        $error_message = 'Error executing query: ' . $stmt->error;
-        $feedback_list = null;
-    }
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $feedback_list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error_message = 'Database query error: ' . $e->getMessage() . '<br>Please make sure the Feedback table exists and is properly configured.';
+    $feedback_list = [];
 }
 
 // Get statistics
 $stats = ['total' => 0, 'pending' => 0, 'reviewed' => 0, 'resolved' => 0, 'avg_rating' => 0];
-$stats_sql = "SELECT 
-    COUNT(*) as total,
-    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
-    COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed,
-    COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved,
-    COALESCE(AVG(rating), 0) as avg_rating
-    FROM Feedback";
-$stats_result = $conn->query($stats_sql);
-if ($stats_result) {
-    $stats = $stats_result->fetch_assoc();
+try {
+    $stats_sql = "SELECT 
+        COUNT(*) as total,
+        COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
+        COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed,
+        COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved,
+        COALESCE(AVG(rating), 0) as avg_rating
+        FROM Feedback";
+    $stats_result = $pdo->query($stats_sql);
+    if ($stats_result) {
+        $stats = $stats_result->fetch();
+    }
+} catch (PDOException $e) {
+    // Continue with default stats
 }
 ?>
 
@@ -177,9 +163,406 @@ if ($stats_result) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feedback Management - Admin Panel</title>
-    <link rel="stylesheet" href="../assets/css/feedback_management.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: #f9fafb;
+        }
 
+        .admin-header {
+            background: linear-gradient(135deg, #a8e6a3 0%, #7ed97e 100%);
+            color: white;
+            padding: 20px 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .admin-header h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .admin-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            border-left: 4px solid #a8e6a3;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+        }
+
+        .stat-card .stat-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #22c55e;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-label {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .filters-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+
+        .filters-form {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            align-items: end;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .form-control {
+            padding: 10px 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: #7ed97e;
+            box-shadow: 0 0 0 3px rgba(126, 217, 126, 0.1);
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #a8e6a3 0%, #7ed97e 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(126, 217, 126, 0.3);
+        }
+
+        .btn-secondary {
+            background: #e5e7eb;
+            color: #4b5563;
+        }
+
+        .btn-secondary:hover {
+            background: #d1d5db;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            animation: slideDown 0.3s ease;
+            line-height: 1.6;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .alert-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 2px solid #86efac;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 2px solid #fca5a5;
+        }
+
+        .feedback-table {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        .table-header {
+            padding: 20px 25px;
+            border-bottom: 2px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-header h2 {
+            color: #1f2937;
+            font-size: 20px;
+        }
+
+        .feedback-item {
+            padding: 25px;
+            border-bottom: 1px solid #f3f4f6;
+            transition: background 0.2s ease;
+        }
+
+        .feedback-item:hover {
+            background: #f9fafb;
+        }
+
+        .feedback-item:last-child {
+            border-bottom: none;
+        }
+
+        .feedback-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .feedback-title {
+            flex: 1;
+        }
+
+        .feedback-title h3 {
+            color: #1f2937;
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .feedback-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 13px;
+            color: #6b7280;
+            flex-wrap: wrap;
+        }
+
+        .feedback-meta span {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-reviewed {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .badge-resolved {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-category {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .rating-stars {
+            color: #fbbf24;
+            font-size: 16px;
+        }
+
+        .feedback-message {
+            color: #4b5563;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .admin-response-box {
+            background: #f0fdf4;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+
+        .admin-response-box h4 {
+            color: #22c55e;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+
+        .admin-response-box p {
+            color: #4b5563;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .feedback-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .expand-btn {
+            background: #f3f4f6;
+            color: #4b5563;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .expand-btn:hover {
+            background: #e5e7eb;
+        }
+
+        .response-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 10px;
+            border: 2px solid #e5e7eb;
+        }
+
+        .response-form.active {
+            display: block;
+        }
+
+        .response-form textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            margin-bottom: 15px;
+        }
+
+        .response-form textarea:focus {
+            outline: none;
+            border-color: #7ed97e;
+        }
+
+        .response-form-actions {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .no-feedback {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .filters-form {
+                grid-template-columns: 1fr;
+            }
+
+            .feedback-header {
+                flex-direction: column;
+            }
+
+            .feedback-actions {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 <body>
     <div class="admin-header">
@@ -278,11 +661,11 @@ if ($stats_result) {
         <!-- Feedback List -->
         <div class="feedback-table">
             <div class="table-header">
-                <h2>Feedback List <?php echo ($feedback_list) ? '(' . $feedback_list->num_rows . ' items)' : ''; ?></h2>
+                <h2>Feedback List (<?php echo count($feedback_list); ?> items)</h2>
             </div>
 
-            <?php if ($feedback_list && $feedback_list->num_rows > 0): ?>
-                <?php while ($feedback = $feedback_list->fetch_assoc()): ?>
+            <?php if (!empty($feedback_list)): ?>
+                <?php foreach ($feedback_list as $feedback): ?>
                     <div class="feedback-item">
                         <div class="feedback-header">
                             <div class="feedback-title">
@@ -351,7 +734,7 @@ if ($stats_result) {
                             </form>
                         </div>
                     </div>
-                <?php endwhile; ?>
+                <?php endforeach; ?>
             <?php else: ?>
                 <div class="no-feedback">
                     <p style="font-size: 48px;">📭</p>
@@ -377,12 +760,3 @@ if ($stats_result) {
     </script>
 </body>
 </html>
-
-<?php
-if (isset($stmt)) {
-    $stmt->close();
-}
-if (isset($conn)) {
-    $conn->close();
-}
-?>
