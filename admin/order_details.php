@@ -1,9 +1,12 @@
 <?php
 session_start();
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_admin();
-if (!$db_ok || !$conn) die('Connection failed');
+
+if (!$pdo) {
+    die('Connection failed');
+}
 
 if (!isset($_GET['order_id'])) {
     echo 'Missing order id';
@@ -11,34 +14,30 @@ if (!isset($_GET['order_id'])) {
 }
 $order_id = (int)$_GET['order_id'];
 
-// Fetch order + member
-$stmt = $conn->prepare("SELECT o.*, m.username, m.email, m.phone_number FROM `Order` o JOIN Member m ON o.member_id = m.member_id WHERE o.order_id = ? LIMIT 1");
-$stmt->bind_param('i', $order_id);
-$stmt->execute();
-$res = $stmt->get_result();
-$order = $res->fetch_assoc();
-if (!$order) {
-    echo 'Order not found.';
-    exit;
+try {
+    // Fetch order + member
+    $stmt = $pdo->prepare("SELECT o.*, m.username, m.email, m.phone_number FROM `Order` o JOIN Member m ON o.member_id = m.member_id WHERE o.order_id = ? LIMIT 1");
+    $stmt->execute([$order_id]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if (!$order) {
+        echo 'Order not found.';
+        exit;
+    }
+
+    // Order items
+    $stmt = $pdo->prepare("SELECT oi.*, p.name, p.main_image_path FROM Order_Item oi JOIN Product p ON oi.product_id = p.product_id WHERE oi.order_id = ?");
+    $stmt->execute([$order_id]);
+    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Payment
+    $stmt = $pdo->prepare("SELECT * FROM Payment WHERE order_id = ? LIMIT 1");
+    $stmt->execute([$order_id]);
+    $payment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+} catch (PDOException $e) {
+    die('Database error: ' . $e->getMessage());
 }
-$stmt->close();
-
-// Order items
-$stmt = $conn->prepare("SELECT oi.*, p.name, p.main_image_path FROM Order_Item oi JOIN Product p ON oi.product_id = p.product_id WHERE oi.order_id = ?");
-$stmt->bind_param('i', $order_id);
-$stmt->execute();
-$items_res = $stmt->get_result();
-$items = [];
-while ($r = $items_res->fetch_assoc()) $items[] = $r;
-$stmt->close();
-
-// Payment
-$stmt = $conn->prepare("SELECT * FROM Payment WHERE order_id = ? LIMIT 1");
-$stmt->bind_param('i', $order_id);
-$stmt->execute();
-$pay_res = $stmt->get_result();
-$payment = $pay_res->fetch_assoc();
-$stmt->close();
 
 // Simple ETA calculation
 $eta = 'N/A';
@@ -91,10 +90,12 @@ if ($order['status'] === 'Shipped') {
 
         <h3>Payment</h3>
         <?php if ($payment): ?>
-            <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
-            <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
-            <p><strong>Status:</strong> <?php echo htmlspecialchars($payment['status']); ?></p>
-            <p><strong>Paid at:</strong> <?php echo $payment['payment_date']; ?></p>
+            <div class="payment-info">
+                <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
+                <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
+                <p><strong>Status:</strong> <?php echo htmlspecialchars($payment['status']); ?></p>
+                <p><strong>Paid at:</strong> <?php echo $payment['payment_date']; ?></p>
+            </div>
         <?php else: ?>
             <p>No payment record found.</p>
         <?php endif; ?>

@@ -1,6 +1,8 @@
 <?php
-include '../helper/connection.php';
-
+session_start();
+include '../helper/pdo_connection.php';
+require_once '../helper/auth.php';
+require_admin();
 
 $message = '';
 $message_type = '';
@@ -58,18 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness checks (username + email) if no basic errors
         if (!$errors) {
             // Check username uniqueness
-            $checkName = $conn->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
-            $checkName->bind_param('s', $username);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
+            $checkName->execute([$username]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This admin username is already taken.';
             }
 
             // Check email uniqueness
-            $checkEmail = $conn->prepare("SELECT 1 FROM Admin WHERE email = ?");
-            $checkEmail->bind_param('s', $email);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ?");
+            $checkEmail->execute([$email]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This admin email is already registered.';
             }
         }
@@ -80,18 +80,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $password = password_hash($password_raw, PASSWORD_BCRYPT);
 
-            $stmt = $conn->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
-            $stmt->bind_param('sss', $username, $email, $password);
-
-            if ($stmt->execute()) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
+                $stmt->execute([$username, $email, $password]);
                 $message = "Admin created successfully!";
                 $message_type = "success";
-            } else {
-                if ($conn->errno === 1062) {
+            } catch (PDOException $e) {
+                if ($e->getCode() == 23000) {
                     // Fallback if DB has UNIQUE constraints
                     $message = "Admin username or email already exists.";
                 } else {
-                    $message = "Error creating admin: " . $conn->error;
+                    $message = "Error creating admin: " . $e->getMessage();
                 }
                 $message_type = "error";
             }
@@ -126,18 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness check for username/email among other admins
         if (!$errors) {
             // Name must be unique excluding current admin
-            $checkName = $conn->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
-            $checkName->bind_param('si', $username, $id);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
+            $checkName->execute([$username, $id]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This admin username is already taken.';
             }
 
             // Email must be unique excluding current admin
-            $checkEmail = $conn->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
-            $checkEmail->bind_param('si', $email, $id);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
+            $checkEmail->execute([$email, $id]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This admin email is already registered.';
             }
         }
@@ -146,22 +143,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = implode(' ', $errors);
             $message_type = 'error';
         } else {
-            $stmt = $conn->prepare("UPDATE Admin SET username = ?, email = ? WHERE admin_id = ?");
-            $stmt->bind_param('ssi', $username, $email, $id);
+            try {
+                $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ? WHERE admin_id = ?");
+                $stmt->execute([$username, $email, $id]);
 
-            if ($stmt->execute()) {
                 // Update password if provided
                 if (!empty($new_password_raw)) {
                     $new_password = password_hash($new_password_raw, PASSWORD_BCRYPT);
-                    $passStmt = $conn->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
-                    $passStmt->bind_param('si', $new_password, $id);
-                    $passStmt->execute();
+                    $passStmt = $pdo->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
+                    $passStmt->execute([$new_password, $id]);
                 }
 
                 $message = "Admin updated successfully!";
                 $message_type = "success";
-            } else {
-                $message = "Error updating admin: " . $conn->error;
+            } catch (PDOException $e) {
+                $message = "Error updating admin: " . $e->getMessage();
                 $message_type = "error";
             }
         }
@@ -175,29 +171,119 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "You cannot delete your own admin account!";
             $message_type = "error";
         } else {
-            $stmt = $conn->prepare("DELETE FROM Admin WHERE admin_id = ?");
-            $stmt->bind_param('i', $id);
-
-            if ($stmt->execute()) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
+                $stmt->execute([$id]);
                 $message = "Admin deleted successfully!";
                 $message_type = "success";
-            } else {
-                $message = "Error deleting admin: " . $conn->error;
+            } catch (PDOException $e) {
+                $message = "Error deleting admin: " . $e->getMessage();
                 $message_type = "error";
             }
         }
     }
+
+    /** IMPORT ADMINS FROM CSV **/
+    if (isset($_POST['upload_admin_csv']) && isset($_FILES['admin_csv_file'])) {
+        if ($_FILES['admin_csv_file']['error'] == 0) {
+            $file = $_FILES['admin_csv_file']['tmp_name'];
+            $handle = fopen($file, 'r');
+
+            if ($handle !== false) {
+                $header = fgetcsv($handle); // skip header
+                $successCount = 0;
+                $errorCount = 0;
+
+                try {
+                    $pdo->beginTransaction();
+
+                    while (($data = fgetcsv($handle)) !== false) {
+                        // Expect username,email,password (password REQUIRED)
+                        if (count($data) >= 3) {
+                            $username = trim($data[0]);
+                            $email = trim($data[1]);
+                            $password_raw = trim($data[2]);
+
+                            if (empty($username) || empty($email) || $password_raw === '') {
+                                // missing required field
+                                $errorCount++;
+                                continue;
+                            }
+
+                            // Skip if username or email already exists
+                            $check = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? OR email = ?");
+                            $check->execute([$username, $email]);
+                            if ($check->fetch()) {
+                                $errorCount++;
+                                continue;
+                            }
+
+                            $password_hash = password_hash($password_raw, PASSWORD_BCRYPT);
+
+                            $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
+                            $stmt->execute([$username, $email, $password_hash]);
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+
+                    $pdo->commit();
+                    $message = "$successCount admin(s) imported successfully!";
+                    if ($errorCount > 0) $message .= " ($errorCount row(s) skipped).";
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $message = "Error importing CSV: " . $e->getMessage();
+                    $message_type = 'error';
+                }
+
+                fclose($handle);
+            }
+        } else {
+            $message = "Error uploading CSV file";
+            $message_type = 'error';
+        }
+    }
+}
+
+// EXPORT ADMINS TO CSV
+if (isset($_GET['export']) && $_GET['export'] === 'admins') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=admins_export.csv');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['admin_id', 'username', 'email']);
+
+    $stmt = $pdo->query("SELECT admin_id, username, email FROM Admin ORDER BY admin_id ASC");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        fputcsv($output, [$row['admin_id'], $row['username'], $row['email']]);
+    }
+
+    fclose($output);
+    exit;
 }
 
 /* ========== READ admins with search & sort ========== */
-$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 $sql = "SELECT * FROM Admin WHERE 1=1";
+$params = [];
 if (!empty($search)) {
-    $sql .= " AND (username LIKE '%$search%' OR email LIKE '%$search%')";
+    $sql .= " AND (username LIKE ? OR email LIKE ?)";
+    $searchParam = "%$search%";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
 }
 $sql .= " ORDER BY $sort $order";
-$admins = $conn->query($sql);
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Stats for admins (simple card)
+$admin_stats = [];
+$admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchColumn();
 
 ?>
 <!DOCTYPE html>
@@ -288,7 +374,11 @@ $admins = $conn->query($sql);
     <div class="main-content">
         <div class="header">
             <h1>Manage Admin Accounts</h1>
-            <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+                <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
+                <a href="?export=admins" class="btn btn-info">⬇️ Export CSV</a>
+            </div>
         </div>
 
         <?php if (!empty($message)): ?>
@@ -296,6 +386,17 @@ $admins = $conn->query($sql);
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
+
+        <!-- Statistics Cards -->
+        <div class="stats-container" style="margin-bottom:12px;">
+            <div class="stat-card">
+                <div class="stat-icon">👤</div>
+                <div class="stat-info">
+                    <h3><?php echo $admin_stats['total_admins']; ?></h3>
+                    <p>Total Admins</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Search Bar -->
         <div class="filter-bar">
@@ -320,8 +421,8 @@ $admins = $conn->query($sql);
                </thead>
 
                 <tbody>
-                    <?php if ($admins && $admins->num_rows > 0): ?>
-                        <?php while ($a = $admins->fetch_assoc()): ?>
+                    <?php if ($admins && count($admins) > 0): ?>
+                        <?php foreach ($admins as $a): ?>
                         <tr>
                             <td><?= $a['admin_id'] ?></td>
                             <td><?= htmlspecialchars($a['username']) ?></td>
@@ -337,7 +438,7 @@ $admins = $conn->query($sql);
                                 <?php endif; ?>
                             </td>
                         </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <tr><td colspan="4" style="text-align:center;padding:40px;">No admins found.</td></tr>
                     <?php endif; ?>
@@ -348,6 +449,39 @@ $admins = $conn->query($sql);
 </div>
 
 <!-- CREATE ADMIN MODAL -->
+<!-- CSV Upload Modal -->
+<div id="csvModalAdmin" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Admins from CSV</h2>
+            <button class="close" onclick="closeModal('csvModalAdmin')">&times;</button>
+        </div>
+        <div class="csv-instructions" style="border:1px solid #e5e7eb;background:#f8fafc;padding:12px;border-radius:6px;">
+            <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
+            <ul style="margin:0 0 8px 18px;color:#374151;">
+                <li><strong>Required columns:</strong> <code>username,email,password</code></li>
+                <li>Rows with existing usernames or emails will be skipped (they are not overwritten).</li>
+            </ul>
+
+                <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+                <a href="sample_csv/sample_admins.csv" download class="btn btn-sm btn-info" style="padding:6px 10px;">📥 Download Sample CSV</a>
+                <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
+            </div>
+
+            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password
+admin2,admin2@example.com,Secret123!
+jane_admin,jane@example.com,Password!234
+</pre>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select CSV File <span class="required">*</span></label>
+                <input type="file" name="admin_csv_file" accept=".csv" required>
+            </div>
+            <button type="submit" name="upload_admin_csv" class="btn btn-success">Import Admins</button>
+        </form>
+    </div>
+</div>
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -483,6 +617,9 @@ $admins = $conn->query($sql);
 <script>
 function openCreateModal() {
     document.getElementById('createModal').style.display = 'block';
+}
+function openCSVModalAdmin() {
+    document.getElementById('csvModalAdmin').style.display = 'block';
 }
 function openEditModal(data) {
     document.getElementById('edit_admin_id').value = data.admin_id;
@@ -732,4 +869,3 @@ document.addEventListener('DOMContentLoaded', function () {
 </body>
 </html>
 
-<?php $conn->close(); ?>

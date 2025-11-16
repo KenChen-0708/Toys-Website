@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-include '../helper/connection.php';
+include '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_admin();
 
@@ -20,45 +20,51 @@ function admin_initials($username) {
 $total_users = $total_orders = $total_revenue = $pending_orders = 0;
 
 // Total Members
-if ($db_ok) {
-    $res = $conn->query("SELECT COUNT(*) AS c FROM Member");
-    $total_users = $res ? (int)$res->fetch_assoc()['c'] : 0;
+try {
+    $res = $pdo->query("SELECT COUNT(*) AS c FROM Member");
+    $total_users = (int)$res->fetch(PDO::FETCH_ASSOC)['c'];
+} catch (PDOException $e) {
+    $total_users = 0;
 }
 
 // Total Orders
-if ($db_ok) {
-    $res = $conn->query("SELECT COUNT(*) AS c FROM `Order`");
-    $total_orders = $res ? (int)$res->fetch_assoc()['c'] : 0;
+try {
+    $res = $pdo->query("SELECT COUNT(*) AS c FROM `Order`");
+    $total_orders = (int)$res->fetch(PDO::FETCH_ASSOC)['c'];
+} catch (PDOException $e) {
+    $total_orders = 0;
 }
 
 // Total Revenue
-if ($db_ok) {
-    $res = $conn->query("SELECT SUM(total_amount) AS t FROM `Order` WHERE status != 'Cancelled'");
-    $row = $res ? $res->fetch_assoc() : null;
+try {
+    $res = $pdo->query("SELECT SUM(total_amount) AS t FROM `Order` WHERE status != 'Cancelled'");
+    $row = $res->fetch(PDO::FETCH_ASSOC);
     $total_revenue = $row && $row['t'] !== null ? (float)$row['t'] : 0;
+} catch (PDOException $e) {
+    $total_revenue = 0;
 }
 
 // Pending Orders
-if ($db_ok) {
-    $res = $conn->query("SELECT COUNT(*) AS c FROM `Order` WHERE status = 'Pending'");
-    $pending_orders = $res ? (int)$res->fetch_assoc()['c'] : 0;
+try {
+    $res = $pdo->query("SELECT COUNT(*) AS c FROM `Order` WHERE status = 'Pending'");
+    $pending_orders = (int)$res->fetch(PDO::FETCH_ASSOC)['c'];
+} catch (PDOException $e) {
+    $pending_orders = 0;
 }
 
 // Recent Members
 $recent_users = [];
-if ($db_ok) {
-    $res = $conn->query("SELECT member_id, username, email FROM Member ORDER BY member_id DESC LIMIT 5");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $recent_users[] = $row;
-        }
-    }
+try {
+    $res = $pdo->query("SELECT member_id, username, email FROM Member ORDER BY member_id DESC LIMIT 5");
+    $recent_users = $res->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $recent_users = [];
 }
 
 // Recent Orders
 $recent_orders = [];
-if ($db_ok) {
-    $res = $conn->query("
+try {
+    $res = $pdo->query("
         SELECT 
             o.order_id, m.username AS customer, o.total_amount, o.status, o.order_date 
         FROM `Order` o 
@@ -66,28 +72,24 @@ if ($db_ok) {
         ORDER BY o.order_date DESC 
         LIMIT 5
     ");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $recent_orders[] = $row;
-        }
-    }
+    $recent_orders = $res->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $recent_orders = [];
 }
 
 // Orders by Status
 $order_status_data = [];
-if ($db_ok) {
-    $res = $conn->query("SELECT status, COUNT(*) AS count FROM `Order` GROUP BY status");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $order_status_data[] = $row;
-        }
-    }
+try {
+    $res = $pdo->query("SELECT status, COUNT(*) AS count FROM `Order` GROUP BY status");
+    $order_status_data = $res->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $order_status_data = [];
 }
 
 // Revenue by Month (6 months)
 $revenue_by_month = [];
-if ($db_ok) {
-    $res = $conn->query("
+try {
+    $res = $pdo->query("
         SELECT DATE_FORMAT(order_date,'%Y-%m') AS month, SUM(total_amount) AS revenue
         FROM `Order`
         WHERE status!='Cancelled'
@@ -95,11 +97,9 @@ if ($db_ok) {
         GROUP BY DATE_FORMAT(order_date,'%Y-%m')
         ORDER BY month ASC
     ");
-    if ($res) {
-        while ($row = $res->fetch_assoc()) {
-            $revenue_by_month[] = $row;
-        }
-    }
+    $revenue_by_month = $res->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $revenue_by_month = [];
 }
 ?>
 <!DOCTYPE html>
@@ -473,8 +473,3 @@ if ($db_ok) {
 
 </body>
 </html>
-<?php
-if (isset($db_ok) && $db_ok) {
-    $conn->close();
-}
-?>

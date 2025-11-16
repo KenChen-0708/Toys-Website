@@ -15,6 +15,7 @@
 
     <!--=============== CSS ===============-->
     <link rel="stylesheet" href="/assets/css/styles.css" />
+    <link rel="stylesheet" href="/assets/css/index.css" />
 
     <title><?= htmlspecialchars($title) ?></title>
   </head>

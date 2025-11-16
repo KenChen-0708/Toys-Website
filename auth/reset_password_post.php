@@ -1,5 +1,5 @@
 <?php
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 // Ensure guest only
@@ -51,15 +51,13 @@ if (!empty($errors)) {
 // Step 1: Hash the raw token from URL before checking (must match stored hash)
 $tokenHash = hash('sha256', $token);
 
-$stmt = $conn->prepare("
+$stmt = $pdo->prepare("
     SELECT * FROM password_resets 
     WHERE email = ? AND token = ?
     LIMIT 1
 ");
-$stmt->bind_param("ss", $email, $tokenHash);
-$stmt->execute();
-$result = $stmt->get_result();
-$reset = $result->fetch_assoc();
+$stmt->execute([$email, $tokenHash]);
+$reset = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$reset) {
     $_SESSION['errors'] = ["Invalid or expired password reset token."];
@@ -79,19 +77,14 @@ if ($current_time > $reset['expires_at']) {
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
 // Step 4: Update Member table (by email)
-$updateMember = $conn->prepare("
+$updateMember = $pdo->prepare("
     UPDATE Member SET password = ? WHERE email = ?
 ");
-$updateMember->bind_param("ss", $hashed_password, $email);
-$updateMember->execute();
-
-// Optionally, you could check affected_rows to be extra safe:
-// if ($updateMember->affected_rows === 0) { ... }
+$updateMember->execute([$hashed_password, $email]);
 
 // Step 5: Delete token after use
-$deleteToken = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-$deleteToken->bind_param("s", $email);
-$deleteToken->execute();
+$deleteToken = $pdo->prepare("DELETE FROM password_resets WHERE email = ?");
+$deleteToken->execute([$email]);
 
 // Step 6: Redirect with success message to login page
 $_SESSION['success'] = "Your password has been successfully updated. Please log in.";

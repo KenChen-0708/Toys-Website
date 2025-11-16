@@ -1,6 +1,6 @@
 <?php
 $title = "Register";
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_guest();
 ?>

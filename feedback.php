@@ -1,8 +1,9 @@
 <?php
 session_start();
-require_once 'helper/connection.php';
+require_once 'helper/pdo_connection.php';
 require_once 'helper/auth.php';
 is_logged_in();
+
 
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {
@@ -22,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $category = trim($_POST['category'] ?? '');
     $rating = intval($_POST['rating'] ?? 0);
     $message = trim($_POST['message'] ?? '');
-    
+
     // Validation
     if (empty($subject)) {
         $error_message = 'Please provide a subject for your feedback.';
@@ -36,30 +37,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         $error_message = 'Feedback message must be at least 10 characters long.';
     } else {
         // Insert feedback into database
-        $sql = "INSERT INTO Feedback (member_id, subject, category, rating, message, status, created_at) 
-                VALUES (?, ?, ?, ?, ?, 'pending', NOW())";
-        
-        $stmt = $conn->prepare($sql);
-        $stmt->bind_param('issis', $member_id, $subject, $category, $rating, $message);
-        
-        if ($stmt->execute()) {
-            $success_message = 'Thank you for your feedback! We appreciate your input and will review it shortly.';
-            // Clear form data
-            $_POST = array();
-        } else {
+        try {
+            $sql = "INSERT INTO Feedback (member_id, subject, category, rating, message, status, created_at) 
+                    VALUES (?, ?, ?, ?, ?, 'pending', NOW())";
+
+            $stmt = $pdo->prepare($sql);
+
+            if ($stmt->execute([$member_id, $subject, $category, $rating, $message])) {
+                $success_message = 'Thank you for your feedback! We appreciate your input and will review it shortly.';
+                // Clear form data
+                $_POST = array();
+            } else {
+                $error_message = 'Failed to submit feedback. Please try again later.';
+            }
+        } catch (PDOException $e) {
             $error_message = 'Failed to submit feedback. Please try again later.';
         }
-        
-        $stmt->close();
     }
 }
 
 // Fetch user's previous feedback
-$feedback_history_sql = "SELECT * FROM Feedback WHERE member_id = ? ORDER BY created_at DESC LIMIT 10";
-$stmt = $conn->prepare($feedback_history_sql);
-$stmt->bind_param('i', $member_id);
-$stmt->execute();
-$feedback_history = $stmt->get_result();
+try {
+    $feedback_history_sql = "SELECT * FROM Feedback WHERE member_id = ? ORDER BY created_at DESC LIMIT 10";
+    $stmt = $pdo->prepare($feedback_history_sql);
+    $stmt->execute([$member_id]);
+    $feedback_history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $feedback_history = [];
+}
 
 $title = "Feedback";
 include 'partials/header.php';
@@ -67,12 +72,16 @@ include 'partials/header.php';
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Feedback - Evara</title>
     <link rel="stylesheet" href="../assets/css/feedback.css" />
+    <link rel="stylesheet" href="../assets/css/styles.css" />
+
 </head>
+
 <body>
     <div class="feedback-page">
         <div class="feedback-container">
@@ -109,15 +118,14 @@ include 'partials/header.php';
                             <label for="subject">
                                 Subject <span class="required">*</span>
                             </label>
-                            <input 
-                                type="text" 
-                                id="subject" 
-                                name="subject" 
+                            <input
+                                type="text"
+                                id="subject"
+                                name="subject"
                                 class="form-control"
                                 placeholder="Brief summary of your feedback"
                                 value="<?php echo isset($_POST['subject']) ? htmlspecialchars($_POST['subject']) : ''; ?>"
-                                required
-                            />
+                                required />
                         </div>
 
                         <div class="form-group">
@@ -159,15 +167,14 @@ include 'partials/header.php';
                             <label for="message">
                                 Your Feedback <span class="required">*</span>
                             </label>
-                            <textarea 
-                                id="message" 
-                                name="message" 
+                            <textarea
+                                id="message"
+                                name="message"
                                 class="form-control"
                                 placeholder="Please share your detailed feedback here..."
                                 required
                                 maxlength="1000"
-                                oninput="updateCharCount()"
-                            ><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
+                                oninput="updateCharCount()"><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
                             <div class="char-count">
                                 <span id="charCount">0</span> / 1000 characters
                             </div>
@@ -193,11 +200,12 @@ include 'partials/header.php';
                         </ul>
                     </div>
 
+
                     <!-- Feedback History -->
                     <div class="feedback-history">
                         <h3>📋 Your Recent Feedback</h3>
-                        <?php if ($feedback_history && $feedback_history->num_rows > 0): ?>
-                            <?php while ($history = $feedback_history->fetch_assoc()): ?>
+                        <?php if ($feedback_history && count($feedback_history) > 0): ?>
+                            <?php foreach ($feedback_history as $history): ?>
                                 <div class="history-item" onclick="toggleFeedback(this)">
                                     <div class="history-header">
                                         <span class="history-subject"><?php echo htmlspecialchars($history['subject']); ?></span>
@@ -228,7 +236,7 @@ include 'partials/header.php';
                                         </div>
                                     <?php endif; ?>
                                 </div>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         <?php else: ?>
                             <div class="no-history">
                                 <p>No feedback submitted yet</p>
@@ -257,17 +265,25 @@ include 'partials/header.php';
         function toggleFeedback(item) {
             item.classList.toggle('expanded');
         }
+
+        // Update rating display
+        document.querySelectorAll('.rating-group input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', function() {
+                const ratingDisplay = document.getElementById('ratingDisplay');
+                if (this.checked) {
+                    ratingDisplay.textContent = this.value + ' Stars';
+                    ratingDisplay.classList.add('active');
+                } else {
+                    ratingDisplay.textContent = 'Select rating';
+                    ratingDisplay.classList.remove('active');
+                }
+            });
+        });
     </script>
 </body>
+
 </html>
 
-<?php
-if (isset($stmt)) {
-    $stmt->close();
-}
-if (isset($conn)) {
-    $conn->close();
-}
-?>
+
 
 <?php include 'partials/footer.php'; ?>

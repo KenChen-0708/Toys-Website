@@ -2,16 +2,11 @@
 session_start();
 
 // Include database connection
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 // Ensure only admin can access
 require_admin();
-
-// Check connection
-if (!$db_ok || !$conn) {
-    die("Connection failed: Unable to connect to database");
-}
 
 $message = '';
 $message_type = '';
@@ -59,51 +54,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness checks (username, email, phone)
         if (empty($errors)) {
             // Name unique (case-sensitive)
-            $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY username = ?");
-            $checkName->bind_param('s', $username);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Member WHERE BINARY username = ?");
+            $checkName->execute([$username]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This username is already taken.';
             }
 
             // Email unique
-            $checkEmail = $conn->prepare("SELECT 1 FROM Member WHERE email = ?");
-            $checkEmail->bind_param('s', $email);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Member WHERE email = ?");
+            $checkEmail->execute([$email]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This email is already registered.';
             }
 
             // Phone unique (only if provided)
             if ($phone !== '') {
-                $checkPhone = $conn->prepare("SELECT 1 FROM Member WHERE phone_number = ?");
-                $checkPhone->bind_param('s', $phone);
-                $checkPhone->execute();
-                if ($checkPhone->get_result()->fetch_row()) {
+                $checkPhone = $pdo->prepare("SELECT 1 FROM Member WHERE phone_number = ?");
+                $checkPhone->execute([$phone]);
+                if ($checkPhone->fetch()) {
                     $errors[] = 'This phone number is already in use.';
                 }
             }
         }
 
         if (empty($errors)) {
-            $name_esc    = $conn->real_escape_string($username);
-            $email_esc   = $conn->real_escape_string($email);
-            $phone_esc   = $conn->real_escape_string($phone);
-            $address_esc = $conn->real_escape_string($address);
-            $password    = password_hash($password_raw, PASSWORD_BCRYPT);
+            $password = password_hash($password_raw, PASSWORD_BCRYPT);
 
-            $sql = "INSERT INTO Member (username, email, phone_number, address, password, register_date)
-                    VALUES ('$name_esc', '$email_esc', '$phone_esc', '$address_esc', '$password', NOW())";
-
-            if ($conn->query($sql)) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date)
+                                        VALUES (?, ?, ?, ?, ?, NOW())");
+                $stmt->execute([$username, $email, $phone, $address, $password]);
                 $message = "Member created successfully!";
                 $message_type = "success";
-            } else {
+            } catch (PDOException $e) {
                 // Fallback if UNIQUE constraints exist in DB
-                if ($conn->errno === 1062) {
+                if ($e->getCode() == 23000) {
                     $message = "Username, email, or phone already exists.";
                 } else {
-                    $message = "Error: " . $conn->error;
+                    $message = "Error: " . $e->getMessage();
                 }
                 $message_type = "error";
             }
@@ -151,58 +139,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness checks (exclude current member)
         if (empty($errors)) {
             // Name unique except current
-            $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY username = ? AND member_id <> ?");
-            $checkName->bind_param('si', $username, $id);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Member WHERE BINARY username = ? AND member_id <> ?");
+            $checkName->execute([$username, $id]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This username is already taken.';
             }
 
             // Email unique except current
-            $checkEmail = $conn->prepare("SELECT 1 FROM Member WHERE email = ? AND member_id <> ?");
-            $checkEmail->bind_param('si', $email, $id);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Member WHERE email = ? AND member_id <> ?");
+            $checkEmail->execute([$email, $id]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This email is already registered.';
             }
 
             // Phone unique except current (only if provided)
             if ($phone !== '') {
-                $checkPhone = $conn->prepare("SELECT 1 FROM Member WHERE phone_number = ? AND member_id <> ?");
-                $checkPhone->bind_param('si', $phone, $id);
-                $checkPhone->execute();
-                if ($checkPhone->get_result()->fetch_row()) {
+                $checkPhone = $pdo->prepare("SELECT 1 FROM Member WHERE phone_number = ? AND member_id <> ?");
+                $checkPhone->execute([$phone, $id]);
+                if ($checkPhone->fetch()) {
                     $errors[] = 'This phone number is already in use.';
                 }
             }
         }
 
         if (empty($errors)) {
-            $id_esc      = $conn->real_escape_string((string)$id);
-            $name_esc    = $conn->real_escape_string($username);
-            $email_esc   = $conn->real_escape_string($email);
-            $phone_esc   = $conn->real_escape_string($phone);
-            $address_esc = $conn->real_escape_string($address);
-
-            $sql = "UPDATE Member SET 
-                    username='$name_esc',
-                    email='$email_esc',
-                    phone_number='$phone_esc',
-                    address='$address_esc'
-                    WHERE member_id='$id_esc'";
-
-            if ($conn->query($sql)) {
+            try {
+                $stmt = $pdo->prepare("UPDATE Member SET 
+                        username = ?,
+                        email = ?,
+                        phone_number = ?,
+                        address = ?
+                        WHERE member_id = ?");
+                $stmt->execute([$username, $email, $phone, $address, $id]);
 
                 // Optional password update
                 if ($new_pass !== '') {
                     $new_password = password_hash($new_pass, PASSWORD_BCRYPT);
-                    $conn->query("UPDATE Member SET password='$new_password' WHERE member_id='$id_esc'");
+                    $passStmt = $pdo->prepare("UPDATE Member SET password = ? WHERE member_id = ?");
+                    $passStmt->execute([$new_password, $id]);
                 }
 
                 $message = "Member updated successfully!";
                 $message_type = "success";
-            } else {
-                $message = "Error: " . $conn->error;
+            } catch (PDOException $e) {
+                $message = "Error: " . $e->getMessage();
                 $message_type = "error";
             }
         } else {
@@ -213,29 +193,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** DELETE MEMBER **/
     if (isset($_POST['delete_member'])) {
-        $id = $conn->real_escape_string($_POST['member_id']);
-        $sql = "DELETE FROM Member WHERE member_id='$id'";
-
-        if ($conn->query($sql)) {
+        $id = (int)$_POST['member_id'];
+        try {
+            $stmt = $pdo->prepare("DELETE FROM Member WHERE member_id = ?");
+            $stmt->execute([$id]);
             $message = "Member deleted successfully!";
             $message_type = "success";
-        } else {
-            $message = "Error deleting member: " . $conn->error;
+        } catch (PDOException $e) {
+            $message = "Error deleting member: " . $e->getMessage();
             $message_type = "error";
+        }
+    }
+
+    /** IMPORT MEMBERS FROM CSV **/
+    if (isset($_POST['upload_member_csv']) && isset($_FILES['member_csv_file'])) {
+        if ($_FILES['member_csv_file']['error'] == 0) {
+            $file = $_FILES['member_csv_file']['tmp_name'];
+            $handle = fopen($file, 'r');
+
+            if ($handle !== false) {
+                $header = fgetcsv($handle); // skip header
+                $successCount = 0;
+                $errorCount = 0;
+
+                try {
+                    $pdo->beginTransaction();
+
+                    while (($data = fgetcsv($handle)) !== false) {
+                        // Expect username,email,password,phone,address (password REQUIRED)
+                        if (count($data) >= 3) {
+                            $username = trim($data[0]);
+                            $email = trim($data[1]);
+                            $password_raw = isset($data[2]) ? trim($data[2]) : '';
+                            $phone = isset($data[3]) ? trim($data[3]) : '';
+                            $address = isset($data[4]) ? trim($data[4]) : '';
+
+                            if (empty($username) || empty($email) || $password_raw === '') {
+                                // missing required field (password required)
+                                $errorCount++;
+                                continue;
+                            }
+
+                            // Skip if username or email or phone exists
+                            $check = $pdo->prepare("SELECT 1 FROM Member WHERE BINARY username = ? OR email = ? OR phone_number = ?");
+                            $check->execute([$username, $email, $phone]);
+                            if ($check->fetch()) {
+                                $errorCount++;
+                                continue;
+                            }
+
+                            $password_hash = password_hash($password_raw, PASSWORD_BCRYPT);
+
+                            $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date) VALUES (?, ?, ?, ?, ?, NOW())");
+                            $stmt->execute([$username, $email, $phone, $address, $password_hash]);
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+
+                    $pdo->commit();
+                    $message = "$successCount member(s) imported successfully!";
+                    if ($errorCount > 0) $message .= " ($errorCount row(s) skipped).";
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $message = "Error importing CSV: " . $e->getMessage();
+                    $message_type = 'error';
+                }
+
+                fclose($handle);
+            }
+        } else {
+            $message = "Error uploading CSV file";
+            $message_type = 'error';
         }
     }
 }
 
+// EXPORT MEMBERS TO CSV
+if (isset($_GET['export']) && $_GET['export'] === 'members') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=members_export.csv');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['member_id', 'username', 'email', 'phone_number', 'address', 'register_date']);
+
+    $stmt = $pdo->query("SELECT member_id, username, email, phone_number, address, register_date FROM Member ORDER BY member_id ASC");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        fputcsv($output, [$row['member_id'], $row['username'], $row['email'], $row['phone_number'], $row['address'], $row['register_date']]);
+    }
+
+    fclose($output);
+    exit;
+}
+
 /** READ members with search **/
-$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 $sql = "SELECT * FROM Member WHERE 1=1";
+$params = [];
 if (!empty($search)) {
-    $sql .= " AND (username LIKE '%$search%' OR email LIKE '%$search%')";
+    $sql .= " AND (username LIKE ? OR email LIKE ?)";
+    $searchParam = "%$search%";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
 }
 $sql .= " ORDER BY member_id ASC";
 
-$members = $conn->query($sql);
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$members = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// member statistics
+$member_stats = [];
+$member_stats['total_members'] = $pdo->query("SELECT COUNT(*) FROM Member")->fetchColumn();
+$member_stats['recent_7_days'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE register_date >= DATE_SUB(NOW(), INTERVAL 7 DAY)")->fetchColumn();
+$member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE phone_number IS NOT NULL AND phone_number != ''")->fetchColumn();
 
 ?>
 
@@ -333,7 +407,11 @@ $members = $conn->query($sql);
 
         <div class="header">
             <h1>Manage Members</h1>
-            <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
+                <button class="btn btn-success" onclick="openCSVModalMember()">📁 Import CSV</button>
+                <a href="?export=members" class="btn btn-info">⬇️ Export CSV</a>
+            </div>
         </div>
 
         <?php if (!empty($message)): ?>
@@ -341,6 +419,31 @@ $members = $conn->query($sql);
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
+
+        <!-- Statistics Cards -->
+        <div class="stats-container" style="margin-bottom:12px;">
+            <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                    <h3><?php echo $member_stats['total_members']; ?></h3>
+                    <p>Total Members</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">🆕</div>
+                <div class="stat-info">
+                    <h3><?php echo $member_stats['recent_7_days']; ?></h3>
+                    <p>New (7d)</p>
+                </div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📞</div>
+                <div class="stat-info">
+                    <h3><?php echo $member_stats['with_phone']; ?></h3>
+                    <p>With Phone</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Search Bar -->
         <div class="filter-bar">
@@ -368,8 +471,8 @@ $members = $conn->query($sql);
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if ($members->num_rows > 0): ?>
-                        <?php while ($m = $members->fetch_assoc()): ?>
+                    <?php if (count($members) > 0): ?>
+                        <?php foreach ($members as $m): ?>
                         <tr>
                             <td><?= $m['member_id'] ?></td>
                             <td><?= htmlspecialchars($m['username']) ?></td>
@@ -389,7 +492,7 @@ $members = $conn->query($sql);
                                 </button>
                             </td>
                         </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <tr><td colspan="7" style="text-align:center;padding:40px;">No members found.</td></tr>
                     <?php endif; ?>
@@ -401,6 +504,40 @@ $members = $conn->query($sql);
 </div>
 
 <!-- CREATE MEMBER MODAL -->
+<!-- CSV Upload Modal -->
+<div id="csvModalMember" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Members from CSV</h2>
+            <button class="close" onclick="closeModal('csvModalMember')">&times;</button>
+        </div>
+        <div class="csv-instructions" style="border:1px solid #e5e7eb;background:#f8fafc;padding:12px;border-radius:6px;">
+            <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
+            <ul style="margin:0 0 8px 18px;color:#374151;">
+                <li><strong>Required columns:</strong> <code>username,email,password,phone,address</code></li>
+                <li>If you don't have phone or address values include empty placeholders so the column order remains correct.</li>
+                <li>Rows with existing usernames, emails or phone numbers will be skipped (they are not overwritten).</li>
+            </ul>
+
+            <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+                <a href="sample_csv/sample_members.csv" download class="btn btn-sm btn-info" style="padding:6px 10px;">📥 Download Sample CSV</a>
+                <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
+            </div>
+
+            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password,phone,address
+john_doe,john@example.com,Secret123!,012-3456789,"12 Market St, City"
+alice,alice@example.com,AlicePass1!,,"34 Rose Ave, City"
+</pre>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select CSV File <span class="required">*</span></label>
+                <input type="file" name="member_csv_file" accept=".csv" required>
+            </div>
+            <button type="submit" name="upload_member_csv" class="btn btn-success">Import Members</button>
+        </form>
+    </div>
+</div>
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -589,6 +726,9 @@ $members = $conn->query($sql);
 <script>
 function openCreateModal() {
     document.getElementById('createModal').style.display = 'block';
+}
+function openCSVModalMember() {
+    document.getElementById('csvModalMember').style.display = 'block';
 }
 
 function openEditModal(data) {
@@ -886,4 +1026,3 @@ document.addEventListener('DOMContentLoaded', function () {
 </body>
 </html>
 
-<?php $conn->close(); ?>
