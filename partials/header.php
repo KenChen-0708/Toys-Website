@@ -53,7 +53,7 @@
 
       <nav class="nav container">
         <a href="/index.php" class="nav__logo">
-          <img class="nav__logo-img" src="/assets/img/logo.jpg" alt="website logo" />
+          <img class="nav__logo-img" src="/assets/img/logo.png" alt="website logo" />
         </a>
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
