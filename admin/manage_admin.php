@@ -182,6 +182,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    /** IMPORT ADMINS FROM CSV **/
+    if (isset($_POST['upload_admin_csv']) && isset($_FILES['admin_csv_file'])) {
+        if ($_FILES['admin_csv_file']['error'] == 0) {
+            $file = $_FILES['admin_csv_file']['tmp_name'];
+            $handle = fopen($file, 'r');
+
+            if ($handle !== false) {
+                $header = fgetcsv($handle); // skip header
+                $successCount = 0;
+                $errorCount = 0;
+
+                try {
+                    $pdo->beginTransaction();
+
+                    while (($data = fgetcsv($handle)) !== false) {
+                        // Expect username,email,password (password REQUIRED)
+                        if (count($data) >= 3) {
+                            $username = trim($data[0]);
+                            $email = trim($data[1]);
+                            $password_raw = trim($data[2]);
+
+                            if (empty($username) || empty($email) || $password_raw === '') {
+                                // missing required field
+                                $errorCount++;
+                                continue;
+                            }
+
+                            // Skip if username or email already exists
+                            $check = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? OR email = ?");
+                            $check->execute([$username, $email]);
+                            if ($check->fetch()) {
+                                $errorCount++;
+                                continue;
+                            }
+
+                            $password_hash = password_hash($password_raw, PASSWORD_BCRYPT);
+
+                            $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
+                            $stmt->execute([$username, $email, $password_hash]);
+                            $successCount++;
+                        } else {
+                            $errorCount++;
+                        }
+                    }
+
+                    $pdo->commit();
+                    $message = "$successCount admin(s) imported successfully!";
+                    if ($errorCount > 0) $message .= " ($errorCount row(s) skipped).";
+                    $message_type = 'success';
+                } catch (Exception $e) {
+                    $pdo->rollBack();
+                    $message = "Error importing CSV: " . $e->getMessage();
+                    $message_type = 'error';
+                }
+
+                fclose($handle);
+            }
+        } else {
+            $message = "Error uploading CSV file";
+            $message_type = 'error';
+        }
+    }
+}
+
+// EXPORT ADMINS TO CSV
+if (isset($_GET['export']) && $_GET['export'] === 'admins') {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename=admins_export.csv');
+
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['admin_id', 'username', 'email']);
+
+    $stmt = $pdo->query("SELECT admin_id, username, email FROM Admin ORDER BY admin_id ASC");
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        fputcsv($output, [$row['admin_id'], $row['username'], $row['email']]);
+    }
+
+    fclose($output);
+    exit;
 }
 
 /* ========== READ admins with search & sort ========== */
@@ -200,6 +280,10 @@ $sql .= " ORDER BY $sort $order";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Stats for admins (simple card)
+$admin_stats = [];
+$admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchColumn();
 
 ?>
 <!DOCTYPE html>
@@ -290,7 +374,11 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="main-content">
         <div class="header">
             <h1>Manage Admin Accounts</h1>
-            <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+                <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
+                <a href="?export=admins" class="btn btn-info">⬇️ Export CSV</a>
+            </div>
         </div>
 
         <?php if (!empty($message)): ?>
@@ -298,6 +386,17 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <?php echo htmlspecialchars($message); ?>
             </div>
         <?php endif; ?>
+
+        <!-- Statistics Cards -->
+        <div class="stats-container" style="margin-bottom:12px;">
+            <div class="stat-card">
+                <div class="stat-icon">👤</div>
+                <div class="stat-info">
+                    <h3><?php echo $admin_stats['total_admins']; ?></h3>
+                    <p>Total Admins</p>
+                </div>
+            </div>
+        </div>
 
         <!-- Search Bar -->
         <div class="filter-bar">
@@ -350,6 +449,39 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
 </div>
 
 <!-- CREATE ADMIN MODAL -->
+<!-- CSV Upload Modal -->
+<div id="csvModalAdmin" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>Import Admins from CSV</h2>
+            <button class="close" onclick="closeModal('csvModalAdmin')">&times;</button>
+        </div>
+        <div class="csv-instructions" style="border:1px solid #e5e7eb;background:#f8fafc;padding:12px;border-radius:6px;">
+            <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
+            <ul style="margin:0 0 8px 18px;color:#374151;">
+                <li><strong>Required columns:</strong> <code>username,email,password</code></li>
+                <li>Rows with existing usernames or emails will be skipped (they are not overwritten).</li>
+            </ul>
+
+                <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
+                <a href="sample_csv/sample_admins.csv" download class="btn btn-sm btn-info" style="padding:6px 10px;">📥 Download Sample CSV</a>
+                <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
+            </div>
+
+            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password
+admin2,admin2@example.com,Secret123!
+jane_admin,jane@example.com,Password!234
+</pre>
+        </div>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select CSV File <span class="required">*</span></label>
+                <input type="file" name="admin_csv_file" accept=".csv" required>
+            </div>
+            <button type="submit" name="upload_admin_csv" class="btn btn-success">Import Admins</button>
+        </form>
+    </div>
+</div>
 <div id="createModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -485,6 +617,9 @@ $admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <script>
 function openCreateModal() {
     document.getElementById('createModal').style.display = 'block';
+}
+function openCSVModalAdmin() {
+    document.getElementById('csvModalAdmin').style.display = 'block';
 }
 function openEditModal(data) {
     document.getElementById('edit_admin_id').value = data.admin_id;
