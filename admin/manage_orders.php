@@ -1,72 +1,87 @@
-
 <?php
 session_start();
 require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_admin();
 
+if (!$pdo) {
+    die("Connection failed: Unable to connect to database");
+}
+
 $message = '';
 $message_type = '';
 
 // Handle POST actions: update status, edit address, delete order
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Update status
-    if (isset($_POST['update_status']) && isset($_POST['order_id']) && isset($_POST['status'])) {
-        $order_id = (int)$_POST['order_id'];
-        $status = $_POST['status'];
-        // Validate allowed statuses
-        $allowed = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
-        if (in_array($status, $allowed)) {
-            try {
+    try {
+        // Update status
+        if (isset($_POST['update_status']) && isset($_POST['order_id']) && isset($_POST['status'])) {
+            $order_id = (int)$_POST['order_id'];
+            $status = $_POST['status'];
+            // Validate allowed statuses
+            $allowed = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
+            if (in_array($status, $allowed)) {
                 $stmt = $pdo->prepare("UPDATE `Order` SET status = ? WHERE order_id = ?");
-                $stmt->execute([$status, $order_id]);
-                $message = 'Order status updated.';
-                $message_type = 'success';
-            } catch (PDOException $e) {
-                $message = 'Error: ' . $e->getMessage();
+                if ($stmt->execute([$status, $order_id])) {
+                    $message = 'Order status updated.';
+                    $message_type = 'success';
+                } else {
+                    $message = 'Error updating status.';
+                    $message_type = 'error';
+                }
+            } else {
+                $message = 'Invalid status value.';
                 $message_type = 'error';
             }
-        } else {
-            $message = 'Invalid status value.';
-            $message_type = 'error';
         }
-    }
 
-    // Edit shipping address
-    if (isset($_POST['edit_address']) && isset($_POST['order_id']) && isset($_POST['shipping_address'])) {
-        $order_id = (int)$_POST['order_id'];
-        $addr = $_POST['shipping_address'];
-        try {
+        // Edit shipping address
+        if (isset($_POST['edit_address']) && isset($_POST['order_id']) && isset($_POST['shipping_address'])) {
+            $order_id = (int)$_POST['order_id'];
+            $addr = $_POST['shipping_address'];
             $stmt = $pdo->prepare("UPDATE `Order` SET shipping_address = ? WHERE order_id = ?");
-            $stmt->execute([$addr, $order_id]);
-            $message = 'Shipping address updated.';
-            $message_type = 'success';
-        } catch (PDOException $e) {
-            $message = 'Error: ' . $e->getMessage();
-            $message_type = 'error';
+            if ($stmt->execute([$addr, $order_id])) {
+                $message = 'Shipping address updated.';
+                $message_type = 'success';
+            } else {
+                $message = 'Error updating address.';
+                $message_type = 'error';
+            }
         }
-    }
 
-    // Optional: Delete order
-    if (isset($_POST['delete_order']) && isset($_POST['order_id'])) {
-        $order_id = (int)$_POST['order_id'];
-        // Deleting order will cascade to Order_Item and Payment (if FK with ON DELETE CASCADE)
-        try {
+        // Optional: Delete order
+        if (isset($_POST['delete_order']) && isset($_POST['order_id'])) {
+            $order_id = (int)$_POST['order_id'];
+            // Deleting order will cascade to Order_Item and Payment (if FK with ON DELETE CASCADE)
             $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
-            $stmt->execute([$order_id]);
-            $message = 'Order deleted.';
-            $message_type = 'success';
-        } catch (PDOException $e) {
-            $message = 'Error deleting order: ' . $e->getMessage();
-            $message_type = 'error';
+            if ($stmt->execute([$order_id])) {
+                $message = 'Order deleted.';
+                $message_type = 'success';
+            } else {
+                $message = 'Error deleting order.';
+                $message_type = 'error';
+            }
         }
+    } catch (PDOException $e) {
+        $message = 'Database error: ' . $e->getMessage();
+        $message_type = 'error';
     }
 }
 
 // Filters and search/////////////////////////////////////////////////////////////
 $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $filter_member = isset($_GET['member_id']) && $_GET['member_id'] !== '' ? (int)$_GET['member_id'] : null;
+$filter_status = isset($_GET['status']) && $_GET['status'] !== '' ? $_GET['status'] : null;
+$filter_date_from = isset($_GET['date_from']) && $_GET['date_from'] !== '' ? $_GET['date_from'] : null;
+$filter_date_to = isset($_GET['date_to']) && $_GET['date_to'] !== '' ? $_GET['date_to'] : null;
+$filter_amount_min = isset($_GET['amount_min']) && $_GET['amount_min'] !== '' ? (float)$_GET['amount_min'] : null;
+$filter_amount_max = isset($_GET['amount_max']) && $_GET['amount_max'] !== '' ? (float)$_GET['amount_max'] : null;
 $sort = (isset($_GET['sort']) && $_GET['sort'] === 'asc') ? 'ASC' : 'DESC';
+
+// Pagination
+$page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] : 1;
+$per_page = 20;
+$offset = ($page - 1) * $per_page;
 
 // Base query
 $sql = "SELECT 
@@ -83,20 +98,34 @@ $sql = "SELECT
 
 $params = [];
 
-// ---------- SEARCH FIX ----------
+// ---------- ENHANCED SEARCH ----------
 if ($search !== "") {
     // If search is a pure number → exact match on order_id
     if (ctype_digit($search)) {
         $sql .= " AND o.order_id = ?";
         $params[] = (int)$search;
     } 
-    // Otherwise → text search only
+    // Otherwise → text search on member, address, and product names
     else {
-        $sql .= " AND (m.username LIKE ? OR o.shipping_address LIKE ?)";
+        $sql .= " AND (m.username LIKE ? 
+                  OR o.shipping_address LIKE ? 
+                  OR EXISTS (
+                      SELECT 1 FROM Order_Item oi2 
+                      JOIN Product p2 ON oi2.product_id = p2.product_id 
+                      WHERE oi2.order_id = o.order_id 
+                      AND p2.product_name LIKE ?
+                  ))";
         $like = "%$search%";
         $params[] = $like;
         $params[] = $like;
+        $params[] = $like;
     }
+}
+
+// ---------- STATUS FILTER ----------
+if ($filter_status) {
+    $sql .= " AND o.status = ?";
+    $params[] = $filter_status;
 }
 
 // ---------- MEMBER FILTER ----------
@@ -105,16 +134,57 @@ if ($filter_member) {
     $params[] = $filter_member;
 }
 
-// ---------- SORT ----------
-$sql .= " ORDER BY o.order_date $sort, o.order_id DESC";
+// ---------- DATE RANGE FILTER ----------
+if ($filter_date_from) {
+    $sql .= " AND o.order_date >= ?";
+    $params[] = $filter_date_from;
+}
+if ($filter_date_to) {
+    $sql .= " AND o.order_date <= ?";
+    $params[] = $filter_date_to . ' 23:59:59';
+}
+
+// ---------- AMOUNT RANGE FILTER ----------
+if ($filter_amount_min !== null) {
+    $sql .= " AND o.total_amount >= ?";
+    $params[] = $filter_amount_min;
+}
+if ($filter_amount_max !== null) {
+    $sql .= " AND o.total_amount <= ?";
+    $params[] = $filter_amount_max;
+}
+
+// Count total results before pagination
+$count_sql = "SELECT COUNT(*) FROM ($sql) as count_query";
+try {
+    $count_stmt = $pdo->prepare($count_sql);
+    $count_stmt->execute($params);
+    $total_results = $count_stmt->fetchColumn();
+    $total_pages = ceil($total_results / $per_page);
+} catch (PDOException $e) {
+    $total_results = 0;
+    $total_pages = 1;
+}
+
+// ---------- SORT & PAGINATION ----------
+$sql .= " ORDER BY o.order_date $sort, o.order_id DESC LIMIT $per_page OFFSET $offset";
 
 // ---------- PREPARE & EXECUTE ----------
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("Query failed: " . $e->getMessage());
+}
 
 // Fetch members for filter dropdown
-$members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username ASC")->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $members_stmt = $pdo->query("SELECT member_id, username FROM Member ORDER BY username ASC");
+    $members = $members_stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $members = [];
+}
 //////////////////////////////////////////////////////////////end of search
 ?>
 
@@ -153,7 +223,7 @@ $members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username
             <!-- Filter Bar -->
             <div class="filter-bar">
                 <form method="GET" style="display:flex; gap:15px; flex:1; align-items:center;">
-                    <input type="text" name="search" placeholder="Search order id, member or address..." value="<?php echo htmlspecialchars($search); ?>">
+                    <input type="text" name="search" placeholder="Search order id, member, address or product..." value="<?php echo htmlspecialchars($search); ?>">
 
                     <label>Member</label>
                     <select name="member_id" onchange="this.form.submit()">
@@ -162,6 +232,27 @@ $members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username
                             <option value="<?php echo $m['member_id']; ?>" <?php if ($filter_member == $m['member_id']) echo 'selected'; ?>><?php echo htmlspecialchars($m['username']); ?></option>
                         <?php endforeach; ?>
                     </select>
+
+                    <label>Status</label>
+                    <select name="status" onchange="this.form.submit()">
+                        <option value="">-- All Statuses --</option>
+                        <option value="Pending" <?php if ($filter_status == 'Pending') echo 'selected'; ?>>Pending</option>
+                        <option value="Shipped" <?php if ($filter_status == 'Shipped') echo 'selected'; ?>>Shipped</option>
+                        <option value="Delivered" <?php if ($filter_status == 'Delivered') echo 'selected'; ?>>Delivered</option>
+                        <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
+                    </select>
+
+                    <label>Date From</label>
+                    <input type="date" name="date_from" value="<?php echo htmlspecialchars($filter_date_from); ?>">
+
+                    <label>Date To</label>
+                    <input type="date" name="date_to" value="<?php echo htmlspecialchars($filter_date_to); ?>">
+
+                    <label>Amount Min</label>
+                    <input type="number" name="amount_min" step="0.01" value="<?php echo htmlspecialchars($filter_amount_min); ?>">
+
+                    <label>Amount Max</label>
+                    <input type="number" name="amount_max" step="0.01" value="<?php echo htmlspecialchars($filter_amount_max); ?>">
 
                     <label>Sort by date</label>
                     <select name="sort" onchange="this.form.submit();">
@@ -190,8 +281,8 @@ $members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if (count($result) > 0): ?>
-                            <?php foreach ($result as $row): ?>
+                        <?php if (count($orders) > 0): ?>
+                            <?php foreach ($orders as $row): ?>
                                 <tr>
                                     <td><?= $row['order_id'] ?></td>
                                     <td><?= htmlspecialchars($row['username']) ?></td>
@@ -238,6 +329,17 @@ $members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username
                 </table>
             </div>
 
+            <!-- Pagination -->
+            <div class="pagination">
+                <?php if ($total_pages > 1): ?>
+                    <a href="manage_orders.php?page=1&search=<?php echo htmlspecialchars($search); ?>&member_id=<?php echo htmlspecialchars($filter_member); ?>&status=<?php echo htmlspecialchars($filter_status); ?>&date_from=<?php echo htmlspecialchars($filter_date_from); ?>&date_to=<?php echo htmlspecialchars($filter_date_to); ?>&amount_min=<?php echo htmlspecialchars($filter_amount_min); ?>&amount_max=<?php echo htmlspecialchars($filter_amount_max); ?>&sort=<?php echo htmlspecialchars($sort); ?>" class="btn">First</a>
+                    <a href="manage_orders.php?page=<?php echo max(1, $page - 1); ?>&search=<?php echo htmlspecialchars($search); ?>&member_id=<?php echo htmlspecialchars($filter_member); ?>&status=<?php echo htmlspecialchars($filter_status); ?>&date_from=<?php echo htmlspecialchars($filter_date_from); ?>&date_to=<?php echo htmlspecialchars($filter_date_to); ?>&amount_min=<?php echo htmlspecialchars($filter_amount_min); ?>&amount_max=<?php echo htmlspecialchars($filter_amount_max); ?>&sort=<?php echo htmlspecialchars($sort); ?>" class="btn">Previous</a>
+                    <span>Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
+                    <a href="manage_orders.php?page=<?php echo min($total_pages, $page + 1); ?>&search=<?php echo htmlspecialchars($search); ?>&member_id=<?php echo htmlspecialchars($filter_member); ?>&status=<?php echo htmlspecialchars($filter_status); ?>&date_from=<?php echo htmlspecialchars($filter_date_from); ?>&date_to=<?php echo htmlspecialchars($filter_date_to); ?>&amount_min=<?php echo htmlspecialchars($filter_amount_min); ?>&amount_max=<?php echo htmlspecialchars($filter_amount_max); ?>&sort=<?php echo htmlspecialchars($sort); ?>" class="btn">Next</a>
+                    <a href="manage_orders.php?page=<?php echo $total_pages; ?>&search=<?php echo htmlspecialchars($search); ?>&member_id=<?php echo htmlspecialchars($filter_member); ?>&status=<?php echo htmlspecialchars($filter_status); ?>&date_from=<?php echo htmlspecialchars($filter_date_from); ?>&date_to=<?php echo htmlspecialchars($filter_date_to); ?>&amount_min=<?php echo htmlspecialchars($filter_amount_min); ?>&amount_max=<?php echo htmlspecialchars($filter_amount_max); ?>&sort=<?php echo htmlspecialchars($sort); ?>" class="btn">Last</a>
+                <?php endif; ?>
+            </div>
+
         </div>
     </div>
 
@@ -259,6 +361,3 @@ $members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username
 </body>
 
 </html>
-
-
-
