@@ -90,10 +90,12 @@ if ($order['status'] === 'Shipped') {
 
         <h3>Payment</h3>
         <?php if ($payment): ?>
-            <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
-            <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
-            <p><strong>Status:</strong> <?php echo htmlspecialchars($payment['status']); ?></p>
-            <p><strong>Paid at:</strong> <?php echo $payment['payment_date']; ?></p>
+            <div class="payment-info">
+                <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
+                <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
+                <p><strong>Status:</strong> <?php echo htmlspecialchars($payment['status']); ?></p>
+                <p><strong>Paid at:</strong> <?php echo $payment['payment_date']; ?></p>
+            </div>
         <?php else: ?>
             <p>No payment record found.</p>
         <?php endif; ?>

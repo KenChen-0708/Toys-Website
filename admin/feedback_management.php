@@ -163,592 +163,201 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Feedback Management - Admin Panel</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
-            background: #f9fafb;
-        }
-
-        .admin-header {
-            background: linear-gradient(135deg, #a8e6a3 0%, #7ed97e 100%);
-            color: white;
-            padding: 20px 30px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .admin-header h1 {
-            font-size: 28px;
-            margin-bottom: 5px;
-        }
-
-        .admin-header p {
-            opacity: 0.9;
-            font-size: 14px;
-        }
-
-        .container {
-            max-width: 1600px;
-            margin: 0 auto;
-            padding: 30px;
-        }
-
-        .stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-
-        .stat-card {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            border-left: 4px solid #a8e6a3;
-            transition: all 0.3s ease;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
-        }
-
-        .stat-card .stat-value {
-            font-size: 32px;
-            font-weight: bold;
-            color: #22c55e;
-            margin-bottom: 5px;
-        }
-
-        .stat-card .stat-label {
-            color: #6b7280;
-            font-size: 14px;
-        }
-
-        .filters-section {
-            background: white;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-        }
-
-        .filters-form {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            align-items: end;
-        }
-
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-
-        .form-group label {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1f2937;
-            margin-bottom: 8px;
-        }
-
-        .form-control {
-            padding: 10px 14px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: #7ed97e;
-            box-shadow: 0 0 0 3px rgba(126, 217, 126, 0.1);
-        }
-
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #a8e6a3 0%, #7ed97e 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(126, 217, 126, 0.3);
-        }
-
-        .btn-secondary {
-            background: #e5e7eb;
-            color: #4b5563;
-        }
-
-        .btn-secondary:hover {
-            background: #d1d5db;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            animation: slideDown 0.3s ease;
-            line-height: 1.6;
-        }
-
-        @keyframes slideDown {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .alert-success {
-            background: #dcfce7;
-            color: #166534;
-            border: 2px solid #86efac;
-        }
-
-        .alert-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border: 2px solid #fca5a5;
-        }
-
-        .feedback-table {
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-            overflow: hidden;
-        }
-
-        .table-header {
-            padding: 20px 25px;
-            border-bottom: 2px solid #f3f4f6;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .table-header h2 {
-            color: #1f2937;
-            font-size: 20px;
-        }
-
-        .feedback-item {
-            padding: 25px;
-            border-bottom: 1px solid #f3f4f6;
-            transition: background 0.2s ease;
-        }
-
-        .feedback-item:hover {
-            background: #f9fafb;
-        }
-
-        .feedback-item:last-child {
-            border-bottom: none;
-        }
-
-        .feedback-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: start;
-            margin-bottom: 15px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-
-        .feedback-title {
-            flex: 1;
-        }
-
-        .feedback-title h3 {
-            color: #1f2937;
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        .feedback-meta {
-            display: flex;
-            gap: 15px;
-            font-size: 13px;
-            color: #6b7280;
-            flex-wrap: wrap;
-        }
-
-        .feedback-meta span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-
-        .badge-pending {
-            background: #fef3c7;
-            color: #92400e;
-        }
-
-        .badge-reviewed {
-            background: #dbeafe;
-            color: #1e40af;
-        }
-
-        .badge-resolved {
-            background: #dcfce7;
-            color: #166534;
-        }
-
-        .badge-category {
-            background: #f3f4f6;
-            color: #4b5563;
-        }
-
-        .rating-stars {
-            color: #fbbf24;
-            font-size: 16px;
-        }
-
-        .feedback-message {
-            color: #4b5563;
-            line-height: 1.6;
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #f9fafb;
-            border-radius: 8px;
-        }
-
-        .admin-response-box {
-            background: #f0fdf4;
-            border-left: 4px solid #22c55e;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-        }
-
-        .admin-response-box h4 {
-            color: #22c55e;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-
-        .admin-response-box p {
-            color: #4b5563;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .feedback-actions {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .expand-btn {
-            background: #f3f4f6;
-            color: #4b5563;
-            padding: 8px 16px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .expand-btn:hover {
-            background: #e5e7eb;
-        }
-
-        .response-form {
-            display: none;
-            margin-top: 20px;
-            padding: 20px;
-            background: #f9fafb;
-            border-radius: 10px;
-            border: 2px solid #e5e7eb;
-        }
-
-        .response-form.active {
-            display: block;
-        }
-
-        .response-form textarea {
-            width: 100%;
-            min-height: 100px;
-            padding: 12px;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            font-family: inherit;
-            font-size: 14px;
-            resize: vertical;
-            margin-bottom: 15px;
-        }
-
-        .response-form textarea:focus {
-            outline: none;
-            border-color: #7ed97e;
-        }
-
-        .response-form-actions {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .no-feedback {
-            text-align: center;
-            padding: 60px 20px;
-            color: #9ca3af;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
-
-            .stats-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .filters-form {
-                grid-template-columns: 1fr;
-            }
-
-            .feedback-header {
-                flex-direction: column;
-            }
-
-            .feedback-actions {
-                flex-direction: column;
-            }
-
-            .btn {
-                width: 100%;
-            }
-        }
-    </style>
+    <link rel="stylesheet" href="../assets/css/admin_panel.css">
+    <link rel="stylesheet" href="../assets/css/manage_orders.css">
+    <link rel="stylesheet" href="../assets/css/feedback_management.css">
 </head>
 <body>
-    <div class="admin-header">
-        <h1>💬 Feedback Management</h1>
-        <p>Manage and respond to customer feedback</p>
-    </div>
-
-    <div class="container">
-        <?php if ($success_message): ?>
-            <div class="alert alert-success">✓ <?php echo htmlspecialchars($success_message); ?></div>
-        <?php endif; ?>
-
-        <?php if ($error_message): ?>
-            <div class="alert alert-error">⚠ <?php echo $error_message; ?></div>
-        <?php endif; ?>
-
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-value"><?php echo $stats['total']; ?></div>
-                <div class="stat-label">Total Feedback</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?php echo $stats['pending']; ?></div>
-                <div class="stat-label">Pending Review</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?php echo $stats['reviewed']; ?></div>
-                <div class="stat-label">Reviewed</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?php echo $stats['resolved']; ?></div>
-                <div class="stat-label">Resolved</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?php echo number_format($stats['avg_rating'], 1); ?>⭐</div>
-                <div class="stat-label">Average Rating</div>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="filters-section">
-            <form method="GET" class="filters-form">
-                <div class="form-group">
-                    <label>Search</label>
-                    <input type="text" name="search" class="form-control" placeholder="Search feedback..." value="<?php echo htmlspecialchars($search); ?>">
-                </div>
-
-                <div class="form-group">
-                    <label>Status</label>
-                    <select name="status" class="form-control">
-                        <option value="all" <?php echo $status_filter === 'all' ? 'selected' : ''; ?>>All Status</option>
-                        <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                        <option value="reviewed" <?php echo $status_filter === 'reviewed' ? 'selected' : ''; ?>>Reviewed</option>
-                        <option value="resolved" <?php echo $status_filter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Category</label>
-                    <select name="category" class="form-control">
-                        <option value="all" <?php echo $category_filter === 'all' ? 'selected' : ''; ?>>All Categories</option>
-                        <option value="product_quality" <?php echo $category_filter === 'product_quality' ? 'selected' : ''; ?>>Product Quality</option>
-                        <option value="customer_service" <?php echo $category_filter === 'customer_service' ? 'selected' : ''; ?>>Customer Service</option>
-                        <option value="website" <?php echo $category_filter === 'website' ? 'selected' : ''; ?>>Website</option>
-                        <option value="delivery" <?php echo $category_filter === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
-                        <option value="pricing" <?php echo $category_filter === 'pricing' ? 'selected' : ''; ?>>Pricing</option>
-                        <option value="suggestion" <?php echo $category_filter === 'suggestion' ? 'selected' : ''; ?>>Suggestion</option>
-                        <option value="complaint" <?php echo $category_filter === 'complaint' ? 'selected' : ''; ?>>Complaint</option>
-                        <option value="other" <?php echo $category_filter === 'other' ? 'selected' : ''; ?>>Other</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Rating</label>
-                    <select name="rating" class="form-control">
-                        <option value="all" <?php echo $rating_filter === 'all' ? 'selected' : ''; ?>>All Ratings</option>
-                        <option value="5" <?php echo $rating_filter === '5' ? 'selected' : ''; ?>>5 Stars</option>
-                        <option value="4" <?php echo $rating_filter === '4' ? 'selected' : ''; ?>>4 Stars</option>
-                        <option value="3" <?php echo $rating_filter === '3' ? 'selected' : ''; ?>>3 Stars</option>
-                        <option value="2" <?php echo $rating_filter === '2' ? 'selected' : ''; ?>>2 Stars</option>
-                        <option value="1" <?php echo $rating_filter === '1' ? 'selected' : ''; ?>>1 Star</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <button type="submit" class="btn btn-primary">Apply Filters</button>
-                </div>
-
-                <div class="form-group">
-                    <a href="feedback_management.php" class="btn btn-secondary">Clear Filters</a>
-                </div>
-            </form>
-        </div>
-
-        <!-- Feedback List -->
-        <div class="feedback-table">
-            <div class="table-header">
-                <h2>Feedback List (<?php echo count($feedback_list); ?> items)</h2>
+    <div class="admin-container">
+        <?php include '../partials/admin_panel.php'; ?>
+        
+        <div class="main-content">
+            <div class="admin-header">
+                <h1>💬 Feedback Management</h1>
+                <p>Manage and respond to customer feedback</p>
             </div>
 
-            <?php if (!empty($feedback_list)): ?>
-                <?php foreach ($feedback_list as $feedback): ?>
-                    <div class="feedback-item">
-                        <div class="feedback-header">
-                            <div class="feedback-title">
-                                <h3><?php echo htmlspecialchars($feedback['subject']); ?></h3>
-                                <div class="feedback-meta">
-                                    <span>👤 <?php echo htmlspecialchars($feedback['member_name'] ?? 'Unknown'); ?></span>
-                                    <span>📧 <?php echo htmlspecialchars($feedback['member_email'] ?? 'N/A'); ?></span>
-                                    <span>📅 <?php echo date('M d, Y h:i A', strtotime($feedback['created_at'])); ?></span>
-                                </div>
-                            </div>
-                            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                                <span class="badge badge-<?php echo htmlspecialchars($feedback['status']); ?>">
-                                    <?php echo ucfirst(htmlspecialchars($feedback['status'])); ?>
-                                </span>
-                                <span class="badge badge-category">
-                                    <?php echo htmlspecialchars(str_replace('_', ' ', ucwords($feedback['category'], '_'))); ?>
-                                </span>
-                                <span class="rating-stars">
-                                    <?php echo str_repeat('⭐', $feedback['rating']); ?>
-                                </span>
-                            </div>
-                        </div>
+            <div class="container">
+                <?php if ($success_message): ?>
+                    <div class="alert alert-success">✓ <?php echo htmlspecialchars($success_message); ?></div>
+                <?php endif; ?>
 
-                        <div class="feedback-message">
-                            <strong>Customer Feedback:</strong><br>
-                            <?php echo nl2br(htmlspecialchars($feedback['message'])); ?>
-                        </div>
+                <?php if ($error_message): ?>
+                    <div class="alert alert-error">⚠ <?php echo $error_message; ?></div>
+                <?php endif; ?>
 
-                        <?php if (!empty($feedback['admin_response'])): ?>
-                            <div class="admin-response-box">
-                                <h4>✓ Admin Response:</h4>
-                                <p><?php echo nl2br(htmlspecialchars($feedback['admin_response'])); ?></p>
-                            </div>
-                        <?php endif; ?>
-
-                        <div class="feedback-actions">
-                            <button class="expand-btn" onclick="toggleResponseForm(<?php echo $feedback['feedback_id']; ?>)">
-                                💬 Respond & Update Status
-                            </button>
-                            <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this feedback?');">
-                                <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
-                                <button type="submit" name="delete_feedback" class="btn btn-danger">🗑️ Delete</button>
-                            </form>
-                        </div>
-
-                        <div class="response-form" id="form-<?php echo $feedback['feedback_id']; ?>">
-                            <form method="POST">
-                                <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
-                                
-                                <div class="form-group">
-                                    <label>Admin Response</label>
-                                    <textarea name="admin_response" placeholder="Type your response to the customer..."><?php echo htmlspecialchars($feedback['admin_response'] ?? ''); ?></textarea>
-                                </div>
-
-                                <div class="response-form-actions">
-                                    <div class="form-group" style="flex: 1;">
-                                        <label>Update Status</label>
-                                        <select name="status" class="form-control" required>
-                                            <option value="pending" <?php echo $feedback['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                            <option value="reviewed" <?php echo $feedback['status'] === 'reviewed' ? 'selected' : ''; ?>>Reviewed</option>
-                                            <option value="resolved" <?php echo $feedback['status'] === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
-                                        </select>
-                                    </div>
-                                    <button type="submit" name="update_status" class="btn btn-primary">💾 Update</button>
-                                </div>
-                            </form>
-                        </div>
+                <!-- Statistics -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value"><?php echo $stats['total']; ?></div>
+                        <div class="stat-label">Total Feedback</div>
                     </div>
-                <?php endforeach; ?>
-            <?php else: ?>
-                <div class="no-feedback">
-                    <p style="font-size: 48px;">📭</p>
-                    <h3>No Feedback Found</h3>
-                    <p>
-                        <?php if (strpos($error_message, 'table') !== false): ?>
-                            Please create the Feedback table first by running: <br>
-                            <code>/sql/create_feedback_table.sql</code>
-                        <?php else: ?>
-                            No feedback matches your current filters or no feedback has been submitted yet.
-                        <?php endif; ?>
-                    </p>
+                    <div class="stat-card">
+                        <div class="stat-value"><?php echo $stats['pending']; ?></div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value"><?php echo $stats['reviewed']; ?></div>
+                        <div class="stat-label">Reviewed</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value"><?php echo $stats['resolved']; ?></div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value"><?php echo number_format($stats['avg_rating'], 1); ?>⭐</div>
+                        <div class="stat-label">Average Rating</div>
+                    </div>
                 </div>
-            <?php endif; ?>
+
+                <!-- Filters -->
+                <div class="filters-section">
+                    <form method="GET" class="filters-form">
+                        <div class="form-group">
+                            <label>Search</label>
+                            <input type="text" name="search" class="form-control" placeholder="Search feedback..." value="<?php echo htmlspecialchars($search); ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select name="status" class="form-control">
+                                <option value="all" <?php echo $status_filter === 'all' ? 'selected' : ''; ?>>All Status</option>
+                                <option value="pending" <?php echo $status_filter === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                <option value="reviewed" <?php echo $status_filter === 'reviewed' ? 'selected' : ''; ?>>Reviewed</option>
+                                <option value="resolved" <?php echo $status_filter === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select name="category" class="form-control">
+                                <option value="all" <?php echo $category_filter === 'all' ? 'selected' : ''; ?>>All Categories</option>
+                                <option value="product_quality" <?php echo $category_filter === 'product_quality' ? 'selected' : ''; ?>>Product Quality</option>
+                                <option value="customer_service" <?php echo $category_filter === 'customer_service' ? 'selected' : ''; ?>>Customer Service</option>
+                                <option value="website" <?php echo $category_filter === 'website' ? 'selected' : ''; ?>>Website</option>
+                                <option value="delivery" <?php echo $category_filter === 'delivery' ? 'selected' : ''; ?>>Delivery</option>
+                                <option value="pricing" <?php echo $category_filter === 'pricing' ? 'selected' : ''; ?>>Pricing</option>
+                                <option value="suggestion" <?php echo $category_filter === 'suggestion' ? 'selected' : ''; ?>>Suggestion</option>
+                                <option value="complaint" <?php echo $category_filter === 'complaint' ? 'selected' : ''; ?>>Complaint</option>
+                                <option value="other" <?php echo $category_filter === 'other' ? 'selected' : ''; ?>>Other</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Rating</label>
+                            <select name="rating" class="form-control">
+                                <option value="all" <?php echo $rating_filter === 'all' ? 'selected' : ''; ?>>All Ratings</option>
+                                <option value="5" <?php echo $rating_filter === '5' ? 'selected' : ''; ?>>5 Stars</option>
+                                <option value="4" <?php echo $rating_filter === '4' ? 'selected' : ''; ?>>4 Stars</option>
+                                <option value="3" <?php echo $rating_filter === '3' ? 'selected' : ''; ?>>3 Stars</option>
+                                <option value="2" <?php echo $rating_filter === '2' ? 'selected' : ''; ?>>2 Stars</option>
+                                <option value="1" <?php echo $rating_filter === '1' ? 'selected' : ''; ?>>1 Star</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                        </div>
+
+                        <div class="form-group">
+                            <a href="feedback_management.php" class="btn btn-secondary">Clear Filters</a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Feedback List -->
+                <div class="feedback-table">
+                    <div class="table-header">
+                        <h2>Feedback List (<?php echo count($feedback_list); ?> items)</h2>
+                    </div>
+
+                    <?php if (!empty($feedback_list)): ?>
+                        <?php foreach ($feedback_list as $feedback): ?>
+                            <div class="feedback-item">
+                                <div class="feedback-header">
+                                    <div class="feedback-title">
+                                        <h3><?php echo htmlspecialchars($feedback['subject']); ?></h3>
+                                        <div class="feedback-meta">
+                                            <span>👤 <?php echo htmlspecialchars($feedback['member_name'] ?? 'Unknown'); ?></span>
+                                            <span>📧 <?php echo htmlspecialchars($feedback['member_email'] ?? 'N/A'); ?></span>
+                                            <span>📅 <?php echo date('M d, Y h:i A', strtotime($feedback['created_at'])); ?></span>
+                                        </div>
+                                    </div>
+                                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                                        <span class="badge badge-<?php echo htmlspecialchars($feedback['status']); ?>">
+                                            <?php echo ucfirst(htmlspecialchars($feedback['status'])); ?>
+                                        </span>
+                                        <span class="badge badge-category">
+                                            <?php echo htmlspecialchars(str_replace('_', ' ', ucwords($feedback['category'], '_'))); ?>
+                                        </span>
+                                        <span class="rating-stars">
+                                            <?php echo str_repeat('⭐', $feedback['rating']); ?>
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div class="feedback-message">
+                                    <strong>Customer Feedback:</strong><br>
+                                    <?php echo nl2br(htmlspecialchars($feedback['message'])); ?>
+                                </div>
+
+                                <?php if (!empty($feedback['admin_response'])): ?>
+                                    <div class="admin-response-box">
+                                        <h4>✓ Admin Response:</h4>
+                                        <p><?php echo nl2br(htmlspecialchars($feedback['admin_response'])); ?></p>
+                                    </div>
+                                <?php endif; ?>
+
+                                <div class="feedback-actions">
+                                    <button class="expand-btn" onclick="toggleResponseForm(<?php echo $feedback['feedback_id']; ?>)">
+                                        💬 Respond & Update Status
+                                    </button>
+                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this feedback?');">
+                                        <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
+                                        <button type="submit" name="delete_feedback" class="btn btn-danger">🗑️ Delete</button>
+                                    </form>
+                                </div>
+
+                                <div class="response-form" id="form-<?php echo $feedback['feedback_id']; ?>">
+                                    <form method="POST">
+                                        <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
+                                        
+                                        <div class="form-group">
+                                            <label>Admin Response</label>
+                                            <textarea name="admin_response" placeholder="Type your response to the customer..."><?php echo htmlspecialchars($feedback['admin_response'] ?? ''); ?></textarea>
+                                        </div>
+
+                                        <div class="response-form-actions">
+                                            <div class="form-group" style="flex: 1;">
+                                                <label>Update Status</label>
+                                                <select name="status" class="form-control" required>
+                                                    <option value="pending" <?php echo $feedback['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                                    <option value="reviewed" <?php echo $feedback['status'] === 'reviewed' ? 'selected' : ''; ?>>Reviewed</option>
+                                                    <option value="resolved" <?php echo $feedback['status'] === 'resolved' ? 'selected' : ''; ?>>Resolved</option>
+                                                </select>
+                                            </div>
+                                            <button type="submit" name="update_status" class="btn btn-primary">💾 Update</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <div class="no-feedback">
+                            <p style="font-size: 48px;">📭</p>
+                            <h3>No Feedback Found</h3>
+                            <p>
+                                <?php if (strpos($error_message, 'table') !== false): ?>
+                                    Please create the Feedback table first by running: <br>
+                                    <code>/sql/create_feedback_table.sql</code>
+                                <?php else: ?>
+                                    No feedback matches your current filters or no feedback has been submitted yet.
+                                <?php endif; ?>
+                            </p>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -757,6 +366,18 @@ try {
             const form = document.getElementById('form-' + feedbackId);
             form.classList.toggle('active');
         }
+        
+        // Mobile menu functionality from admin_panel.php
+        document.addEventListener('DOMContentLoaded', function() {
+            const mobileBtn = document.querySelector('.mobile-menu-btn');
+            const sidebar = document.querySelector('.sidebar');
+            
+            if (mobileBtn && sidebar) {
+                mobileBtn.addEventListener('click', function() {
+                    sidebar.classList.toggle('mobile-open');
+                });
+            }
+        });
     </script>
 </body>
 </html>
