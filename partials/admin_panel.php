@@ -1,4 +1,7 @@
 <?php 
+// Make sure session is started somewhere before this file is included
+// session_start();
+
 $current_page = basename($_SERVER['PHP_SELF']); 
 
 // Prepare admin data safely
