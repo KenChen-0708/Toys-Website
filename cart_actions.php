@@ -9,13 +9,38 @@ if (!isset($_SESSION['member'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Please log in to add items to cart',
-        'redirect' => 'auth/login.php'
+        'redirect' => 'auth/login.php',
+        'debug' => 'No session found'
+    ]);
+    exit();
+}
+
+if (!isset($_SESSION['member']['id'])) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Session error - please log in again',
+        'redirect' => 'auth/login.php',
+        'debug' => 'Session exists but no ID: ' . json_encode($_SESSION['member'])
     ]);
     exit();
 }
 
 $member_id = $_SESSION['member']['id'];
 $action = $_POST['action'] ?? '';
+
+// Debug: Check if member exists in database
+$stmt = $pdo->prepare("SELECT member_id FROM Member WHERE member_id = ?");
+$stmt->execute([$member_id]);
+$member_exists = $stmt->fetch();
+
+if (!$member_exists) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Member not found in database. Please log in again.',
+        'debug' => 'Member ID ' . $member_id . ' does not exist in Member table'
+    ]);
+    exit();
+}
 
 try {
     switch ($action) {
@@ -49,13 +74,13 @@ try {
             }
 
             // Get or create cart for user
-            $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE user_id = ?");
+            $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE member_id = ?");
             $stmt->execute([$member_id]);
             $cart = $stmt->fetch();
 
             if (!$cart) {
                 // Create new cart
-                $stmt = $pdo->prepare("INSERT INTO Cart (user_id) VALUES (?)");
+                $stmt = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
                 $stmt->execute([$member_id]);
                 $cart_id = $pdo->lastInsertId();
             } else {
@@ -102,8 +127,12 @@ try {
 } catch (PDOException $e) {
     echo json_encode([
         'success' => false,
-        'message' => 'Database error occurred',
-        'error' => $e->getMessage()
+        'message' => 'Database error occurred: ' . $e->getMessage(),
+        'error' => $e->getMessage(),
+        'debug' => [
+            'member_id' => $member_id ?? 'not set',
+            'session' => $_SESSION['member'] ?? 'not logged in'
+        ]
     ]);
 }
 ?>

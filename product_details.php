@@ -1047,11 +1047,11 @@ $title = htmlspecialchars($product['name']) . " — Details";
           <?php if (is_logged_in()): ?>
             <div class="header__user-profile">
               <button class="avatar-btn">
-                <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['name'])) ?></span>
+                <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['username'])) ?></span>
               </button>
               <div class="profile-menu">
                 <div class="profile-menu__header">
-                  <strong><?= htmlspecialchars($_SESSION['member']['name']) ?></strong><br>
+                  <strong><?= htmlspecialchars($_SESSION['member']['username']) ?></strong><br>
                   <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
                 </div>
                 <a href="/accounts.php">My Account</a>
@@ -1216,7 +1216,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
             <i class="fi fi-rs-shopping-bag"></i>
             Buy Now
           </button>
-          <button class="btn btn-icon" title="Add to Wishlist">
+          <button class="btn btn-icon" id="addToWishlistBtn" title="Add to Wishlist" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
             <i class="fi fi-rs-heart"></i>
           </button>
         </div>
@@ -1326,7 +1326,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
               </a>
 
               <div class="product-actions">
-                <button class="action-btn" data-product-id="<?= $related['product_id'] ?>">
+                <button class="action-btn wishlist-btn" data-product-id="<?= $related['product_id'] ?>">
                   <i class="fi fi-rs-heart"></i>
                 </button>
                 <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
@@ -1454,6 +1454,49 @@ $title = htmlspecialchars($product['name']) . " — Details";
         });
       });
 
+      // Add to wishlist functionality
+      $('#addToWishlistBtn').on('click', function() {
+        const $btn = $(this);
+        if ($btn.is(':disabled')) return;
+
+        const productId = <?= $product_id ?>;
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
+
+        $.ajax({
+          url: 'wishlist_actions.php',
+          method: 'POST',
+          data: {
+            action: 'add',
+            product_id: productId
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              showToast('Product added to wishlist!', 'success');
+              if (response.wishlist_count !== undefined) {
+                $('.count:not(.cart-count)').text(response.wishlist_count);
+              }
+              $btn.html('<i class="fi fi-ss-heart"></i> Added!');
+              setTimeout(() => {
+                $btn.html(originalHtml).prop('disabled', false);
+              }, 1500);
+            } else {
+              showToast(response.message || 'Failed to add to wishlist', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              }
+              $btn.html(originalHtml).prop('disabled', false);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
       // Add to cart for related products
       $(document).on('click', '.add-cart-btn', function(e) {
         e.preventDefault();
@@ -1495,6 +1538,48 @@ $title = htmlspecialchars($product['name']) . " — Details";
           error: function() {
             showToast('An error occurred. Please try again.', 'error');
             $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
+      // Add to wishlist for related products
+      $(document).on('click', '.wishlist-btn', function(e) {
+        e.preventDefault();
+        const $btn = $(this);
+        const productId = $btn.data('product-id');
+        const originalHtml = $btn.html();
+
+        $btn.html('<i class="fi fi-rs-spinner"></i>');
+
+        $.ajax({
+          url: 'wishlist_actions.php',
+          method: 'POST',
+          data: {
+            action: 'add',
+            product_id: productId
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              showToast('Product added to wishlist!', 'success');
+              if (response.wishlist_count !== undefined) {
+                $('.count:not(.cart-count)').text(response.wishlist_count);
+              }
+              $btn.html('<i class="fi fi-ss-heart"></i>');
+              setTimeout(() => {
+                $btn.html(originalHtml);
+              }, 1000);
+            } else {
+              showToast(response.message || 'Failed to add to wishlist', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              }
+              $btn.html(originalHtml);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml);
           }
         });
       });

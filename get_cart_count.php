@@ -12,29 +12,19 @@ if (isset($_SESSION['member'])) {
     
     try {
         // Get cart count
-        $stmt = $pdo->prepare("
-            SELECT COUNT(*) as count 
-            FROM Cart c 
-            JOIN Cart_Item ci ON c.cart_id = ci.cart_id 
-            WHERE c.user_id = ?
-        ");
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM Cart_Item ci JOIN Cart c ON ci.cart_id = c.cart_id WHERE c.member_id = ?");
         $stmt->execute([$member_id]);
         $result = $stmt->fetch();
         $cart_count = $result ? $result['count'] : 0;
         
-        // Get wishlist count (if wishlist table exists)
-        try {
-            $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM Wishlist WHERE member_id = ?");
-            $stmt->execute([$member_id]);
-            $result = $stmt->fetch();
-            $wishlist_count = $result ? $result['count'] : 0;
-        } catch (PDOException $e) {
-            // Wishlist table might not exist
-            $wishlist_count = 0;
-        }
+        // Get wishlist count
+        $stmt = $pdo->prepare("SELECT COUNT(*) as count FROM Wishlist_Item wi JOIN Wishlist w ON wi.wishlist_id = w.wishlist_id WHERE w.member_id = ?");
+        $stmt->execute([$member_id]);
+        $result = $stmt->fetch();
+        $wishlist_count = $result ? $result['count'] : 0;
         
     } catch (PDOException $e) {
-        // Error getting counts
+        // Silently fail and return 0 counts
     }
 }
 

@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WI
 
       case 'clear_cart':
         // Get cart_id for the member
-        $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE user_id = ?");
+        $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE member_id = ?");
         $stmt->execute([$member_id]);
         $cart = $stmt->fetch();
 
@@ -96,7 +96,7 @@ try {
         FROM Cart c
         JOIN Cart_Item ci ON c.cart_id = ci.cart_id
         JOIN Product p ON ci.product_id = p.product_id
-        WHERE c.user_id = ?
+        WHERE c.member_id = ?
         ORDER BY ci.cart_item_id DESC
     ");
   $stmt->execute([$member_id]);
