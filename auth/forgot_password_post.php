@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 // PHPMailer (manual include)
@@ -37,14 +37,13 @@ if ($errors) {
 
 // Find user by email
 $sql = "SELECT member_id AS id, username AS username, email FROM member WHERE email = ?";
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    die("SQL error: " . $conn->error); // dev debug
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("SQL error: " . $e->getMessage()); // dev debug
 }
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
 
 if (!$user) {
     $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, a reset link has been sent.';
@@ -58,18 +57,15 @@ $tokenHash = hash('sha256', $rawToken);
 $expiresAt = (new DateTime('+1 hour'))->format('Y-m-d H:i:s');
 
 // Delete old tokens for this email
-$del = $conn->prepare("DELETE FROM password_resets WHERE email = ?");
-$del->bind_param('s', $user['email']);
-$del->execute();
-$del->close();
+$del = $pdo->prepare("DELETE FROM password_resets WHERE email = ?");
+$del->execute([$user['email']]);
 
 // Insert new reset token
-$stmt = $conn->prepare("
+$stmt = $pdo->prepare("
     INSERT INTO password_resets (email, token, expires_at)
     VALUES (?, ?, ?)
 ");
-$stmt->bind_param('sss', $user['email'], $tokenHash, $expiresAt);
-$stmt->execute();
+$stmt->execute([$user['email'], $tokenHash, $expiresAt]);
 
 // Build reset link
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";

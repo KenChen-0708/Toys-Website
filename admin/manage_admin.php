@@ -1,6 +1,8 @@
 <?php
-include '../helper/connection.php';
-
+session_start();
+include '../helper/pdo_connection.php';
+require_once '../helper/auth.php';
+require_admin();
 
 $message = '';
 $message_type = '';
@@ -58,18 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness checks (username + email) if no basic errors
         if (!$errors) {
             // Check username uniqueness
-            $checkName = $conn->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
-            $checkName->bind_param('s', $username);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
+            $checkName->execute([$username]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This admin username is already taken.';
             }
 
             // Check email uniqueness
-            $checkEmail = $conn->prepare("SELECT 1 FROM Admin WHERE email = ?");
-            $checkEmail->bind_param('s', $email);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ?");
+            $checkEmail->execute([$email]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This admin email is already registered.';
             }
         }
@@ -80,18 +80,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $password = password_hash($password_raw, PASSWORD_BCRYPT);
 
-            $stmt = $conn->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
-            $stmt->bind_param('sss', $username, $email, $password);
-
-            if ($stmt->execute()) {
+            try {
+                $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
+                $stmt->execute([$username, $email, $password]);
                 $message = "Admin created successfully!";
                 $message_type = "success";
-            } else {
-                if ($conn->errno === 1062) {
+            } catch (PDOException $e) {
+                if ($e->getCode() == 23000) {
                     // Fallback if DB has UNIQUE constraints
                     $message = "Admin username or email already exists.";
                 } else {
-                    $message = "Error creating admin: " . $conn->error;
+                    $message = "Error creating admin: " . $e->getMessage();
                 }
                 $message_type = "error";
             }
@@ -126,18 +125,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Uniqueness check for username/email among other admins
         if (!$errors) {
             // Name must be unique excluding current admin
-            $checkName = $conn->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
-            $checkName->bind_param('si', $username, $id);
-            $checkName->execute();
-            if ($checkName->get_result()->fetch_row()) {
+            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
+            $checkName->execute([$username, $id]);
+            if ($checkName->fetch()) {
                 $errors[] = 'This admin username is already taken.';
             }
 
             // Email must be unique excluding current admin
-            $checkEmail = $conn->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
-            $checkEmail->bind_param('si', $email, $id);
-            $checkEmail->execute();
-            if ($checkEmail->get_result()->fetch_row()) {
+            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
+            $checkEmail->execute([$email, $id]);
+            if ($checkEmail->fetch()) {
                 $errors[] = 'This admin email is already registered.';
             }
         }
@@ -146,22 +143,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = implode(' ', $errors);
             $message_type = 'error';
         } else {
-            $stmt = $conn->prepare("UPDATE Admin SET username = ?, email = ? WHERE admin_id = ?");
-            $stmt->bind_param('ssi', $username, $email, $id);
+            try {
+                $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ? WHERE admin_id = ?");
+                $stmt->execute([$username, $email, $id]);
 
-            if ($stmt->execute()) {
                 // Update password if provided
                 if (!empty($new_password_raw)) {
                     $new_password = password_hash($new_password_raw, PASSWORD_BCRYPT);
-                    $passStmt = $conn->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
-                    $passStmt->bind_param('si', $new_password, $id);
-                    $passStmt->execute();
+                    $passStmt = $pdo->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
+                    $passStmt->execute([$new_password, $id]);
                 }
 
                 $message = "Admin updated successfully!";
                 $message_type = "success";
-            } else {
-                $message = "Error updating admin: " . $conn->error;
+            } catch (PDOException $e) {
+                $message = "Error updating admin: " . $e->getMessage();
                 $message_type = "error";
             }
         }
@@ -175,14 +171,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "You cannot delete your own admin account!";
             $message_type = "error";
         } else {
-            $stmt = $conn->prepare("DELETE FROM Admin WHERE admin_id = ?");
-            $stmt->bind_param('i', $id);
-
-            if ($stmt->execute()) {
+            try {
+                $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
+                $stmt->execute([$id]);
                 $message = "Admin deleted successfully!";
                 $message_type = "success";
-            } else {
-                $message = "Error deleting admin: " . $conn->error;
+            } catch (PDOException $e) {
+                $message = "Error deleting admin: " . $e->getMessage();
                 $message_type = "error";
             }
         }
@@ -190,14 +185,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 /* ========== READ admins with search & sort ========== */
-$search = isset($_GET['search']) ? $conn->real_escape_string($_GET['search']) : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
 
 $sql = "SELECT * FROM Admin WHERE 1=1";
+$params = [];
 if (!empty($search)) {
-    $sql .= " AND (username LIKE '%$search%' OR email LIKE '%$search%')";
+    $sql .= " AND (username LIKE ? OR email LIKE ?)";
+    $searchParam = "%$search%";
+    $params[] = $searchParam;
+    $params[] = $searchParam;
 }
 $sql .= " ORDER BY $sort $order";
-$admins = $conn->query($sql);
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$admins = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 ?>
 <!DOCTYPE html>
@@ -320,8 +322,8 @@ $admins = $conn->query($sql);
                </thead>
 
                 <tbody>
-                    <?php if ($admins && $admins->num_rows > 0): ?>
-                        <?php while ($a = $admins->fetch_assoc()): ?>
+                    <?php if ($admins && count($admins) > 0): ?>
+                        <?php foreach ($admins as $a): ?>
                         <tr>
                             <td><?= $a['admin_id'] ?></td>
                             <td><?= htmlspecialchars($a['username']) ?></td>
@@ -337,7 +339,7 @@ $admins = $conn->query($sql);
                                 <?php endif; ?>
                             </td>
                         </tr>
-                        <?php endwhile; ?>
+                        <?php endforeach; ?>
                     <?php else: ?>
                         <tr><td colspan="4" style="text-align:center;padding:40px;">No admins found.</td></tr>
                     <?php endif; ?>
@@ -732,4 +734,3 @@ document.addEventListener('DOMContentLoaded', function () {
 </body>
 </html>
 
-<?php $conn->close(); ?>

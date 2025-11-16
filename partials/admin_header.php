@@ -3,7 +3,7 @@ session_start();
 
 // Database configuration
 // Create connection
-include '../helper/connection.php';
+include '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_admin();
 
