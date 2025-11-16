@@ -7,8 +7,9 @@ $(document).ready(function() {
   let currentPage = 1;
   let isLoading = false;
 
-  // Initialize - load products on page load
+  // Initialize - load products and cart count on page load
   loadProducts();
+  loadCartCount();
 
   // Mobile filter toggle
   $('#mobileFilterBtn').on('click', function() {
@@ -397,6 +398,26 @@ $(document).ready(function() {
   }
 
 
+
+  /**
+   * Load cart count
+   */
+  function loadCartCount() {
+    $.ajax({
+      url: 'get_cart_count.php',
+      method: 'GET',
+      dataType: 'json',
+      success: function(response) {
+        if (response.success) {
+          $('.cart-count').text(response.cart_count || 0);
+          $('.wishlist-count').text(response.wishlist_count || 0);
+        }
+      },
+      error: function() {
+        // Silently fail
+      }
+    });
+  }
 
   /**
    * Update cart count
