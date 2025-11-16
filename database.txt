@@ -1,150 +1,33 @@
-CREATE TABLE Admin (
-    admin_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL
-);
-
--- 2️⃣ MEMBER TABLE
-CREATE TABLE Member (
-    member_id INT AUTO_INCREMENT PRIMARY KEY,
-    username VARCHAR(100) NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    phone_number VARCHAR(20),
-    address TEXT,
-    profile_photo_path VARCHAR(255),  -- Siuyee
-    register_date DATETIME NOT NULL
+CREATE TABLE Vouchers (
+    voucher_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    value DECIMAL(10,2) NOT NULL,
+    type ENUM('fixed', 'percent') NOT NULL DEFAULT 'fixed',
+    min_spend DECIMAL(10,2) DEFAULT 0,
+    max_discount DECIMAL(10,2) DEFAULT NULL,
+    usage_limit INT NOT NULL DEFAULT 1,
+    usage_per_user INT NOT NULL DEFAULT 1,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    status ENUM('active','inactive','expired') NOT NULL DEFAULT 'active',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_voucher_dates (start_date, end_date) 
 );
 
 
--- 3️⃣ PRODUCT TABLE
-CREATE TABLE Product (
-    product_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(150) NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    description TEXT,
-    category VARCHAR(100),
-    stock INT NOT NULL,
-    status ENUM('Available', 'Unavailable') NOT NULL DEFAULT 'Available',
-    main_image_path VARCHAR(255),
-    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
-
-
--- PRODUCT SUB IMAGE TABLE
- CREATE TABLE Product_Sub_Image (
-    sub_image_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    sub_image_path VARCHAR(255) NOT NULL,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id)
-        ON DELETE CASCADE
-);
-
-
-
--- 4️⃣ CART TABLE
-CREATE TABLE Cart (
-    cart_id INT AUTO_INCREMENT PRIMARY KEY,
+CREATE TABLE Voucher_Usage (
+    voucher_usage_id INT AUTO_INCREMENT PRIMARY KEY,
+    voucher_id INT NOT NULL,
     member_id INT NOT NULL,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- 5️⃣ CART ITEM TABLE
-CREATE TABLE Cart_Item (
-    cart_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    cart_id INT NOT NULL,
-    quantity INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (cart_id) REFERENCES Cart(cart_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-
-
--- 6️⃣ ORDER TABLE
-CREATE TABLE `Order` (
-    order_id INT AUTO_INCREMENT PRIMARY KEY,
-    member_id INT NOT NULL,
-    order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    total_amount DECIMAL(10,2) NOT NULL,
-    status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-    shipping_address TEXT,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
-
--- 8️⃣ ORDER ITEM TABLE
-CREATE TABLE Order_Item (
-    order_item_id INT AUTO_INCREMENT PRIMARY KEY,
     order_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
+    used_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-
-
-
--- 7️⃣ PAYMENT TABLE
-CREATE TABLE Payment (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    order_id INT UNIQUE,  -- FK to Order
-    payment_method ENUM('Credit Card', 'Debit Card', 'Online Banking', 'E-Wallet', 'Cash on Delivery') NOT NULL,
-    payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    amount DECIMAL(10,2) NOT NULL,
-    status ENUM('Pending', 'Completed', 'Failed', 'Refunded') DEFAULT 'Pending',
-    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE Wishlist (
-    wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
-    member_id INT NOT NULL UNIQUE,
-    FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE Wishlist_Item (
-    wishlist_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    wishlist_id INT NOT NULL,
-    product_id INT NOT NULL,
-    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (wishlist_id) REFERENCES Wishlist(wishlist_id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-    UNIQUE (wishlist_id, product_id)
-);
-
--- Password reset table
-CREATE TABLE password_resets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    email VARCHAR(255) NOT NULL,
-    token VARCHAR(64) NOT NULL,
-    expires_at DATETIME NOT NULL
-);
-
-
-CREATE TABLE Review (
-    review_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    member_id INT NOT NULL,
-    rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-    review_text TEXT,
-    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    FOREIGN KEY (product_id) REFERENCES Product(product_id)
+    FOREIGN KEY (voucher_id) REFERENCES Vouchers(voucher_id)
         ON DELETE CASCADE ON UPDATE CASCADE,
 
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
