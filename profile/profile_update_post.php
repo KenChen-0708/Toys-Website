@@ -57,7 +57,7 @@ if (empty($errors) && $db_ok && $pdo) {
         $pdo->beginTransaction();
 
         // Check if username is already taken by another user
-        $stmt_check_name = $pdo->prepare("SELECT member_id FROM Member WHERE BINARY name = ? AND member_id != ?");
+        $stmt_check_name = $pdo->prepare("SELECT member_id FROM Member WHERE BINARY username = ? AND member_id != ?");
         $stmt_check_name->execute([$name, $member_id]);
         if ($stmt_check_name->fetch()) {
             $errors[] = 'This username is already taken.';
@@ -74,7 +74,7 @@ if (empty($errors) && $db_ok && $pdo) {
             // Update profile
             $stmt_update = $pdo->prepare("
                 UPDATE Member 
-                SET name = ?, email = ?, phone_number = ?, address = ?
+                SET username = ?, email = ?, phone_number = ?, address = ?
                 WHERE member_id = ?
             ");
             $stmt_update->execute([$name, $email, $phone_number, $address, $member_id]);

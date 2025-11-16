@@ -16,7 +16,7 @@
   $user_data = null;
   if ($db_ok && $pdo) {
     try {
-      $stmt = $pdo->prepare("SELECT member_id, name, email, phone_number, address, profile_photo_path, register_date FROM Member WHERE member_id = ?");
+      $stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, address, profile_photo_path, register_date FROM Member WHERE member_id = ?");
       $stmt->execute([$member_id]);
       $user_data = $stmt->fetch();
     } catch (PDOException $e) {
@@ -91,7 +91,7 @@
             </div>
           </div>
           <div class="profile-info">
-            <h1><?= htmlspecialchars($user_data['name'] ?? 'User') ?></h1>
+            <h1><?= htmlspecialchars($user_data['username'] ?? 'User') ?></h1>
             <p><i class="fi fi-rs-envelope"></i> <?= htmlspecialchars($user_data['email'] ?? '') ?></p>
             <?php if ($user_data && $user_data['phone_number']): ?>
               <p><i class="fi fi-rs-phone-call"></i> <?= htmlspecialchars($user_data['phone_number']) ?></p>
@@ -191,7 +191,7 @@
             <div style="background: linear-gradient(135deg, var(--first-color-alt) 0%, rgba(26, 122, 94, 0.1) 100%); border-radius: 12px; padding: 2rem; border-left: 4px solid var(--first-color);">
               <h3 style="margin-bottom: 1rem; color: var(--title-color); display: flex; align-items: center; gap: 0.5rem;">
                 <i class="fi fi-rs-smile" style="color: var(--first-color);"></i>
-                Welcome Back, <?= htmlspecialchars($user_data['name'] ?? 'User') ?>!
+                Welcome Back, <?= htmlspecialchars($user_data['username'] ?? 'User') ?>!
               </h3>
               <p style="color: var(--text-color); line-height: 1.8; margin-bottom: 1rem;">
                 Manage your account settings, track your orders, and update your profile information all in one place.
@@ -359,7 +359,7 @@
                        minlength="3"
                        pattern="[A-Za-z0-9_]+"
                        title="Username can only contain letters, numbers, and underscores"
-                       value="<?= htmlspecialchars($old_profile['name'] ?? $user_data['name'] ?? '') ?>" 
+                       value="<?= htmlspecialchars($old_profile['name'] ?? $user_data['username'] ?? '') ?>" 
                        placeholder="Enter your username" />
               </div>
               

@@ -29,8 +29,8 @@ if (strlen($password) < 6) $errors[] = 'Password must be at least 6 characters.'
 if ($password !== $password_confirm) $errors[] = 'Passwords do not match.';
 
 if (!$errors) {
-  // --- name (case-sensitive) ---
-  $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY name = ?");
+  // --- username (case-sensitive) ---
+  $checkName = $conn->prepare("SELECT 1 FROM Member WHERE BINARY username = ?");
   $checkName->bind_param('s', $name);
   $checkName->execute();
   if ($checkName->get_result()->fetch_row()) {
@@ -49,7 +49,7 @@ if (!$errors) {
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $now = date('Y-m-d H:i:s');
     $stmt = $conn->prepare("
-      INSERT INTO Member (name, password, email, phone_number, address, register_date)
+      INSERT INTO Member (username, password, email, phone_number, address, register_date)
       VALUES (?, ?, ?, ?, ?, ?)
     ");
     $stmt->bind_param('ssssss', $name, $hash, $email, $phone, $address, $now);
