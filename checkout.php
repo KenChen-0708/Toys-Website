@@ -3,14 +3,12 @@ session_start();
 require_once 'helper/pdo_connection.php';
 
 // Check if user is logged in
-// if (!isset($_SESSION['member'])) {
-//     header('Location: auth/login.php');
-//     exit();
-// }
+if (!isset($_SESSION['member'])) {
+    header('Location: auth/login.php');
+    exit();
+}
 
-// $member_id = $_SESSION['member']['id'];
-
-$member_id = 1;
+$member_id = $_SESSION['member']['id'];
 
 $error_message = '';
 $success_message = '';
@@ -32,10 +30,10 @@ try {
     $stmt->execute([$member_id]);
     $cart_items = $stmt->fetchAll();
     
-    if (empty($cart_items)) {
-        header('Location: cart.php');
-        exit();
-    }
+    // if (empty($cart_items)) {
+    //     header(header: 'Location: cart.php');
+    //     exit();
+    // }
     
     // Calculate cart total
     $cart_total = 0;
@@ -288,6 +286,24 @@ $final_total = $cart_total - $voucher_discount;
             margin-bottom: 20px;
             border-radius: 8px;
             font-size: 15px;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            max-width: 400px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
         }
         
         .alert-error {
@@ -384,16 +400,23 @@ $final_total = $cart_total - $voucher_discount;
         }
         
         .add-address-toggle {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #f8f9fa;
             color: #4CAF50;
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            display: inline-block;
-            margin-bottom: 15px;
             text-decoration: none;
+            transition: all 0.3s;
+            text-align: center;
         }
         
         .add-address-toggle:hover {
-            text-decoration: underline;
+            background-color: #4CAF50;
+            color: white;
+            border-style: solid;
         }
         
         .address-form {
@@ -788,6 +811,225 @@ $final_total = $cart_total - $voucher_discount;
                 this.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
             });
         });
+        
+        // Auto-hide alerts after 5 seconds
+        setTimeout(() => {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(alert => {
+                alert.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => alert.remove(), 300);
+            });
+        }, 5000);
+        
+        // AJAX for voucher application
+        document.addEventListener('DOMContentLoaded', function() {
+            const voucherForm = document.querySelector('form[method="POST"]');
+            const applyVoucherBtn = document.querySelector('button[name="apply_voucher"]');
+            
+            if (applyVoucherBtn) {
+                applyVoucherBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const voucherCode = document.querySelector('input[name="voucher_code"]').value;
+                    const formData = new FormData();
+                    formData.append('apply_voucher', '1');
+                    formData.append('voucher_code', voucherCode);
+                    
+                    // Show loading state
+                    applyVoucherBtn.disabled = true;
+                    applyVoucherBtn.innerHTML = 'Applying...';
+                    
+                    fetch('checkout_ajax.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove existing alerts
+                        document.querySelectorAll('.alert').forEach(a => a.remove());
+                        
+                        if (data.success) {
+                            // Show success message
+                            showAlert(data.message, 'success');
+                            
+                            // Update price summary
+                            updatePriceSummary(data.cart_total, data.voucher_discount, data.final_total, voucherCode);
+                        } else {
+                            // Show error message
+                            showAlert(data.message, 'error');
+                        }
+                        
+                        // Reset button
+                        applyVoucherBtn.disabled = false;
+                        applyVoucherBtn.innerHTML = 'Apply';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('An error occurred. Please try again.', 'error');
+                        applyVoucherBtn.disabled = false;
+                        applyVoucherBtn.innerHTML = 'Apply';
+                    });
+                });
+            }
+            
+            // AJAX for adding new address
+            const addAddressBtn = document.querySelector('button[name="add_address"]');
+            
+            if (addAddressBtn) {
+                addAddressBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    const formData = new FormData();
+                    formData.append('add_address', '1');
+                    formData.append('address_line1', document.querySelector('input[name="address_line1"]').value);
+                    formData.append('address_line2', document.querySelector('input[name="address_line2"]').value);
+                    formData.append('city', document.querySelector('input[name="city"]').value);
+                    formData.append('state', document.querySelector('input[name="state"]').value);
+                    formData.append('postal_code', document.querySelector('input[name="postal_code"]').value);
+                    formData.append('country', document.querySelector('input[name="country"]').value);
+                    
+                    // Show loading state
+                    addAddressBtn.disabled = true;
+                    addAddressBtn.innerHTML = 'Saving...';
+                    
+                    fetch('checkout_ajax.php', {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        // Remove existing alerts
+                        document.querySelectorAll('.alert').forEach(a => a.remove());
+                        
+                        if (data.success) {
+                            // Show success message
+                            showAlert(data.message, 'success');
+                            
+                            // Add new address to the list
+                            addAddressToList(data.address);
+                            
+                            // Clear form
+                            document.querySelector('input[name="address_line1"]').value = '';
+                            document.querySelector('input[name="address_line2"]').value = '';
+                            document.querySelector('input[name="city"]').value = '';
+                            document.querySelector('input[name="state"]').value = '';
+                            document.querySelector('input[name="postal_code"]').value = '';
+                            
+                            // Hide form
+                            document.getElementById('addressForm').classList.remove('active');
+                        } else {
+                            // Show error message
+                            showAlert(data.message, 'error');
+                        }
+                        
+                        // Reset button
+                        addAddressBtn.disabled = false;
+                        addAddressBtn.innerHTML = 'Save Address';
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showAlert('An error occurred. Please try again.', 'error');
+                        addAddressBtn.disabled = false;
+                        addAddressBtn.innerHTML = 'Save Address';
+                    });
+                });
+            }
+        });
+        
+        function showAlert(message, type) {
+            const alert = document.createElement('div');
+            alert.className = `alert alert-${type}`;
+            alert.textContent = message;
+            document.body.appendChild(alert);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                alert.style.animation = 'slideOut 0.3s ease';
+                setTimeout(() => alert.remove(), 300);
+            }, 5000);
+        }
+        
+        function updatePriceSummary(cartTotal, voucherDiscount, finalTotal, voucherCode) {
+            const priceSummary = document.querySelector('.price-summary');
+            
+            let html = `
+                <div class="price-row">
+                    <span>Subtotal</span>
+                    <span>RM${parseFloat(cartTotal).toFixed(2)}</span>
+                </div>
+            `;
+            
+            if (voucherDiscount > 0) {
+                html += `
+                    <div class="price-row discount">
+                        <span>Discount</span>
+                        <span>-RM${parseFloat(voucherDiscount).toFixed(2)}</span>
+                    </div>
+                    <input type="hidden" name="voucher_code_hidden" value="${voucherCode}">
+                `;
+            }
+            
+            html += `
+                <div class="price-row total">
+                    <span>Total</span>
+                    <span>RM${parseFloat(finalTotal).toFixed(2)}</span>
+                </div>
+            `;
+            
+            priceSummary.innerHTML = html;
+        }
+        
+        function addAddressToList(address) {
+            const addressGrid = document.querySelector('.address-grid');
+            
+            const addressHTML = `
+                <label class="address-option">
+                    <input type="radio" 
+                           name="shipping_address_id" 
+                           value="${address.shipping_address_id}" 
+                           required>
+                    <div class="address-content">
+                        <div class="address-line primary">
+                            ${address.address_line1}
+                        </div>
+                        ${address.address_line2 ? `<div class="address-line">${address.address_line2}</div>` : ''}
+                        <div class="address-line">
+                            ${address.city}, ${address.state} ${address.postal_code}
+                        </div>
+                        <div class="address-line">
+                            ${address.country}
+                        </div>
+                    </div>
+                    <div class="check-icon">✓</div>
+                </label>
+            `;
+            
+            addressGrid.insertAdjacentHTML('afterbegin', addressHTML);
+            
+            // Re-attach event listeners
+            document.querySelectorAll('.address-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    document.querySelectorAll('.address-option').forEach(opt => {
+                        opt.style.borderColor = '#ddd';
+                        opt.style.boxShadow = 'none';
+                    });
+                    this.style.borderColor = '#4CAF50';
+                    this.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
+                });
+            });
+        }
     </script>
+    <style>
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+    </style>
 </body>
 </html>
