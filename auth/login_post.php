@@ -1,5 +1,5 @@
 <?php
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -42,14 +42,13 @@ if (strlen($password) < 6) {
 }
 
 if (!$errors) {
-  $stmt = $conn->prepare("
+  $stmt = $pdo->prepare("
     SELECT member_id, username, email, password
     FROM Member
     WHERE BINARY username = ?
   ");
-  $stmt->bind_param('s', $username);
-  $stmt->execute();
-  $user = $stmt->get_result()->fetch_assoc();
+  $stmt->execute([$username]);
+  $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
   if ($user && password_verify($password, $user['password'])) {
 

@@ -1,13 +1,9 @@
 
 <?php
 session_start();
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 require_admin();
-
-if (!$db_ok || !$conn) {
-    die("Connection failed: Unable to connect to database");
-}
 
 $message = '';
 $message_type = '';
@@ -17,20 +13,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Update status
     if (isset($_POST['update_status']) && isset($_POST['order_id']) && isset($_POST['status'])) {
         $order_id = (int)$_POST['order_id'];
-        $status = $conn->real_escape_string($_POST['status']);
+        $status = $_POST['status'];
         // Validate allowed statuses
         $allowed = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
         if (in_array($status, $allowed)) {
-            $stmt = $conn->prepare("UPDATE `Order` SET status = ? WHERE order_id = ?");
-            $stmt->bind_param('si', $status, $order_id);
-            if ($stmt->execute()) {
+            try {
+                $stmt = $pdo->prepare("UPDATE `Order` SET status = ? WHERE order_id = ?");
+                $stmt->execute([$status, $order_id]);
                 $message = 'Order status updated.';
                 $message_type = 'success';
-            } else {
-                $message = 'Error: ' . $conn->error;
+            } catch (PDOException $e) {
+                $message = 'Error: ' . $e->getMessage();
                 $message_type = 'error';
             }
-            $stmt->close();
         } else {
             $message = 'Invalid status value.';
             $message_type = 'error';
@@ -40,33 +35,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Edit shipping address
     if (isset($_POST['edit_address']) && isset($_POST['order_id']) && isset($_POST['shipping_address'])) {
         $order_id = (int)$_POST['order_id'];
-        $addr = $conn->real_escape_string($_POST['shipping_address']);
-        $stmt = $conn->prepare("UPDATE `Order` SET shipping_address = ? WHERE order_id = ?");
-        $stmt->bind_param('si', $addr, $order_id);
-        if ($stmt->execute()) {
+        $addr = $_POST['shipping_address'];
+        try {
+            $stmt = $pdo->prepare("UPDATE `Order` SET shipping_address = ? WHERE order_id = ?");
+            $stmt->execute([$addr, $order_id]);
             $message = 'Shipping address updated.';
             $message_type = 'success';
-        } else {
-            $message = 'Error: ' . $conn->error;
+        } catch (PDOException $e) {
+            $message = 'Error: ' . $e->getMessage();
             $message_type = 'error';
         }
-        $stmt->close();
     }
 
     // Optional: Delete order
     if (isset($_POST['delete_order']) && isset($_POST['order_id'])) {
         $order_id = (int)$_POST['order_id'];
         // Deleting order will cascade to Order_Item and Payment (if FK with ON DELETE CASCADE)
-        $stmt = $conn->prepare("DELETE FROM `Order` WHERE order_id = ?");
-        $stmt->bind_param('i', $order_id);
-        if ($stmt->execute()) {
+        try {
+            $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
+            $stmt->execute([$order_id]);
             $message = 'Order deleted.';
             $message_type = 'success';
-        } else {
-            $message = 'Error deleting order: ' . $conn->error;
+        } catch (PDOException $e) {
+            $message = 'Error deleting order: ' . $e->getMessage();
             $message_type = 'error';
         }
-        $stmt->close();
     }
 }
 
@@ -89,7 +82,6 @@ $sql = "SELECT
         WHERE 1=1";
 
 $params = [];
-$types  = "";
 
 // ---------- SEARCH FIX ----------
 if ($search !== "") {
@@ -97,7 +89,6 @@ if ($search !== "") {
     if (ctype_digit($search)) {
         $sql .= " AND o.order_id = ?";
         $params[] = (int)$search;
-        $types .= "i";
     } 
     // Otherwise → text search only
     else {
@@ -105,7 +96,6 @@ if ($search !== "") {
         $like = "%$search%";
         $params[] = $like;
         $params[] = $like;
-        $types .= "ss";
     }
 }
 
@@ -113,26 +103,18 @@ if ($search !== "") {
 if ($filter_member) {
     $sql .= " AND o.member_id = ?";
     $params[] = $filter_member;
-    $types .= "i";
 }
 
 // ---------- SORT ----------
 $sql .= " ORDER BY o.order_date $sort, o.order_id DESC";
 
 // ---------- PREPARE & EXECUTE ----------
-$stmt = $conn->prepare($sql);
-if (!$stmt) die("Query prepare failed: " . $conn->error);
-
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
-}
-
-$stmt->execute();
-$result = $stmt->get_result();
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch members for filter dropdown
-$members_res = $conn->query("SELECT member_id, username FROM Member ORDER BY username ASC");
-$members = $members_res->fetch_all(MYSQLI_ASSOC);
+$members = $pdo->query("SELECT member_id, username FROM Member ORDER BY username ASC")->fetchAll(PDO::FETCH_ASSOC);
 //////////////////////////////////////////////////////////////end of search
 ?>
 
@@ -208,8 +190,8 @@ $members = $members_res->fetch_all(MYSQLI_ASSOC);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php if ($result->num_rows > 0): ?>
-                            <?php while ($row = $result->fetch_assoc()): ?>
+                        <?php if (count($result) > 0): ?>
+                            <?php foreach ($result as $row): ?>
                                 <tr>
                                     <td><?= $row['order_id'] ?></td>
                                     <td><?= htmlspecialchars($row['username']) ?></td>
@@ -246,7 +228,7 @@ $members = $members_res->fetch_all(MYSQLI_ASSOC);
                                         <button class="btn btn-danger" onclick="confirmDelete(<?= $row['order_id'] ?>)">Delete</button>
                                     </td>
                                 </tr>
-                            <?php endwhile; ?>
+                            <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
                                 <td colspan="8" style="text-align:center;padding:40px;">No orders found.</td>
@@ -278,7 +260,5 @@ $members = $members_res->fetch_all(MYSQLI_ASSOC);
 
 </html>
 
-<?php $stmt->close();
-$conn->close(); ?>
 
 

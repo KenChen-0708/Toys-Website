@@ -1,5 +1,5 @@
 <?php
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { 
@@ -43,10 +43,9 @@ if (strlen($password) < 6) {
 
 if (!$errors) {
   // Look up by Admin.username (your username column)
-  $stmt = $conn->prepare("SELECT admin_id, username, email, password FROM Admin WHERE BINARY username = ?");
-  $stmt->bind_param('s', $username);
-  $stmt->execute();
-  $admin = $stmt->get_result()->fetch_assoc();
+  $stmt = $pdo->prepare("SELECT admin_id, username, email, password FROM Admin WHERE BINARY username = ?");
+  $stmt->execute([$username]);
+  $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
   $valid = false;
   if ($admin && password_verify($password, $admin['password'])) {
