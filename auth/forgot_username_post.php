@@ -1,7 +1,7 @@
 <?php
 session_start();
 
-require_once '../helper/connection.php';
+require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 // PHPMailer (manual include)
@@ -37,15 +37,13 @@ if ($errors) {
 
 // Find user by email
 $sql = "SELECT member_id AS id, username AS username, email FROM member WHERE email = ?";
-$stmt = $conn->prepare($sql);
-if (!$stmt) {
-    die("SQL error: " . $conn->error); // dev debug
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute([$email]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    die("SQL error: " . $e->getMessage()); // dev debug
 }
-$stmt->bind_param('s', $email);
-$stmt->execute();
-$result = $stmt->get_result();
-$user = $result->fetch_assoc();
-$stmt->close();
 
 // If not found, still show generic success (no user enumeration)
 if (!$user) {
