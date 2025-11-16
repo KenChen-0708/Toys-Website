@@ -888,7 +888,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       display: flex;
       align-items: center;
       justify-content: center;
-      background: var(--white);
+      background: var(--primary-light);
       border: none;
       border-radius: 50%;
       color: var(--dark);

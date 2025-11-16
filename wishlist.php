@@ -192,6 +192,7 @@ try {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wishlist - Online Store</title>
+  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     * {
@@ -346,15 +347,26 @@ try {
 
     .wishlist-item {
       display: grid;
-      grid-template-columns: 40px 100px 1fr 100px 140px 60px;
-      gap: 24px;
+      grid-template-columns: 40px 100px 2fr 120px 120px 100px 140px 60px;
+      gap: 20px;
       padding: 32px 40px;
       border-bottom: 1px solid #e5e5e5;
       align-items: center;
+      transition: background-color 0.2s ease;
     }
 
     .wishlist-item:hover {
-      background-color: #fafafa;
+      background-color: #f8f8f8;
+    }
+
+    .item-image-container,
+    .item-details h3 {
+      cursor: pointer;
+    }
+
+    .item-image-container:hover,
+    .item-details h3:hover {
+      opacity: 0.8;
     }
 
     .item-checkbox {
@@ -380,32 +392,25 @@ try {
 
     .item-details h3 {
       color: #1a1a1a;
-      margin-bottom: 8px;
+      margin: 0;
       font-size: 15px;
       font-weight: 500;
       letter-spacing: -0.2px;
     }
 
-    .item-details .status {
-      font-size: 11px;
-      padding: 4px 8px;
-      display: inline-block;
-      margin-top: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
+    .item-stock {
+      font-size: 14px;
+      color: #666;
       font-weight: 500;
     }
 
-    .status-available {
-      background-color: #f5f5f5;
-      color: #666;
-      border: 1px solid #e5e5e5;
+    .item-stock.out-of-stock {
+      color: #999;
     }
 
-    .status-unavailable {
-      background-color: #f5f5f5;
+    .item-date {
+      font-size: 13px;
       color: #999;
-      border: 1px solid #e5e5e5;
     }
 
     .item-price {
@@ -430,26 +435,35 @@ try {
 
     .btn-add-cart {
       padding: 8px 16px;
-      border: 1px solid #1a1a1a;
-      background: #1a1a1a;
+      border: none;
+      background: #0891b2;
       color: white;
       cursor: pointer;
       font-size: 12px;
-      font-weight: 500;
-      transition: background-color 0.3s ease, border-color 0.3s ease;
+      font-weight: 600;
+      transition: all 0.3s ease;
       text-align: center;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
     }
 
-    .btn-add-cart:hover {
-      background-color: #000;
-      border-color: #000;
+    .btn-add-cart i {
+      font-size: 14px;
+    }
+
+    .btn-add-cart:hover:not(:disabled) {
+      background-color: #0e7490;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
 
     .btn-add-cart:disabled {
       background-color: #d0d0d0;
-      border-color: #d0d0d0;
       cursor: not-allowed;
-      opacity: 0.6;
+      opacity: 0.5;
     }
 
     .item-remove {
@@ -583,18 +597,24 @@ try {
       }
 
       .wishlist-item {
-        grid-template-columns: 40px 80px 1fr;
+        grid-template-columns: 40px 80px 1fr 80px;
         gap: 16px;
         padding: 24px 20px;
       }
 
-      .item-price,
+      .item-stock,
+      .item-date,
+      .item-price {
+        display: none;
+      }
+
       .item-actions {
         grid-column: 3;
+        margin-top: 8px;
       }
 
       .item-remove {
-        grid-column: 3;
+        grid-column: 4;
         text-align: right;
       }
 
@@ -643,8 +663,8 @@ try {
       <?php else: ?>
         <div class="wishlist-table">
           <?php foreach ($wishlist_items as $item): ?>
-            <div class="wishlist-item" data-wishlist-item-id="<?= $item['wishlist_item_id'] ?>">
-              <div class="item-checkbox">
+            <div class="wishlist-item" data-wishlist-item-id="<?= $item['wishlist_item_id'] ?>" data-product-id="<?= $item['product_id'] ?>">
+              <div class="item-checkbox" onclick="event.stopPropagation();">
                 <input type="checkbox" class="item-select" data-wishlist-item-id="<?= $item['wishlist_item_id'] ?>">
               </div>
 
@@ -656,17 +676,14 @@ try {
 
               <div class="item-details">
                 <h3><?= htmlspecialchars($item['name']) ?></h3>
-                <?php if ($item['status'] === 'Unavailable'): ?>
-                  <span class="status status-unavailable">
-                    <?= htmlspecialchars($item['status']) ?>
-                  </span>
-                <?php else: ?>
-                  <span class="status status-available">
-                    <?= htmlspecialchars($item['status']) ?>
-                  </span>
-                <?php endif; ?>
-                <div class="stock-info">Stock: <?= $item['stock'] ?> available</div>
-                <div class="added-date">Added: <?= date('M d, Y', strtotime($item['date_added'])) ?></div>
+              </div>
+
+              <div class="item-stock <?= ($item['status'] === 'Unavailable' || $item['stock'] < 1) ? 'out-of-stock' : '' ?>">
+                <?= $item['stock'] ?> in stock
+              </div>
+
+              <div class="item-date">
+                <?= date('M d, Y', strtotime($item['date_added'])) ?>
               </div>
 
               <div class="item-price">
@@ -677,6 +694,7 @@ try {
                 <button class="btn-add-cart" 
                         data-product-id="<?= $item['product_id'] ?>"
                         <?= ($item['status'] === 'Unavailable' || $item['stock'] < 1) ? 'disabled' : '' ?>>
+                  <i class="fi fi-rs-shopping-cart-add"></i>
                   Add to Cart
                 </button>
               </div>
@@ -779,12 +797,19 @@ try {
       });
 
       // Individual checkbox
-      $(document).on('change', '.item-select', function() {
+      $(document).on('change', '.item-select', function(e) {
+        e.stopPropagation();
         updateSelectedCount();
       });
 
+      // Prevent checkbox click from triggering navigation
+      $(document).on('click', '.item-checkbox', function(e) {
+        e.stopPropagation();
+      });
+
       // Add to cart
-      $(document).on('click', '.btn-add-cart', function() {
+      $(document).on('click', '.btn-add-cart', function(e) {
+        e.stopPropagation();
         const $btn = $(this);
         const productId = $btn.data('product-id');
 
@@ -797,29 +822,30 @@ try {
           },
           dataType: 'json',
           beforeSend: function() {
-            $btn.prop('disabled', true).text('Adding...');
+            $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Adding...');
           },
           success: function(response) {
             if (response.success) {
               showAlert(response.message, 'success');
-              $btn.text('Added!');
+              $btn.html('<i class="fi fi-rs-check"></i> Added!');
               setTimeout(function() {
-                $btn.text('Add to Cart').prop('disabled', false);
+                $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
               }, 2000);
             } else {
               showAlert(response.message, 'error');
-              $btn.text('Add to Cart').prop('disabled', false);
+              $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
             }
           },
           error: function() {
             showAlert('An error occurred while adding to cart', 'error');
-            $btn.text('Add to Cart').prop('disabled', false);
+            $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
           }
         });
       });
 
       // Remove single item
-      $(document).on('click', '.btn-remove', function() {
+      $(document).on('click', '.btn-remove', function(e) {
+        e.stopPropagation();
         const wishlistItemId = $(this).data('wishlist-item-id');
         const $wishlistItem = $(this).closest('.wishlist-item');
 
@@ -959,6 +985,14 @@ try {
             }
           });
         });
+      });
+
+      // Handle clicks on product image and name to navigate to product page
+      $(document).on('click', '.item-image-container, .item-details h3', function() {
+        const productId = $(this).closest('.wishlist-item').data('product-id');
+        if (productId) {
+          window.location.href = 'product_details.php?id=' + productId;
+        }
       });
     });
   </script>

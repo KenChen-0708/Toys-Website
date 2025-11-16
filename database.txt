@@ -17,6 +17,21 @@ CREATE TABLE Member (
     register_date DATETIME NOT NULL
 );
 
+CREATE TABLE Shipping_Address (
+    shipping_address_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,              -- FK to Member
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255),
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(100) NOT NULL,
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE
+);
+
 
 -- 3️⃣ PRODUCT TABLE
 CREATE TABLE Product (
@@ -41,8 +56,6 @@ CREATE TABLE Product (
     FOREIGN KEY (product_id) REFERENCES Product(product_id)
         ON DELETE CASCADE
 );
-
-
 
 -- 4️⃣ CART TABLE
 CREATE TABLE Cart (
@@ -70,12 +83,14 @@ CREATE TABLE Cart_Item (
 CREATE TABLE `Order` (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     member_id INT NOT NULL,
+    shipping_address_id INT NOT NULL,
     order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10,2) NOT NULL,
     status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-    shipping_address TEXT,
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE,
+   FOREIGN KEY (shipping_address_id) REFERENCES Shipping_Address(shipping_address_id)
+    ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 -- 8️⃣ ORDER ITEM TABLE
@@ -133,7 +148,6 @@ CREATE TABLE password_resets (
     expires_at DATETIME NOT NULL
 );
 
-
 CREATE TABLE Review (
     review_id INT AUTO_INCREMENT PRIMARY KEY,
     product_id INT NOT NULL,
@@ -146,5 +160,37 @@ CREATE TABLE Review (
         ON DELETE CASCADE ON UPDATE CASCADE,
 
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Voucher (
+    voucher_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    discount_value DECIMAL(10,2) NOT NULL,
+    discount_type ENUM('fixed', 'percent') NOT NULL DEFAULT 'fixed',
+    min_spend DECIMAL(10,2) DEFAULT 0,
+    max_discount DECIMAL(10,2) DEFAULT NULL,
+    usage_limit INT NOT NULL DEFAULT 1,
+    usage_per_user INT NOT NULL DEFAULT 1,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    status ENUM('active','inactive','expired') NOT NULL DEFAULT 'active',
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Voucher_Usage (
+    voucher_usage_id INT AUTO_INCREMENT PRIMARY KEY,
+    voucher_id INT NOT NULL,
+    member_id INT NOT NULL,
+    order_id INT NOT NULL,
+    redeemed_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (voucher_id) REFERENCES Voucher(voucher_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
         ON DELETE CASCADE ON UPDATE CASCADE
 );
