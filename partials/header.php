@@ -7,6 +7,9 @@
     $second = mb_substr($parts[1] ?? '', 0, 1);
     return mb_strtoupper($first . $second ?: $first);
   }
+
+  // Get current page for active link
+  $current_page = basename($_SERVER['PHP_SELF']);
 ?>
 <!--=============== HEADER ===============-->
     <header class="header">
@@ -57,10 +60,9 @@
         </a>
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
-            <li><a href="/index.php" class="nav__link">Home</a></li>
-            <li><a href="/product_list.php" class="nav__link">Product</a></li>
-            <li><a href="/accounts.php" class="nav__link active-link">My Account</a></li>
-            <li><a href="/compare.php" class="nav__link">Compare</a></li>
+            <li><a href="/index.php" class="nav__link <?= $current_page === 'index.php' ? 'active-link' : '' ?>">Home</a></li>
+            <li><a href="/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
+            <li><a href="/feedback.php" class="nav__link <?= $current_page === 'feedback.php' ? 'active-link' : '' ?>">Feedback</a></li>
           </ul>
           <div class="header__search">
             <input type="text" placeholder="Search For Items..." class="form__input" />
