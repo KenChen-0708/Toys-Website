@@ -49,6 +49,22 @@ CREATE TABLE Member (
     register_date DATETIME NOT NULL
 );
 
+CREATE TABLE Shipping_Address (
+    shipping_address_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    address_line1 VARCHAR(255) NOT NULL,
+    address_line2 VARCHAR(255),
+    city VARCHAR(100) NOT NULL,
+    state VARCHAR(100),
+    postal_code VARCHAR(20),
+    country VARCHAR(100) NOT NULL,
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+
 -- PRODUCT TABLE
 CREATE TABLE Product (
     product_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -90,12 +106,20 @@ CREATE TABLE Cart_Item (
 CREATE TABLE `Order` (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     member_id INT NOT NULL,
+    shipping_address_line1 VARCHAR(255) NOT NULL,
+    shipping_address_line2 VARCHAR(255),
+    shipping_city VARCHAR(100) NOT NULL,
+    shipping_state VARCHAR(100),
+    shipping_postal_code VARCHAR(20),
+    shipping_country VARCHAR(100) NOT NULL,
     order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10,2) NOT NULL,
     status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
-    shipping_address TEXT,
+
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 
 -- ORDER ITEM TABLE
 CREATE TABLE Order_Item (
@@ -116,7 +140,7 @@ CREATE TABLE Payment (
     payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
     amount DECIMAL(10,2) NOT NULL,
     status ENUM('Pending','Completed','Failed','Refunded') DEFAULT 'Pending',
-    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
+    FOREIGN KEY (order_id) REFERENCES `Order`(order_id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- WISHLIST
@@ -124,16 +148,22 @@ CREATE TABLE Wishlist (
     wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
     member_id INT NOT NULL UNIQUE,
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 
 CREATE TABLE Wishlist_Item (
     wishlist_item_id INT AUTO_INCREMENT PRIMARY KEY,
     wishlist_id INT NOT NULL,
     product_id INT NOT NULL,
-    UNIQUE (wishlist_id, product_id),
-    FOREIGN KEY (wishlist_id) REFERENCES Wishlist(wishlist_id),
+    date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (wishlist_id) REFERENCES Wishlist(wishlist_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
     FOREIGN KEY (product_id) REFERENCES Product(product_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE (wishlist_id, product_id)
 );
+
 
 -- PASSWORD RESET
 CREATE TABLE password_resets (
@@ -151,39 +181,78 @@ CREATE TABLE Review (
     rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
     review_text TEXT,
     created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES Product(product_id),
+
+    FOREIGN KEY (product_id) REFERENCES Product(product_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE TABLE Voucher (
+    voucher_id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    discount_value DECIMAL(10,2) NOT NULL,
+    discount_type ENUM('fixed', 'percent') NOT NULL DEFAULT 'fixed',
+    min_spend DECIMAL(10,2) DEFAULT 0,
+    max_discount DECIMAL(10,2) DEFAULT NULL,
+    usage_limit INT NOT NULL DEFAULT 1,
+    usage_per_user INT NOT NULL DEFAULT 1,
+    start_date DATETIME NOT NULL,
+    end_date DATETIME NOT NULL,
+    status ENUM('active','inactive','expired') NOT NULL DEFAULT 'active',
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Voucher_Usage (
+    voucher_usage_id INT AUTO_INCREMENT PRIMARY KEY,
+    voucher_id INT NOT NULL,
+    member_id INT NOT NULL,
+    order_id INT NOT NULL,
+    redeemed_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (voucher_id) REFERENCES Voucher(voucher_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (member_id) REFERENCES Member(member_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (order_id) REFERENCES `Order`(order_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- FEEDBACK TABLE
 CREATE TABLE IF NOT EXISTS `Feedback` (
-  feedback_id INT AUTO_INCREMENT PRIMARY KEY,
-  member_id INT NOT NULL,
-  subject VARCHAR(255) NOT NULL,
-  category ENUM('product_quality','customer_service','website','delivery','pricing','suggestion','complaint','other') NOT NULL,
-  rating TINYINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
-  message TEXT NOT NULL,
-  status ENUM('pending','reviewed','resolved') DEFAULT 'pending',
-  admin_response TEXT NULL,
-  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
-  INDEX idx_member_id (member_id),
-  INDEX idx_status (status),
-  INDEX idx_created_at (created_at),
-  FOREIGN KEY (member_id) REFERENCES Member(member_id) ON DELETE CASCADE
-);
+  `feedback_id` INT NOT NULL AUTO_INCREMENT,
+  `member_id` INT NOT NULL,
+  `subject` VARCHAR(255) NOT NULL,
+  `category` ENUM('product_quality', 'customer_service', 'website', 'delivery', 'pricing', 'suggestion', 'complaint', 'other') NOT NULL,
+  `rating` TINYINT NOT NULL CHECK (`rating` >= 1 AND `rating` <= 5),
+  `message` TEXT NOT NULL,
+  `status` ENUM('pending', 'reviewed', 'resolved') DEFAULT 'pending',
+  `admin_response` TEXT NULL,
+  `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` DATETIME NULL ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`feedback_id`),
+  INDEX `idx_member_id` (`member_id`),
+  INDEX `idx_status` (`status`),
+  INDEX `idx_created_at` (`created_at`),
+  FOREIGN KEY (`member_id`) REFERENCES `Member`(`member_id`) ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- FEEDBACK VIEW
-CREATE OR REPLACE VIEW feedback_statistics AS
+CREATE OR REPLACE VIEW `feedback_statistics` AS
 SELECT 
     category,
-    COUNT(*) total_feedback,
-    AVG(rating) average_rating,
-    COUNT(CASE WHEN status='pending' THEN 1 END) pending_count,
-    COUNT(CASE WHEN status='reviewed' THEN 1 END) reviewed_count,
-    COUNT(CASE WHEN status='resolved' THEN 1 END) resolved_count
-FROM Feedback
+    COUNT(*) as total_feedback,
+    AVG(rating) as average_rating,
+    COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending_count,
+    COUNT(CASE WHEN status = 'reviewed' THEN 1 END) as reviewed_count,
+    COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved_count
+FROM `Feedback`
 GROUP BY category;
+
 
 -- INSERT DATA
 INSERT INTO Product (name, price, description, category, stock, status, main_image_path) VALUES
@@ -208,20 +277,22 @@ INSERT INTO Product (name, price, description, category, stock, status, main_ima
 ('Lego Space Explorer', 88.00, 'Space exploration building kit.', 'Lego', 13, 'Available', '../assets/img/default.jpg'),
 ('Ninja Turtle Van', 160.00, 'The iconic turtle van toy.', 'Ninja Turtle', 4, 'Available', '../assets/img/product_6917146a4c05f.jpg');
 
-INSERT INTO Member 
-(username, password, email, phone_number, address, profile_photo_path, register_date) VALUES
-('Ahmad', 'pass1', 'ahmad@example.com', '012-3456789', '123 Jalan A, KL', NULL, '2023-01-15 10:00:00'),
-('Bella', 'pass2', 'bella@example.com', '013-9876543', '456 Jalan B, Penang', NULL, '2024-03-22 14:30:00'),
-('Chris', 'pass3', 'chris@example.com', '014-5556677', '789 Jalan C, Johor', NULL, '2024-07-05 09:15:00'),
-('Diana', 'pass4', 'diana@example.com', '015-4445566', '321 Jalan D, KL', NULL, '2023-12-18 16:45:00'),
-('Eric', 'pass5', 'eric@example.com', '016-3334455', '654 Jalan E, Penang', NULL, '2025-02-01 11:20:00'),
-('Fiona', 'pass6', 'fiona@example.com', '017-2223344', '987 Jalan F, Selangor', NULL, '2025-05-19 08:50:00'),
-('Gavin', 'pass7', 'gavin@example.com', '018-1112233', '111 Jalan G, KL', NULL, '2023-08-25 12:10:00'),
-('Hannah', 'pass8', 'hannah@example.com', '019-0001122', '222 Jalan H, Johor', NULL, '2024-11-30 17:35:00'),
-('Ian', 'pass9', 'ian@example.com', '010-9998877', '333 Jalan I, Penang', NULL, '2025-06-07 13:00:00'),
-('Jenny', 'pass10', 'jenny@example.com', '011-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00'),
-('max', 'pass10', 'max@example.com', '012-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00');
+-- password: Password123!
+INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_number`, `address`, `profile_photo_path`, `register_date`) VALUES
+(1, 'Ken', '$2y$10$eoth.o.tQ99RPZPv/HxUHeyV3PjQDSMb1mD2Sx.lBD1CNzJg.uEvu', 'ken@example.com', '012-3456789', '123 Jalan A, KL', NULL, '2023-01-15 10:00:00'),
+(2, 'SiuYee', '$2y$10$QYh/ifao5wHJkDip75hg..fpYkWIvdH2y/mqro6Xv/L7ZJK0u.R7K', 'sy@example.com', '013-9876543', '456 Jalan B, Penang', NULL, '2024-03-22 14:30:00'),
+(3, 'Ronaldo', '$2y$10$tZm3kToa/ukNH6oc9zm98uSoF8/5gfLda0zSErhSYsVYS1kOiqIUW', 'r@example.com', '014-5556677', '789 Jalan C, Johor', NULL, '2024-07-05 09:15:00'),
+(4, 'TzeChuen', '$2y$10$l5arISf17ngsVxyXOvhp4es70pkYXtgbxJ33OizV01MKrGB47oDBW', 'tc@example.com', '015-4445566', '321 Jalan D, KL', NULL, '2023-12-18 16:45:00'),
+(5, 'Chris', '$2y$10$Uegr.5wKiXfY6gi9qhgtveK0W/JI0rQ39BS0PFIkApogDmsrwZyb6', 'c@example.com', '016-3334455', '654 Jalan E, Penang', NULL, '2025-02-01 11:20:00'),
+(6, 'KherQin', '$2y$10$qraWdzTC/72ZSjtUhOvUeOPx5Sg66EohiHWuvo9xLawZrmHit.bmW', 'kq@example.com', '017-2223344', '987 Jalan F, Selangor', NULL, '2025-05-19 08:50:00'),
+(7, 'WenChing', '$2y$10$0ING2O.sQdVXog21.brR8uL3MD3dIzpS2C.bNsypl/Ars1NX/ga2e', 'wc@example.com', '018-1112233', '111 Jalan G, KL', NULL, '2023-08-25 12:10:00'),
+(8, 'Isaac', '$2y$10$EPaLeuF8FKcSTu9GE3qbMOHEmDEotDB4pmBUnAJCeYRH0Rn3i.e7u', 'i@example.com', '019-0001122', '222 Jalan H, Johor', NULL, '2024-11-30 17:35:00'),
+(9, 'Jun', '$2y$10$V4GifmEJ0OW/8A0dMfa9W.KpeATjJvStzcjOPrIlaoeiMNBdKiC9y', 'j@example.com', '010-9998877', '333 Jalan I, Penang', NULL, '2025-06-07 13:00:00'),
+(10, 'Quan', '$2y$10$lFsQiKXW3LA9YB8Wk7QKleI2wwUXkhJiKw00Sg7xxzA6VglelQ6GS', 'q@example.com', '011-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00'),
+(11, 'ChaoZe', '$2y$10$28p0m4HDn4y7EiVU66t65OoGnCEcZx3E8h6Uhgglv60ZgbF061O1S', 'cz@example.com', '012-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00');
 
+
+-- password: admin123
 INSERT INTO admin (admin_id, username, password, email) VALUES
 (1, 'admin', '$2y$10$niY7iWha/w7NhJCyzZeoIuSeybKJlTbHPePryWgtYNMnMLQ4gRa9W', 'admin@example.com');
 
@@ -232,7 +303,20 @@ INSERT INTO Cart_Item (product_id, cart_id, quantity) VALUES
 (3,6,1),(7,7,3),(9,8,2),(11,9,1),(13,10,2),(15,1,3),(2,1,2),(3,2,1),(4,3,1),
 (5,4,3),(6,5,1),(7,6,5),(8,7,2),(9,8,1),(9,9,1);
 
-INSERT INTO `Order` (member_id, order_date, total_amount, status, shipping_address) VALUES
+INSERT INTO Shipping_Address (member_id, address_line1, address_line2, city, state, postal_code, country)
+VALUES
+(1, '123 Jalan A', 'Taman Impian', 'Kuala Lumpur', 'Wilayah Persekutuan', '50000', 'Malaysia'),
+(1, '456 Jalan B', NULL, 'George Town', 'Penang', '10250', 'Malaysia'),
+(3, '789 Jalan C', 'Pangsapuri Ria', 'Johor Bahru', 'Johor', '80000', 'Malaysia'),
+(4, '321 Jalan D', NULL, 'Kuala Lumpur', 'Wilayah Persekutuan', '50200', 'Malaysia'),
+(5, '654 Jalan E', 'Taman Maju', 'George Town', 'Penang', '10300', 'Malaysia'),
+(6, '987 Jalan F', NULL, 'Shah Alam', 'Selangor', '40000', 'Malaysia'),
+(7, '111 Jalan G', 'Kampung Baru', 'Kuala Lumpur', 'Wilayah Persekutuan', '50300', 'Malaysia'),
+(8, '222 Jalan H', 'Taman Jaya', 'Johor Bahru', 'Johor', '80100', 'Malaysia'),
+(9, '333 Jalan I', NULL, 'George Town', 'Penang', '10400', 'Malaysia'),
+(10, '444 Jalan J', 'Taman Sentosa', 'Shah Alam', 'Selangor', '40100', 'Malaysia');
+
+INSERT INTO `Order` (member_id, order_date, total_amount, status, shipping_address_line1) VALUES
 (1,'2023-02-10 10:00:00',5650.00,'Delivered','123 Jalan A, KL'),
 (2,'2024-04-15 14:30:00',3300.00,'Shipped','456 Jalan B, Penang'),
 (3,'2024-08-20 09:15:00',3200.00,'Processing','789 Jalan C, Johor'),
@@ -272,6 +356,53 @@ INSERT INTO Review (product_id, member_id, rating, review_text, created_date) VA
 (16,8,5,'Police patrol Lego kit has great details!','2024-12-08 19:10:00'),
 (18,9,3,'Clone figure looks fine but plastic quality feels cheap.','2025-06-11 13:50:00'),
 (20,10,5,'The turtle van is amazing! Great collectible item.','2023-04-20 17:25:00');
+
+INSERT INTO Wishlist (member_id) VALUES
+(1),
+(2),
+(3),
+(4),
+(5),
+(6),
+(7),
+(8),
+(9),
+(10);
+
+INSERT INTO Wishlist_Item (wishlist_id, product_id) VALUES
+(1, 1),
+(1, 5),
+(1, 8),
+(2, 3),
+(2, 7),
+(3, 2),
+(3, 10),
+(4, 4),
+(4, 12),
+(5, 6),
+(5, 14),
+(6, 9),
+(6, 15),
+(7, 11),
+(7, 16),
+(8, 13),
+(8, 18),
+(9, 17),
+(9, 19),
+(10, 20);
+
+INSERT INTO Voucher (code, discount_value, discount_type, min_spend, max_discount, usage_limit, usage_per_user, start_date, end_date, status)
+VALUES
+('WELCOME10', 10.00, 'fixed', 50.00, NULL, 100, 1, '2025-11-01 00:00:00', '2025-12-31 23:59:59', 'active'),
+('SAVE20', 20.00, 'percent', 100.00, 50.00, 50, 1, '2025-11-10 00:00:00', '2025-12-25 23:59:59', 'active'),
+('HOLIDAY15', 15.00, 'fixed', 80.00, NULL, 200, 2, '2025-12-01 00:00:00', '2025-12-31 23:59:59', 'active'),
+('BLACKFRIDAY', 25.00, 'percent', 150.00, 75.00, 500, 1, '2025-11-20 00:00:00', '2025-11-30 23:59:59', 'active'),
+('NEWYEAR50', 50.00, 'fixed', 200.00, NULL, 100, 1, '2025-12-31 00:00:00', '2026-01-05 23:59:59', 'inactive'),
+('FREESHIP', 0.00, 'fixed', 0.00, NULL, 1000, 1, '2025-11-01 00:00:00', '2026-01-31 23:59:59', 'active'),
+('MEGADEAL30', 30.00, 'percent', 250.00, 100.00, 50, 1, '2025-11-15 00:00:00', '2025-12-15 23:59:59', 'active'),
+('SPRINGSALE', 15.00, 'percent', 50.00, 30.00, 300, 2, '2026-03-01 00:00:00', '2026-03-31 23:59:59', 'active'),
+('VIPCUSTOMER', 100.00, 'fixed', 500.00, NULL, 20, 1, '2025-11-01 00:00:00', '2026-01-01 23:59:59', 'active'),
+('FLASHDEAL', 50.00, 'percent', 100.00, 50.00, 100, 1, '2025-11-16 12:00:00', '2025-11-16 18:00:00', 'expired');
 
 SQL;
 
