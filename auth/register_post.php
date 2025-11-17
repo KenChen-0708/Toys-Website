@@ -54,7 +54,7 @@ if (!$errors) {
       $stmt->execute([$username, $hash, $email, $phone, $address, $now]);
 
       $member_id = $pdo->lastInsertId();
-      $cart = $pdo->prepare("INSERT INTO Cart (user_id) VALUES (?)");
+      $cart = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
       $cart->execute([$member_id]);
 
       unset($_SESSION['old']);
