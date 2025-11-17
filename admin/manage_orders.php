@@ -36,16 +36,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Edit shipping address
-        if (isset($_POST['edit_address']) && isset($_POST['order_id']) && isset($_POST['shipping_address'])) {
+        if (isset($_POST['edit_address']) && isset($_POST['order_id'])) {
             $order_id = (int)$_POST['order_id'];
-            $addr = $_POST['shipping_address'];
-            $stmt = $pdo->prepare("UPDATE `Order` SET shipping_address = ? WHERE order_id = ?");
-            if ($stmt->execute([$addr, $order_id])) {
-                $message = 'Shipping address updated.';
-                $message_type = 'success';
-            } else {
-                $message = 'Error updating address.';
+            
+            // Get all the address fields
+            $address_line1 = $_POST['address_line1'] ?? '';
+            $address_line2 = $_POST['address_line2'] ?? '';
+            $city = $_POST['city'] ?? '';
+            $state = $_POST['state'] ?? '';
+            $postal_code = $_POST['postal_code'] ?? '';
+            $country = $_POST['country'] ?? '';
+            
+            // Validate required fields
+            if (empty($address_line1) || empty($city) || empty($country)) {
+                $message = 'Address Line 1, City, and Country are required.';
                 $message_type = 'error';
+            } else {
+                // Update address directly in Order table
+                $stmt = $pdo->prepare("UPDATE `Order` SET 
+                    shipping_address_line1 = ?, shipping_address_line2 = ?, shipping_city = ?, 
+                    shipping_state = ?, shipping_postal_code = ?, shipping_country = ?
+                    WHERE order_id = ?");
+                if ($stmt->execute([$address_line1, $address_line2, $city, $state, $postal_code, $country, $order_id])) {
+                    $message = 'Shipping address updated.';
+                    $message_type = 'success';
+                } else {
+                    $message = 'Error updating address.';
+                    $message_type = 'error';
+                }
             }
         }
 
@@ -83,10 +101,12 @@ $page = isset($_GET['page']) && is_numeric($_GET['page']) ? (int)$_GET['page'] :
 $per_page = 20;
 $offset = ($page - 1) * $per_page;
 
-// Base query
+// Base query - Get orders with address info from Order table
 $sql = "SELECT 
             o.order_id, o.member_id, m.username, o.order_date, 
-            o.total_amount, o.status, o.shipping_address,
+            o.total_amount, o.status,
+            o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, 
+            o.shipping_state, o.shipping_postal_code, o.shipping_country,
             (SELECT p.main_image_path 
              FROM Order_Item oi 
              JOIN Product p ON oi.product_id = p.product_id 
@@ -108,12 +128,12 @@ if ($search !== "") {
     // Otherwise → text search on member, address, and product names
     else {
         $sql .= " AND (m.username LIKE ? 
-                  OR o.shipping_address LIKE ? 
+                  OR CONCAT_WS(' ', o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, o.shipping_state, o.shipping_postal_code, o.shipping_country) LIKE ?
                   OR EXISTS (
                       SELECT 1 FROM Order_Item oi2 
                       JOIN Product p2 ON oi2.product_id = p2.product_id 
                       WHERE oi2.order_id = o.order_id 
-                      AND p2.product_name LIKE ?
+                      AND p2.name LIKE ?
                   ))";
         $like = "%$search%";
         $params[] = $like;
@@ -222,46 +242,68 @@ try {
 
             <!-- Filter Bar -->
             <div class="filter-bar">
-                <form method="GET" style="display:flex; gap:15px; flex:1; align-items:center;">
-                    <input type="text" name="search" placeholder="Search order id, member, address or product..." value="<?php echo htmlspecialchars($search); ?>">
+                <form method="GET">
+                    <!-- Basic Search Row -->
+                    <div class="search-row">
+                        <input type="text" name="search" class="search-input" placeholder="Search order ID, member, address or product..." value="<?php echo htmlspecialchars($search); ?>">
+                        
+                        <select name="status" class="filter-select">
+                            <option value="">All Statuses</option>
+                            <option value="Pending" <?php if ($filter_status == 'Pending') echo 'selected'; ?>>Pending</option>
+                            <option value="Shipped" <?php if ($filter_status == 'Shipped') echo 'selected'; ?>>Shipped</option>
+                            <option value="Delivered" <?php if ($filter_status == 'Delivered') echo 'selected'; ?>>Delivered</option>
+                            <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
+                        </select>
 
-                    <label>Member</label>
-                    <select name="member_id" onchange="this.form.submit()">
-                        <option value="">-- All Members --</option>
-                        <?php foreach ($members as $m): ?>
-                            <option value="<?php echo $m['member_id']; ?>" <?php if ($filter_member == $m['member_id']) echo 'selected'; ?>><?php echo htmlspecialchars($m['username']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        <a href="manage_orders.php" class="btn btn-secondary">Clear</a>
+                        <button type="button" class="btn btn-outline" onclick="toggleAdvancedSearch()">
+                            <span id="advancedToggleText">⚙ Advanced</span>
+                        </button>
+                    </div>
 
-                    <label>Status</label>
-                    <select name="status" onchange="this.form.submit()">
-                        <option value="">-- All Statuses --</option>
-                        <option value="Pending" <?php if ($filter_status == 'Pending') echo 'selected'; ?>>Pending</option>
-                        <option value="Shipped" <?php if ($filter_status == 'Shipped') echo 'selected'; ?>>Shipped</option>
-                        <option value="Delivered" <?php if ($filter_status == 'Delivered') echo 'selected'; ?>>Delivered</option>
-                        <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
-                    </select>
+                    <!-- Advanced Search Section (Hidden by Default) -->
+                    <div id="advancedSearch" class="advanced-search" style="display: none;">
+                        <div class="advanced-row">
+                            <div class="filter-group">
+                                <label>Member</label>
+                                <select name="member_id" class="filter-select">
+                                    <option value="">All Members</option>
+                                    <?php foreach ($members as $m): ?>
+                                        <option value="<?php echo $m['member_id']; ?>" <?php if ($filter_member == $m['member_id']) echo 'selected'; ?>><?php echo htmlspecialchars($m['username']); ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
 
-                    <label>Date From</label>
-                    <input type="date" name="date_from" value="<?php echo htmlspecialchars($filter_date_from); ?>">
+                            <div class="filter-group">
+                                <label>Date From</label>
+                                <input type="date" name="date_from" class="filter-input" value="<?php echo htmlspecialchars($filter_date_from); ?>">
+                            </div>
 
-                    <label>Date To</label>
-                    <input type="date" name="date_to" value="<?php echo htmlspecialchars($filter_date_to); ?>">
+                            <div class="filter-group">
+                                <label>Date To</label>
+                                <input type="date" name="date_to" class="filter-input" value="<?php echo htmlspecialchars($filter_date_to); ?>">
+                            </div>
 
-                    <label>Amount Min</label>
-                    <input type="number" name="amount_min" step="0.01" value="<?php echo htmlspecialchars($filter_amount_min); ?>">
+                            <div class="filter-group">
+                                <label>Amount Min (RM)</label>
+                                <input type="number" name="amount_min" step="0.01" class="filter-input" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_min); ?>">
+                            </div>
 
-                    <label>Amount Max</label>
-                    <input type="number" name="amount_max" step="0.01" value="<?php echo htmlspecialchars($filter_amount_max); ?>">
+                            <div class="filter-group">
+                                <label>Amount Max (RM)</label>
+                                <input type="number" name="amount_max" step="0.01" class="filter-input" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_max); ?>">
+                            </div>
 
-                    <label>Sort by date</label>
-                    <select name="sort" onchange="this.form.submit();">
-                        <option value="desc">Newest</option>
-                        <option value="asc" <?php if ($sort === 'ASC') echo 'selected'; ?>>Oldest</option>
-                    </select>
-
-                    <button type="submit" class="btn btn-primary">Apply</button>
-                    <a href="manage_orders.php" class="btn" style="background:#cbd5e0;">Clear</a>
+                            <div class="filter-group">
+                                <label>Sort by Date</label>
+                                <select name="sort" class="filter-select">
+                                    <option value="desc">Newest First</option>
+                                    <option value="asc" <?php if ($sort === 'ASC') echo 'selected'; ?>>Oldest First</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                 </form>
             </div>
 
@@ -273,8 +315,8 @@ try {
                             <th>Order ID</th>
                             <th>Member</th>
                             <th>Date</th>
+                            <th>Products</th>
                             <th>Total (RM)</th>
-                            <th>Thumb</th>
                             <th>Status</th>
                             <th>Shipping Address</th>
                             <th>Actions</th>
@@ -283,18 +325,37 @@ try {
                     <tbody>
                         <?php if (count($orders) > 0): ?>
                             <?php foreach ($orders as $row): ?>
-                                <tr>
+                                <?php
+                                // Fetch products for this order
+                                $product_stmt = $pdo->prepare("SELECT oi.quantity, oi.price, p.name, p.main_image_path 
+                                                               FROM Order_Item oi 
+                                                               JOIN Product p ON oi.product_id = p.product_id 
+                                                               WHERE oi.order_id = ?");
+                                $product_stmt->execute([$row['order_id']]);
+                                $products = $product_stmt->fetchAll(PDO::FETCH_ASSOC);
+                                ?>
+                                <tr class="row-<?= $row['status'] ?>">
                                     <td><?= $row['order_id'] ?></td>
                                     <td><?= htmlspecialchars($row['username']) ?></td>
-                                    <td><?= $row['order_date'] ?></td>
-                                    <td><?= number_format($row['total_amount'], 2) ?></td>
+                                    <td><?= date('Y-m-d H:i', strtotime($row['order_date'])) ?></td>
                                     <td>
-                                        <?php if ($row['thumb']): ?>
-                                            <img src="<?= htmlspecialchars($row['thumb']) ?>" alt="thumb" class="thumb">
-                                        <?php else: ?>
-                                            <img src="../assets/img/default.jpg" alt="thumb" class="thumb">
-                                        <?php endif; ?>
+                                        <div class="products-list">
+                                            <?php foreach ($products as $product): ?>
+                                                <div class="product-item">
+                                                    <?php if ($product['main_image_path']): ?>
+                                                        <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="product-thumb">
+                                                    <?php else: ?>
+                                                        <img src="../assets/img/default.jpg" alt="default" class="product-thumb">
+                                                    <?php endif; ?>
+                                                    <div class="product-details">
+                                                        <span class="product-name" title="<?= htmlspecialchars($product['name']) ?>"><?= htmlspecialchars($product['name']) ?></span>
+                                                        <span class="product-info">Qty: <?= $product['quantity'] ?> × RM<?= number_format($product['price'], 2) ?></span>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </td>
+                                    <td><strong>RM <?= number_format($row['total_amount'], 2) ?></strong></td>
                                     <td>
                                         <form method="POST" class="inline-form">
                                             <input type="hidden" name="order_id" value="<?= $row['order_id'] ?>">
@@ -304,14 +365,47 @@ try {
                                                 <option value="Delivered" <?php if ($row['status'] == 'Delivered') echo 'selected'; ?>>Delivered</option>
                                                 <option value="Cancelled" <?php if ($row['status'] == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
                                             </select>
-                                            <button type="submit" name="update_status" class="btn btn-primary">Save</button>
+                                            <button type="submit" name="update_status" class="btn btn-sm btn-primary">Update</button>
                                         </form>
                                     </td>
                                     <td>
-                                        <form method="POST" class="inline-form">
+                                        <div class="address-display">
+                                            <div class="address-text">
+                                                <?= htmlspecialchars($row['shipping_address_line1']) ?><br>
+                                                <?php if ($row['shipping_address_line2']): ?>
+                                                    <?= htmlspecialchars($row['shipping_address_line2']) ?><br>
+                                                <?php endif; ?>
+                                                <?= htmlspecialchars($row['shipping_city']) ?>, <?= htmlspecialchars($row['shipping_state']) ?> <?= htmlspecialchars($row['shipping_postal_code']) ?><br>
+                                                <?= htmlspecialchars($row['shipping_country']) ?>
+                                            </div>
+                                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAddressForm(<?= $row['order_id'] ?>)">Edit</button>
+                                        </div>
+                                        <form method="POST" class="address-form" id="address-form-<?= $row['order_id'] ?>" style="display:none;">
                                             <input type="hidden" name="order_id" value="<?= $row['order_id'] ?>">
-                                            <input type="text" name="shipping_address" value="<?= htmlspecialchars($row['shipping_address']) ?>" class="address-input">
-                                            <button type="submit" name="edit_address" class="btn btn-success">Save</button>
+                                            <div class="form-grid">
+                                                <div>
+                                                    <input type="text" name="address_line1" value="<?= htmlspecialchars($row['shipping_address_line1'] ?? '') ?>" class="address-input" placeholder="Address Line 1*" required>
+                                                </div>
+                                                <div>
+                                                    <input type="text" name="address_line2" value="<?= htmlspecialchars($row['shipping_address_line2'] ?? '') ?>" class="address-input" placeholder="Address Line 2">
+                                                </div>
+                                                <div>
+                                                    <input type="text" name="city" value="<?= htmlspecialchars($row['shipping_city'] ?? '') ?>" class="address-input" placeholder="City*" required>
+                                                </div>
+                                                <div>
+                                                    <input type="text" name="state" value="<?= htmlspecialchars($row['shipping_state'] ?? '') ?>" class="address-input" placeholder="State">
+                                                </div>
+                                                <div>
+                                                    <input type="text" name="postal_code" value="<?= htmlspecialchars($row['shipping_postal_code'] ?? '') ?>" class="address-input" placeholder="Postal Code">
+                                                </div>
+                                                <div>
+                                                    <input type="text" name="country" value="<?= htmlspecialchars($row['shipping_country'] ?? '') ?>" class="address-input" placeholder="Country*" required>
+                                                </div>
+                                            </div>
+                                            <div class="btn-group" style="margin-top: 8px;">
+                                                <button type="submit" name="edit_address" class="btn btn-sm btn-success">Save</button>
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAddressForm(<?= $row['order_id'] ?>)">Cancel</button>
+                                            </div>
                                         </form>
                                     </td>
                                     <td>
@@ -356,6 +450,35 @@ try {
                 document.getElementById('deleteForm').submit();
             }
         }
+
+        function toggleAdvancedSearch() {
+            var advancedSearch = document.getElementById('advancedSearch');
+            var toggleText = document.getElementById('advancedToggleText');
+            if (advancedSearch.style.display === 'none') {
+                advancedSearch.style.display = 'block';
+                toggleText.innerHTML = '▲ Hide Advanced';
+            } else {
+                advancedSearch.style.display = 'none';
+                toggleText.innerHTML = '⚙ Advanced';
+            }
+        }
+
+        function toggleAddressForm(orderId) {
+            var addressForm = document.getElementById('address-form-' + orderId);
+            if (addressForm.style.display === 'none') {
+                addressForm.style.display = 'block';
+            } else {
+                addressForm.style.display = 'none';
+            }
+        }
+
+        // Auto-show advanced search if any advanced filters are active
+        window.addEventListener('DOMContentLoaded', function() {
+            <?php if ($filter_member || $filter_date_from || $filter_date_to || $filter_amount_min !== null || $filter_amount_max !== null): ?>
+                document.getElementById('advancedSearch').style.display = 'block';
+                document.getElementById('advancedToggleText').innerHTML = '▲ Hide Advanced';
+            <?php endif; ?>
+        });
     </script>
 
 </body>

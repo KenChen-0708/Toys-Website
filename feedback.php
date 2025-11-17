@@ -4,7 +4,6 @@ require_once 'helper/pdo_connection.php';
 require_once 'helper/auth.php';
 is_logged_in();
 
-
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {
     header('Location: login.php');
@@ -23,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $category = trim($_POST['category'] ?? '');
     $rating = intval($_POST['rating'] ?? 0);
     $message = trim($_POST['message'] ?? '');
-
+    
     // Validation
     if (empty($subject)) {
         $error_message = 'Please provide a subject for your feedback.';
@@ -40,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         try {
             $sql = "INSERT INTO Feedback (member_id, subject, category, rating, message, status, created_at) 
                     VALUES (?, ?, ?, ?, ?, 'pending', NOW())";
-
+            
             $stmt = $pdo->prepare($sql);
-
+            
             if ($stmt->execute([$member_id, $subject, $category, $rating, $message])) {
                 $success_message = 'Thank you for your feedback! We appreciate your input and will review it shortly.';
                 // Clear form data
@@ -72,16 +71,14 @@ include 'partials/header.php';
 
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Feedback - Evara</title>
-    <link rel="stylesheet" href="../assets/css/feedback.css" />
-    <link rel="stylesheet" href="../assets/css/styles.css" />
+    <link rel="stylesheet" href="assets/css/feedback.css">
+    <link rel="stylesheet" href="assets/css/styles.css">
 
 </head>
-
 <body>
     <div class="feedback-page">
         <div class="feedback-container">
@@ -118,14 +115,15 @@ include 'partials/header.php';
                             <label for="subject">
                                 Subject <span class="required">*</span>
                             </label>
-                            <input
-                                type="text"
-                                id="subject"
-                                name="subject"
+                            <input 
+                                type="text" 
+                                id="subject" 
+                                name="subject" 
                                 class="form-control"
                                 placeholder="Brief summary of your feedback"
                                 value="<?php echo isset($_POST['subject']) ? htmlspecialchars($_POST['subject']) : ''; ?>"
-                                required />
+                                required
+                            />
                         </div>
 
                         <div class="form-group">
@@ -149,17 +147,28 @@ include 'partials/header.php';
                             <label>
                                 Overall Rating <span class="required">*</span>
                             </label>
-                            <div class="rating-group">
-                                <input type="radio" id="star5" name="rating" value="5" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 5) ? 'checked' : ''; ?> required />
-                                <label for="star5">⭐</label>
-                                <input type="radio" id="star4" name="rating" value="4" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 4) ? 'checked' : ''; ?> />
-                                <label for="star4">⭐</label>
-                                <input type="radio" id="star3" name="rating" value="3" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 3) ? 'checked' : ''; ?> />
-                                <label for="star3">⭐</label>
-                                <input type="radio" id="star2" name="rating" value="2" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 2) ? 'checked' : ''; ?> />
-                                <label for="star2">⭐</label>
-                                <input type="radio" id="star1" name="rating" value="1" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 1) ? 'checked' : ''; ?> />
-                                <label for="star1">⭐</label>
+                            <div style="display: flex; align-items: center;">
+                                <div class="rating-group">
+                                    <input type="radio" id="star5" name="rating" value="5" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 5) ? 'checked' : ''; ?> required />
+                                    <label for="star5">⭐</label>
+                                    <input type="radio" id="star4" name="rating" value="4" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 4) ? 'checked' : ''; ?> />
+                                    <label for="star4">⭐</label>
+                                    <input type="radio" id="star3" name="rating" value="3" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 3) ? 'checked' : ''; ?> />
+                                    <label for="star3">⭐</label>
+                                    <input type="radio" id="star2" name="rating" value="2" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 2) ? 'checked' : ''; ?> />
+                                    <label for="star2">⭐</label>
+                                    <input type="radio" id="star1" name="rating" value="1" <?php echo (isset($_POST['rating']) && $_POST['rating'] == 1) ? 'checked' : ''; ?> />
+                                    <label for="star1">⭐</label>
+                                </div>
+                                <div class="rating-display" id="ratingDisplay">
+                                    <?php 
+                                    if (isset($_POST['rating'])) {
+                                        echo htmlspecialchars($_POST['rating']) . ' Stars';
+                                    } else {
+                                        echo 'Select rating';
+                                    }
+                                    ?>
+                                </div>
                             </div>
                         </div>
 
@@ -167,14 +176,15 @@ include 'partials/header.php';
                             <label for="message">
                                 Your Feedback <span class="required">*</span>
                             </label>
-                            <textarea
-                                id="message"
-                                name="message"
+                            <textarea 
+                                id="message" 
+                                name="message" 
                                 class="form-control"
                                 placeholder="Please share your detailed feedback here..."
                                 required
                                 maxlength="1000"
-                                oninput="updateCharCount()"><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
+                                oninput="updateCharCount()"
+                            ><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
                             <div class="char-count">
                                 <span id="charCount">0</span> / 1000 characters
                             </div>
@@ -199,7 +209,6 @@ include 'partials/header.php';
                             <li>Your privacy is protected</li>
                         </ul>
                     </div>
-
 
                     <!-- Feedback History -->
                     <div class="feedback-history">
@@ -281,9 +290,6 @@ include 'partials/header.php';
         });
     </script>
 </body>
-
 </html>
-
-
 
 <?php include 'partials/footer.php'; ?>
