@@ -557,7 +557,7 @@ $final_total = $cart_total - $voucher_discount;
             padding-top: 15px;
             font-size: 22px;
             font-weight: 700;
-            color: #4CAF50;
+            color: #696969ff;
         }
         
         /* Buttons */

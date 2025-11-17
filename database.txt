@@ -19,7 +19,7 @@ CREATE TABLE Member (
 
 CREATE TABLE Shipping_Address (
     shipping_address_id INT AUTO_INCREMENT PRIMARY KEY,
-    member_id INT NOT NULL,              -- FK to Member
+    member_id INT NOT NULL,
     address_line1 VARCHAR(255) NOT NULL,
     address_line2 VARCHAR(255),
     city VARCHAR(100) NOT NULL,
@@ -29,8 +29,9 @@ CREATE TABLE Shipping_Address (
     created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
+
 
 
 -- 3️⃣ PRODUCT TABLE
@@ -79,19 +80,26 @@ CREATE TABLE Cart_Item (
 
 
 
+
 -- 6️⃣ ORDER TABLE
 CREATE TABLE `Order` (
     order_id INT AUTO_INCREMENT PRIMARY KEY,
     member_id INT NOT NULL,
-    shipping_address_id INT NOT NULL,
+    shipping_address_line1 VARCHAR(255) NOT NULL,
+    shipping_address_line2 VARCHAR(255),
+    shipping_city VARCHAR(100) NOT NULL,
+    shipping_state VARCHAR(100),
+    shipping_postal_code VARCHAR(20),
+    shipping_country VARCHAR(100) NOT NULL,
     order_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(10,2) NOT NULL,
     status ENUM('Pending', 'Shipped', 'Delivered', 'Cancelled') DEFAULT 'Pending',
+
     FOREIGN KEY (member_id) REFERENCES Member(member_id)
-        ON DELETE CASCADE ON UPDATE CASCADE,
-   FOREIGN KEY (shipping_address_id) REFERENCES Shipping_Address(shipping_address_id)
-    ON DELETE RESTRICT ON UPDATE CASCADE
+        ON DELETE CASCADE ON UPDATE CASCADE
 );
+
+
 
 -- 8️⃣ ORDER ITEM TABLE
 CREATE TABLE Order_Item (
