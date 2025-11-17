@@ -60,7 +60,9 @@ $per_page = 15;
 $offset = ($page - 1) * $per_page;
 
 // Build database query
-$sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status, o.shipping_address,
+$sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status,
+        o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, 
+        o.shipping_state, o.shipping_postal_code, o.shipping_country,
         (SELECT p.main_image_path FROM Order_Item oi JOIN Product p ON oi.product_id = p.product_id 
          WHERE oi.order_id = o.order_id LIMIT 1) AS thumb
         FROM `Order` o
@@ -75,14 +77,14 @@ if ($search !== '') {
         $sql .= " AND o.order_id = ?";
         $params[] = (int)$search;
     } 
-    // Otherwise → text search on shipping address and product names
+    // Otherwise, text search → search in address fields and product names
     else {
-        $sql .= " AND (o.shipping_address LIKE ? 
+        $sql .= " AND (CONCAT_WS(' ', o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, o.shipping_state, o.shipping_postal_code, o.shipping_country) LIKE ?
                   OR EXISTS (
                       SELECT 1 FROM Order_Item oi2 
                       JOIN Product p2 ON oi2.product_id = p2.product_id 
                       WHERE oi2.order_id = o.order_id 
-                      AND p2.product_name LIKE ?
+                      AND p2.name LIKE ?
                   ))";
         $like = "%$search%";
         $params[] = $like;
@@ -266,7 +268,27 @@ try {
                                 <td>
                                     <span class="status <?php echo htmlspecialchars($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></span>
                                 </td>
-                                <td><?php echo htmlspecialchars($row['shipping_address']); ?></td>
+                                <td>
+                                    <?php
+                                    $address_line1 = htmlspecialchars($row['shipping_address_line1'] ?? '');
+                                    $address_line2 = htmlspecialchars($row['shipping_address_line2'] ?? '');
+                                    $city = htmlspecialchars($row['shipping_city'] ?? '');
+                                    $state = htmlspecialchars($row['shipping_state'] ?? '');
+                                    $postal_code = htmlspecialchars($row['shipping_postal_code'] ?? '');
+                                    $country = htmlspecialchars($row['shipping_country'] ?? '');
+                                    
+                                    // Build address string, skipping empty parts
+                                    $address_parts = array_filter([
+                                        $address_line1,
+                                        $address_line2,
+                                        $city,
+                                        $state,
+                                        $postal_code,
+                                        $country
+                                    ]);
+                                    echo implode(', ', $address_parts);
+                                    ?>
+                                </td>
                                 <td>
                                     <a class="btn btn-primary" href="order_details.php?order_id=<?php echo urlencode($row['order_id']); ?>">View</a>
                                 </td>
