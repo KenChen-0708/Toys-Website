@@ -557,6 +557,50 @@ table {
   font-size: var(--small-font-size);
 }
 
+.form__label span {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-weight: var(--weight-600);
+  font-size: var(--small-font-size);
+}
+
+.form__btn {
+  margin-top: 0.75rem;
+}
+
+.form__btn .btn {
+  width: auto;
+  min-width: 150px;
+}
+
+.placed__order-table th,
+.placed__order-table td {
+  padding: 0.65rem 0.5rem;
+  font-size: var(--small-font-size);
+  text-align: left;
+}
+
+.placed__order-table thead {
+  background-color: var(--container-color);
+}
+
+.placed__order-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.placed__order-table .view__order {
+  color: var(--first-color);
+  font-weight: var(--weight-600);
+  font-size: var(--small-font-size);
+}
+
+/* Alerts on account page use existing .alert styles; add success variant */
+.alert--success {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
 
 /*=============== BREAKPOINTS ===============*/
 /* For large devices */
@@ -692,8 +736,9 @@ table {
     right: 36px;
   }
 
-  .account__tab {
-    padding: 0.75rem 1rem;
+  .account__tabs {
+    position: sticky;
+    top: 6rem;
   }
 
   .checkout__group:nth-child(2) {
@@ -769,6 +814,14 @@ table {
   .btn--sm {
     height: 38px;
     line-height: 35px;
+  }
+
+  .account-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
   }
 
   .newsletter__description {
