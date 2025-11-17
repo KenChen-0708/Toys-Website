@@ -45,6 +45,7 @@ CREATE TABLE Member (
     email VARCHAR(100) UNIQUE NOT NULL,
     phone_number VARCHAR(20),
     address TEXT,
+    profile_photo_path VARCHAR(255),
     register_date DATETIME NOT NULL
 );
 
@@ -207,18 +208,19 @@ INSERT INTO Product (name, price, description, category, stock, status, main_ima
 ('Lego Space Explorer', 88.00, 'Space exploration building kit.', 'Lego', 13, 'Available', '../assets/img/default.jpg'),
 ('Ninja Turtle Van', 160.00, 'The iconic turtle van toy.', 'Ninja Turtle', 4, 'Available', '../assets/img/product_6917146a4c05f.jpg');
 
-INSERT INTO Member (username, password, email, phone_number, address, register_date) VALUES
-('Ahmad', 'pass1', 'ahmad@example.com', '012-3456789', '123 Jalan A, KL', '2023-01-15 10:00:00'),
-('Bella', 'pass2', 'bella@example.com', '013-9876543', '456 Jalan B, Penang', '2024-03-22 14:30:00'),
-('Chris', 'pass3', 'chris@example.com', '014-5556677', '789 Jalan C, Johor', '2024-07-05 09:15:00'),
-('Diana', 'pass4', 'diana@example.com', '015-4445566', '321 Jalan D, KL', '2023-12-18 16:45:00'),
-('Eric', 'pass5', 'eric@example.com', '016-3334455', '654 Jalan E, Penang', '2025-02-01 11:20:00'),
-('Fiona', 'pass6', 'fiona@example.com', '017-2223344', '987 Jalan F, Selangor', '2025-05-19 08:50:00'),
-('Gavin', 'pass7', 'gavin@example.com', '018-1112233', '111 Jalan G, KL', '2023-08-25 12:10:00'),
-('Hannah', 'pass8', 'hannah@example.com', '019-0001122', '222 Jalan H, Johor', '2024-11-30 17:35:00'),
-('Ian', 'pass9', 'ian@example.com', '010-9998877', '333 Jalan I, Penang', '2025-06-07 13:00:00'),
-('Jenny', 'pass10', 'jenny@example.com', '011-8887766', '444 Jalan J, Selangor', '2023-04-12 15:45:00'),
-('max', 'pass10', 'max@example.com', '012-8887766', '444 Jalan J, Selangor', '2023-04-12 15:45:00');
+INSERT INTO Member 
+(username, password, email, phone_number, address, profile_photo_path, register_date) VALUES
+('Ahmad', 'pass1', 'ahmad@example.com', '012-3456789', '123 Jalan A, KL', NULL, '2023-01-15 10:00:00'),
+('Bella', 'pass2', 'bella@example.com', '013-9876543', '456 Jalan B, Penang', NULL, '2024-03-22 14:30:00'),
+('Chris', 'pass3', 'chris@example.com', '014-5556677', '789 Jalan C, Johor', NULL, '2024-07-05 09:15:00'),
+('Diana', 'pass4', 'diana@example.com', '015-4445566', '321 Jalan D, KL', NULL, '2023-12-18 16:45:00'),
+('Eric', 'pass5', 'eric@example.com', '016-3334455', '654 Jalan E, Penang', NULL, '2025-02-01 11:20:00'),
+('Fiona', 'pass6', 'fiona@example.com', '017-2223344', '987 Jalan F, Selangor', NULL, '2025-05-19 08:50:00'),
+('Gavin', 'pass7', 'gavin@example.com', '018-1112233', '111 Jalan G, KL', NULL, '2023-08-25 12:10:00'),
+('Hannah', 'pass8', 'hannah@example.com', '019-0001122', '222 Jalan H, Johor', NULL, '2024-11-30 17:35:00'),
+('Ian', 'pass9', 'ian@example.com', '010-9998877', '333 Jalan I, Penang', NULL, '2025-06-07 13:00:00'),
+('Jenny', 'pass10', 'jenny@example.com', '011-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00'),
+('max', 'pass10', 'max@example.com', '012-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00');
 
 INSERT INTO admin (admin_id, username, password, email) VALUES
 (1, 'admin', '$2y$10$niY7iWha/w7NhJCyzZeoIuSeybKJlTbHPePryWgtYNMnMLQ4gRa9W', 'admin@example.com');
