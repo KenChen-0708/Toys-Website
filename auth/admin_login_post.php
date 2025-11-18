@@ -43,7 +43,7 @@ if (strlen($password) < 6) {
 
 if (!$errors) {
   // Look up by Admin.username (your username column)
-  $stmt = $pdo->prepare("SELECT admin_id, username, email, password FROM Admin WHERE BINARY username = ?");
+  $stmt = $pdo->prepare("SELECT admin_id, username, email, password, role FROM Admin WHERE BINARY username = ?");
   $stmt->execute([$username]);
   $admin = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -58,6 +58,7 @@ if (!$errors) {
       'id'    => $admin['admin_id'],
       'username'  => $admin['username'],
       'email' => $admin['email'],
+      'role'  => $admin['role'] ?? 'admin',
     ];
 
     unset($_SESSION['admin_old']);

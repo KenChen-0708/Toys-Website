@@ -2,13 +2,7 @@
 session_start();
 require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
-require_admin();
-
-// Check if admin is logged in
-if (!isset($_SESSION['admin'])) {
-    header('Location: login.php');
-    exit;
-}
+require_permission('feedback', 'view');
 
 $success_message = '';
 $error_message = '';

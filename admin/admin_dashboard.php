@@ -3,7 +3,7 @@ session_start();
 
 include '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
-require_admin();
+require_permission('dashboard', 'view');
 
 // Helper to show initials
 function admin_initials($username) {

@@ -34,7 +34,39 @@ CREATE TABLE Admin (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
     username VARCHAR(100) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL
+    email VARCHAR(100) UNIQUE NOT NULL,
+    role VARCHAR(50) DEFAULT 'admin'
+);
+
+-- ROLE PERMISSIONS TABLE (default permissions for each role)
+CREATE TABLE Role_Permission (
+    role_permission_id INT AUTO_INCREMENT PRIMARY KEY,
+    role VARCHAR(50) NOT NULL,
+    resource VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    UNIQUE KEY unique_role_resource_action (role, resource, action)
+);
+
+-- ADMIN PERMISSIONS TABLE (for custom permissions set by Super Admin)
+CREATE TABLE Admin_Permission (
+    permission_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    resource VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY unique_admin_resource_action (admin_id, resource, action)
+);
+
+-- ADMIN PERMISSION DENIED TABLE (to deny permissions that would otherwise be inherited from role)
+CREATE TABLE Admin_Permission_Denied (
+    denied_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    resource VARCHAR(50) NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY unique_admin_resource_action_denied (admin_id, resource, action)
 );
 
 -- MEMBER TABLE
@@ -279,8 +311,8 @@ INSERT INTO Product (name, price, description, category, stock, status, main_ima
 
 -- password: Password123!
 INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_number`, `address`, `profile_photo_path`, `register_date`) VALUES
-(1, 'Ken', '$2y$10$eoth.o.tQ99RPZPv/HxUHeyV3PjQDSMb1mD2Sx.lBD1CNzJg.uEvu', 'ken@example.com', '012-3456789', '123 Jalan A, KL', NULL, '2023-01-15 10:00:00'),
-(2, 'SiuYee', '$2y$10$QYh/ifao5wHJkDip75hg..fpYkWIvdH2y/mqro6Xv/L7ZJK0u.R7K', 'sy@example.com', '013-9876543', '456 Jalan B, Penang', NULL, '2024-03-22 14:30:00'),
+(1, 'Ken', '$2y$10$eoth.o.tQ99RPZPv/HxUHeyV3PjQDSMb1mD2Sx.lBD1CNzJg.uEvu', 'ken@example.com', '012-3456789', '123 Jalan A, KL', '/assets/img/profile_photo/test.jpg', '2023-01-15 10:00:00'),
+(2, 'SiuYee', '$2y$10$QYh/ifao5wHJkDip75hg..fpYkWIvdH2y/mqro6Xv/L7ZJK0u.R7K', 'sy@example.com', '013-9876543', '456 Jalan B, Penang', '/assets/img/profile_photo/member_2_1763459011.png', '2024-03-22 14:30:00'),
 (3, 'Ronaldo', '$2y$10$tZm3kToa/ukNH6oc9zm98uSoF8/5gfLda0zSErhSYsVYS1kOiqIUW', 'r@example.com', '014-5556677', '789 Jalan C, Johor', NULL, '2024-07-05 09:15:00'),
 (4, 'TzeChuen', '$2y$10$l5arISf17ngsVxyXOvhp4es70pkYXtgbxJ33OizV01MKrGB47oDBW', 'tc@example.com', '015-4445566', '321 Jalan D, KL', NULL, '2023-12-18 16:45:00'),
 (5, 'Chris', '$2y$10$Uegr.5wKiXfY6gi9qhgtveK0W/JI0rQ39BS0PFIkApogDmsrwZyb6', 'c@example.com', '016-3334455', '654 Jalan E, Penang', NULL, '2025-02-01 11:20:00'),
@@ -292,9 +324,80 @@ INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_numbe
 (11, 'ChaoZe', '$2y$10$28p0m4HDn4y7EiVU66t65OoGnCEcZx3E8h6Uhgglv60ZgbF061O1S', 'cz@example.com', '012-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00');
 
 
--- password: admin123
-INSERT INTO admin (admin_id, username, password, email) VALUES
-(1, 'admin', '$2y$10$niY7iWha/w7NhJCyzZeoIuSeybKJlTbHPePryWgtYNMnMLQ4gRa9W', 'admin@example.com');
+-- password: Password123!
+INSERT INTO admin (admin_id, username, password, email, role) VALUES
+(1, 'admin', '$2y$10$EmAKnZxA7KETDmLPgvsFa.zSkd/1RgJwfa9SLZ.qptPOXhDuclVHy', 'admin@example.com', 'super admin'),
+(2, 'user_admin', '$2y$10$KCljbye3yfPg/zMPIv4WLOTy8tSWn5ulxh/hakmOLuai5Fwfo.pbu', 'useradmin@example.com', 'user admin'),
+(3, 'admin_manager', '$2y$10$/mD2aLkUuqCAFkAYdhNg2u0AnVP44lvSqt9iw7d.tMSWVrnVr2oWi', 'adminmanager@example.com', 'admin manager'),
+(4, 'product_admin', '$2y$10$mbBDT8bCihrRZz/bgpaC6OWXMvwDdie1yOTlxkIHOxAjI2GGxHJWS', 'productadmin@example.com', 'product admin'),
+(5, 'order_admin', '$2y$10$6fF6eKkraui/jQS9J6sawO9W6R1thiuzEeotWkYUvnWi5su8ot.7C', 'orderadmin@example.com', 'order admin'),
+(6, 'support_admin', '$2y$10$1hVVlDAiWVCcA7OQ5k5JqOddpv0i1RarEDjwDChR.EgeprsXBEY..', 'supportadmin@example.com', 'support admin'),
+(7, 'analyst', '$2y$10$Ypqa7ilXbQm.LF7.pL5nW.gIxLmlgkARqkcAM/Vl.uklxsnz754nG', 'analyst@example.com', 'analyst');
+
+-- ROLE PERMISSIONS (default permissions for each role)
+-- Admin Manager
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('admin manager', 'admins', 'view'),
+('admin manager', 'admins', 'create'),
+('admin manager', 'admins', 'update'),
+('admin manager', 'admins', 'delete'),
+('admin manager', 'dashboard', 'view');
+
+-- User Admin
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('user admin', 'members', 'view'),
+('user admin', 'members', 'create'),
+('user admin', 'members', 'update'),
+('user admin', 'members', 'delete'),
+('user admin', 'feedback', 'view'),
+('user admin', 'dashboard', 'view');
+
+-- Product Admin
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('product admin', 'products', 'view'),
+('product admin', 'products', 'create'),
+('product admin', 'products', 'update'),
+('product admin', 'products', 'delete'),
+('product admin', 'orders', 'view'),
+('product admin', 'analytics', 'view'),
+('product admin', 'dashboard', 'view');
+
+-- Order Admin
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('order admin', 'orders', 'view'),
+('order admin', 'orders', 'create'),
+('order admin', 'orders', 'update'),
+('order admin', 'orders', 'delete'),
+('order admin', 'members', 'view'),
+('order admin', 'products', 'view'),
+('order admin', 'analytics', 'view'),
+('order admin', 'feedback', 'view'),
+('order admin', 'dashboard', 'view');
+
+-- Support Admin
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('support admin', 'feedback', 'view'),
+('support admin', 'feedback', 'create'),
+('support admin', 'feedback', 'update'),
+('support admin', 'feedback', 'delete'),
+('support admin', 'members', 'view'),
+('support admin', 'orders', 'view'),
+('support admin', 'dashboard', 'view');
+
+-- Analyst
+INSERT INTO Role_Permission (role, resource, action) VALUES
+('analyst', 'dashboard', 'view'),
+('analyst', 'analytics', 'view'),
+('analyst', 'members', 'view'),
+('analyst', 'orders', 'view'),
+('analyst', 'products', 'view'),
+('analyst', 'feedback', 'view');
+
+-- Sample custom permissions (optional - can be set via manage_permissions.php)
+-- Example: Give user_admin additional access to view orders and products
+INSERT INTO Admin_Permission (admin_id, resource, action) VALUES
+(2, 'orders', 'view'),
+(2, 'products', 'view');
 
 INSERT INTO Cart (member_id) VALUES (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
 
