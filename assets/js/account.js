@@ -677,21 +677,41 @@
     });
   }
 
-  // Update dashboard profile photo after successful profile update
-  function updateDashboardProfilePhoto() {
+  // Flag to prevent multiple simultaneous updates
+  let isUpdatingPhotos = false;
+
+  // Update all profile photos (header, dashboard, and update profile section) after successful profile update
+  function updateAllProfilePhotos() {
+    // Prevent multiple simultaneous updates
+    if (isUpdatingPhotos) {
+      return;
+    }
+    isUpdatingPhotos = true;
+    
     const dashboardImg = document.getElementById('dashboardProfileImg');
     const dashboardIcon = document.getElementById('dashboardProfileIcon');
     const currentProfileImg = document.getElementById('currentProfileImg');
     const defaultProfileAvatar = document.getElementById('defaultProfileAvatar');
+    const headerAvatar = document.getElementById('headerAvatar');
     
-    // Sync from update profile section to dashboard
+    // Determine the photo source - check currentProfileImg first, then dashboardImg
+    let photoSrc = null;
     if (currentProfileImg && currentProfileImg.src && currentProfileImg.src !== '') {
-      // Photo exists in update profile section
+      photoSrc = currentProfileImg.src.split('?')[0];
+    } else if (dashboardImg && dashboardImg.src && dashboardImg.src !== '') {
+      photoSrc = dashboardImg.src.split('?')[0];
+    }
+    
+    // Use a single cache-busting parameter for all images in this update cycle
+    const cacheBuster = Date.now();
+    const newSrc = photoSrc ? photoSrc + '?v=' + cacheBuster : null;
+    
+    if (newSrc) {
+      // Photo exists - update all three locations
+      
+      // 1. Update Dashboard
       if (dashboardImg) {
-        // Get the base URL without query params
-        const baseSrc = currentProfileImg.src.split('?')[0];
-        // Add cache-busting parameter to force reload
-        dashboardImg.src = baseSrc + '?v=' + Date.now();
+        dashboardImg.src = newSrc;
         dashboardImg.style.display = 'block';
         dashboardImg.style.visibility = 'visible';
         dashboardImg.style.opacity = '1';
@@ -699,45 +719,79 @@
       if (dashboardIcon) {
         dashboardIcon.style.display = 'none';
       }
-    } else if (defaultProfileAvatar) {
-      // Default avatar is showing (no photo uploaded)
+      
+      // 2. Update Header
+      if (headerAvatar) {
+        let headerImg = headerAvatar.querySelector('img');
+        if (headerImg) {
+          headerImg.src = newSrc;
+        } else {
+          // Create img element if it doesn't exist
+          headerImg = document.createElement('img');
+          headerImg.src = newSrc;
+          headerImg.alt = 'Profile photo';
+          headerAvatar.innerHTML = ''; // Clear initials
+          headerAvatar.appendChild(headerImg);
+        }
+      }
+      
+      // 3. Update Current Profile Photo (in update profile section)
+      if (currentProfileImg) {
+        currentProfileImg.src = newSrc;
+        currentProfileImg.style.display = 'block';
+        currentProfileImg.style.visibility = 'visible';
+      }
+      if (defaultProfileAvatar) {
+        defaultProfileAvatar.style.display = 'none';
+      }
+    } else {
+      // No photo - show initials in all locations
+      
+      // 1. Update Dashboard
       if (dashboardIcon) {
         dashboardIcon.style.display = 'flex';
       }
       if (dashboardImg) {
         dashboardImg.style.display = 'none';
       }
+      
+      // 2. Update Header
+      if (headerAvatar) {
+        const headerImg = headerAvatar.querySelector('img');
+        if (headerImg) {
+          headerImg.remove();
+        }
+        // Get username from page to show initials
+        const username = document.querySelector('.account-summary-name')?.textContent || 
+                        document.querySelector('.profile-menu__header strong')?.textContent || '';
+        const parts = username.trim().split(/\s+/);
+        const first = parts[0] ? parts[0][0] : '';
+        const second = parts[1] ? parts[1][0] : '';
+        const initials = (first + second).toUpperCase() || 'U';
+        headerAvatar.textContent = initials;
+      }
+      
+      // 3. Update Current Profile Photo (in update profile section)
+      if (defaultProfileAvatar) {
+        defaultProfileAvatar.style.display = 'flex';
+      }
+      if (currentProfileImg) {
+        currentProfileImg.style.display = 'none';
+      }
     }
+    
+    // Reset flag after a short delay to allow images to load
+    setTimeout(() => {
+      isUpdatingPhotos = false;
+    }, 1000);
   }
 
-  // Check for profile update success message and update photo
+  // Check for profile update success message and update all profile photos
   const profileSuccess = document.querySelector('.alert--success');
   if (profileSuccess && profileSuccess.textContent.includes('Profile updated successfully')) {
-    // Wait for the page to fully load, then update photo
+    // Wait for the page to fully load, then update all photos once
     setTimeout(() => {
-      // Reload dashboard photo from server with cache-busting
-      const dashboardImg = document.getElementById('dashboardProfileImg');
-      if (dashboardImg && dashboardImg.src) {
-        const baseSrc = dashboardImg.src.split('?')[0];
-        dashboardImg.src = baseSrc + '?v=' + Date.now();
-        // Force image reload
-        dashboardImg.onload = function() {
-          updateDashboardProfilePhoto();
-        };
-        dashboardImg.onerror = function() {
-          // If image fails to load, show default icon
-          const dashboardIcon = document.getElementById('dashboardProfileIcon');
-          if (dashboardIcon) {
-            dashboardIcon.style.display = 'flex';
-          }
-          if (dashboardImg) {
-            dashboardImg.style.display = 'none';
-          }
-        };
-      } else {
-        // No image, check if we should show default icon
-        updateDashboardProfilePhoto();
-      }
+      updateAllProfilePhotos();
     }, 300);
   }
 })();

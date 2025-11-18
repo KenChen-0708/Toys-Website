@@ -4,6 +4,16 @@
   require_once __DIR__ . '/helper/auth.php';
   require_auth();
 
+  // Ensure user_initials function is available
+  if (!function_exists('user_initials')) {
+    function user_initials($username) {
+      $parts = preg_split('/\s+/', trim((string)$username));
+      $first = mb_substr($parts[0] ?? '', 0, 1);
+      $second = mb_substr($parts[1] ?? '', 0, 1);
+      return mb_strtoupper($first . $second ?: $first);
+    }
+  }
+
   $memberId = $_SESSION['member']['id'];
 
   // Fetch fresh member data from DB
@@ -223,20 +233,24 @@
         <p class="account__tab" data-target="#change-password">
           <i class="fi fi-rs-settings-sliders"></i> Change Password
         </p>
-        <p class="account__tab">
-          <i class="fi fi-rs-exit"></i>
-          <a href="/auth/logout.php" style="color: inherit;">Logout</a>
-        </p>
       </div>
 
       <div class="tabs__content">
         <div class="tab__content active-tab" id="dashboard" content>
           <div class="dashboard-profile-card">
             <div class="account-summary-avatar">
-              <?php if (!empty($member['profile_photo_path'])): ?>
+              <?php 
+                $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+                if ($hasPhoto): 
+              ?>
                 <img src="<?= htmlspecialchars($member['profile_photo_path']) ?><?= $profilePhotoUpdated ? '?v=' . time() : '' ?>" alt="Profile photo" id="dashboardProfileImg">
               <?php else: ?>
-                <i class="fi fi-rs-tree" id="dashboardProfileIcon"></i>
+                <span id="dashboardProfileIcon" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
+                  <?php 
+                    $initials = user_initials($member['username'] ?? '');
+                    echo htmlspecialchars($initials ?: 'U');
+                  ?>
+                </span>
               <?php endif; ?>
             </div>
             <div class="account-summary-info">
@@ -363,9 +377,22 @@
         <div class="tab__content" id="orders" content>
           <h3 class="tab__header">Your Orders</h3>
           <div class="tab__body">
-            <p class="tab__description" style="margin-bottom:0.75rem;">
-              This page is coming soon.
+            <p class="tab__description" style="margin-bottom:1.5rem;">
+              View and manage all your orders. Track your purchases, check order status, and view order details.
             </p>
+            <div style="text-align: center; padding: 3rem 2rem;">
+              <div style="margin-bottom: 1.5rem;">
+                <i class="fi fi-rs-shopping-bag" style="font-size: 4rem; color: var(--first-color); opacity: 0.6;"></i>
+              </div>
+              <h4 style="margin-bottom: 1rem; color: var(--title-color);">View Your Orders</h4>
+              <p style="margin-bottom: 2rem; color: var(--text-color); max-width: 500px; margin-left: auto; margin-right: auto;">
+                Click the button below to see all your orders, track their status, and view detailed information about each purchase.
+              </p>
+              <a href="/orders.php" class="btn btn--md btn--primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                <i class="fi fi-rs-shopping-bag"></i>
+                Go to Orders Page
+              </a>
+            </div>
           </div>
         </div>
 
@@ -383,24 +410,31 @@
               </div>
             <?php endif; ?>
 
+            <!-- Profile Photo Section (Separate Form) -->
             <div class="profile-edit-card">
-              <form class="profile-edit-form" method="POST" action="/auth/profile_update_post.php" enctype="multipart/form-data" novalidate>
+              <form class="profile-photo-form" method="POST" action="/auth/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-
-                <!-- Profile Photo Section -->
                 <div class="profile-section">
                   <h4 class="profile-section__title">Profile Photo</h4>
                   <div class="profile-edit-photo-row">
                     <div class="profile-photo-wrapper">
                       <div class="profile-photo-current" id="profilePhotoCurrent">
-                        <?php if (!empty($member['profile_photo_path'])): ?>
+                        <?php 
+                          $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+                          if ($hasPhoto): 
+                        ?>
                           <img src="<?= htmlspecialchars($member['profile_photo_path']) ?>" alt="Profile photo" id="currentProfileImg">
                         <?php else: ?>
                           <div class="profile-edit-avatar" id="defaultProfileAvatar">
-                            <i class="fi fi-rs-tree"></i>
+                            <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
+                              <?php 
+                                $initials = user_initials($member['username'] ?? '');
+                                echo htmlspecialchars($initials ?: 'U');
+                              ?>
+                            </span>
                           </div>
                         <?php endif; ?>
-                        <img id="photoPreview" class="photo-preview" alt="Preview" style="display:none;">
+                        <img id="photoPreview" class="photo-preview" alt="" style="display:none;">
                         <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
                         <button type="button" id="removePreviewBtn" class="photo-preview-remove" title="Remove image" style="display:none;">
                           <i class="fi fi-rs-cross"></i>
@@ -469,6 +503,19 @@
                     </p>
                   </div>
                 </div>
+                <!-- Action Button for Photo -->
+                <div class="profile-edit-actions">
+                  <button class="btn btn--md btn--primary" type="submit">
+                    <i class="fi fi-rs-check"></i> Save Photo
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Profile Information Section (Separate Form) -->
+            <div class="profile-edit-card" style="margin-top: 2rem;">
+              <form class="profile-edit-form" method="POST" action="/auth/profile_update_post.php" novalidate>
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                 <!-- Personal Information Section -->
                 <div class="profile-section">
