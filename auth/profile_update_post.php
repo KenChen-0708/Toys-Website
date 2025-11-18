@@ -90,11 +90,10 @@ if (!empty($addressParts)) {
     $address = implode(', ', $addressParts);
 }
 
-// Fetch current member to know existing photo path
-$stmt = $pdo->prepare("SELECT profile_photo_path FROM Member WHERE member_id = ?");
-$stmt->execute([$memberId]);
-$current = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$current) {
+// Verify account exists
+$checkStmt = $pdo->prepare("SELECT 1 FROM Member WHERE member_id = ?");
+$checkStmt->execute([$memberId]);
+if (!$checkStmt->fetch()) {
     $errors[] = 'Account not found.';
 }
 
@@ -124,108 +123,19 @@ if (!$errors) {
     }
 }
 
-$newPhotoPath = $current['profile_photo_path'] ?? null;
-
-// Handle webcam capture (base64) or normal file upload (one of them)
-if (!$errors) {
-    $uploadDirFs = realpath(__DIR__ . '/../assets/img');
-    if ($uploadDirFs === false) {
-        $uploadDirFs = __DIR__ . '/../assets/img';
-    }
-    $profileDirFs = $uploadDirFs . '/profiles';
-
-    if (!is_dir($profileDirFs)) {
-        mkdir($profileDirFs, 0755, true);
-    }
-
-    // 1) Webcam capture data or drag-and-drop converted to data URL (if present)
-    if ($captureData !== '') {
-        // Match data URL format: data:image/[format];base64,[data]
-        if (preg_match('/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/i', $captureData, $matches)) {
-            $ext = $matches[1] === 'jpeg' ? 'jpg' : $matches[1];
-            $raw = base64_decode($matches[2]);
-            if ($raw === false) {
-                $errors[] = 'Invalid captured image data.';
-            } else {
-                if (strlen($raw) > 2 * 1024 * 1024) { // 2MB
-                    $errors[] = 'Captured photo is too large. Maximum size is 2MB.';
-                } else {
-                    $fileName = 'profile_' . $memberId . '_' . time() . '.' . $ext;
-                    $targetFs = $profileDirFs . '/' . $fileName;
-                    if (file_put_contents($targetFs, $raw) === false) {
-                        $errors[] = 'Failed to save captured photo.';
-                    } else {
-                        $newPhotoPath = '/assets/img/profiles/' . $fileName;
-                    }
-                }
-            }
-        } else {
-            $errors[] = 'Invalid captured image format.';
-        }
-    }
-    // 2) Fallback to normal file upload if no capture
-    elseif (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] !== UPLOAD_ERR_NO_FILE) {
-        $file = $_FILES['profile_photo'];
-
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $errors[] = 'Error uploading profile photo.';
-        } else {
-            $maxSize = 2 * 1024 * 1024; // 2MB
-            if ($file['size'] > $maxSize) {
-                $errors[] = 'Profile photo is too large. Maximum size is 2MB.';
-            } else {
-                $finfo = new finfo(FILEINFO_MIME_TYPE);
-                $mime  = $finfo->file($file['tmp_name']);
-                $allowed = [
-                    'image/jpeg' => 'jpg',
-                    'image/png'  => 'png',
-                    'image/webp' => 'webp',
-                ];
-
-                if (!isset($allowed[$mime])) {
-                    $errors[] = 'Invalid image type. Only JPG, PNG and WEBP are allowed.';
-                } else {
-                    $ext = $allowed[$mime];
-
-                    $fileName = 'profile_' . $memberId . '_' . time() . '.' . $ext;
-                    $targetFs = $profileDirFs . '/' . $fileName;
-
-                    if (!move_uploaded_file($file['tmp_name'], $targetFs)) {
-                        $errors[] = 'Failed to save uploaded photo.';
-                    } else {
-                        $newPhotoPath = '/assets/img/profiles/' . $fileName;
-                    }
-                }
-            }
-        }
-    }
-
-    // Delete old photo if a new one was saved
-    if (!$errors && $newPhotoPath !== ($current['profile_photo_path'] ?? null) && !empty($current['profile_photo_path'])) {
-        $oldPath = $current['profile_photo_path'];
-        if (strpos($oldPath, '/assets/img/profiles/') === 0) {
-            $oldFs = realpath(__DIR__ . '/..' . $oldPath);
-            if ($oldFs && is_file($oldFs)) {
-                @unlink($oldFs);
-            }
-        }
-    }
-}
-
 if ($errors) {
     $_SESSION['profile_errors'] = $errors;
     header('Location: /accounts.php#update-profile');
     exit;
 }
 
-// Perform update
+// Perform update (only update non-photo fields)
 $stmt = $pdo->prepare("
     UPDATE Member
        SET username = ?,
            email = ?,
            phone_number = ?,
-           address = ?,
-           profile_photo_path = ?
+           address = ?
      WHERE member_id = ?
 ");
 $stmt->execute([
@@ -233,22 +143,14 @@ $stmt->execute([
     $email,
     $phone !== '' ? $phone : null,
     $address !== '' ? $address : null,
-    $newPhotoPath,
     $memberId,
 ]);
 
 // Update session so header shows fresh info
 $_SESSION['member']['username'] = $username;
 $_SESSION['member']['email']    = $email;
-if ($newPhotoPath) {
-    $_SESSION['member']['profile_photo_path'] = $newPhotoPath;
-} elseif ($newPhotoPath === null && isset($current['profile_photo_path'])) {
-    // If photo was removed, clear it from session
-    unset($_SESSION['member']['profile_photo_path']);
-}
 
 $_SESSION['profile_success'] = 'Profile updated successfully.';
-$_SESSION['profile_photo_updated'] = true; // Flag to trigger photo update
 
 header('Location: /accounts.php#update-profile');
 exit;
