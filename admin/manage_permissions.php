@@ -667,87 +667,106 @@ function switchTab(tab) {
 document.addEventListener('DOMContentLoaded', function () {
     // Attach change handler to all permission checkboxes in both Role and Admin forms
     const allPermissionCheckboxes = document.querySelectorAll('.permissions-form input[type="checkbox"]');
-    allPermissionCheckboxes.forEach(function (cb) {
-        cb.addEventListener('change', function (e) {
-            const input = e.target;
-            const parent = input.closest('.action-checkbox');
-            if (!parent) return;
+allPermissionCheckboxes.forEach(function (cb) {
+    cb.addEventListener('change', function (e) {
+        const input = e.target;
+        const parent = input.closest('.action-checkbox');
+        if (!parent) return;
 
-            const hasRole = input.getAttribute('data-has-role') === '1';
-            // If inherited from role and user unchecks it -> show denied state
-            if (hasRole && !input.checked) {
-                parent.classList.add('denied');
-                // dim the checkbox to indicate denial (match server-side initial style)
-                input.style.opacity = '0.3';
-                // show denied mark
-                let mark = parent.querySelector('.denied-mark');
-                if (!mark) {
-                    mark = document.createElement('span');
-                    mark.className = 'denied-mark';
-                    mark.textContent = '✕';
-                    parent.insertBefore(mark, parent.firstChild);
-                }
-                mark.style.display = '';
-                // update badge to DENIED
-                let badge = parent.querySelector('.role-permission-badge');
-                if (!badge) {
-                    badge = document.createElement('span');
-                    badge.className = 'role-permission-badge';
-                    parent.appendChild(badge);
-                }
-                badge.textContent = 'DENIED';
-                badge.style.background = '#dc2626';
-                badge.title = 'Denied (inherited from role but revoked)';
-            } else {
-                // Remove denied visuals
-                parent.classList.remove('denied');
-                // restore checkbox opacity so checked look matches other checkboxes
-                input.style.opacity = '';
-                const mark = parent.querySelector('.denied-mark');
-                if (mark) mark.style.display = 'none';
-                // Update badge depending on state
-                const badge = parent.querySelector('.role-permission-badge');
-                const hasRoleNow = input.getAttribute('data-has-role') === '1';
-                const wasExplicit = input.getAttribute('data-is-explicit') === '1';
-                if (!input.checked && !hasRoleNow) {
-                    // nothing to show
-                    if (badge) badge.remove();
-                } else if (input.checked && !hasRoleNow) {
-                    // user granted an extra explicit permission
-                    if (!badge) {
-                        const b = document.createElement('span');
-                        b.className = 'role-permission-badge';
-                        b.style.background = '#3b82f6';
-                        b.textContent = 'EXTRA';
-                        b.title = 'Explicitly granted';
-                        parent.appendChild(b);
-                    } else {
-                        badge.textContent = 'EXTRA';
-                        badge.style.background = '#3b82f6';
-                        badge.title = 'Explicitly granted';
-                    }
-                } else if (hasRoleNow) {
-                    // inherited from role
-                    if (!badge) {
-                        const b = document.createElement('span');
-                        b.className = 'role-permission-badge';
-                        b.textContent = 'ROLE';
-                        b.title = 'Inherited from role';
-                        parent.appendChild(b);
-                    } else {
-                        badge.textContent = 'ROLE';
-                        badge.style.background = '';
-                        badge.title = 'Inherited from role';
-                    }
-                }
-            }
-            // After visuals update, update Save/Clear button states for the parent form
+        const isAdminCheckbox = input.hasAttribute('data-has-role'); // only admin tab has this
+
+        // ============================
+        // ROLE TAB CHECKBOXES
+        // ============================
+        if (!isAdminCheckbox) {
+            // For role permissions we DON'T show ROLE / EXTRA / DENIED badges at all.
+            // Just update Save / Clear button state based on dirty check.
             const formContainer = input.closest('.permissions-form');
             if (formContainer) {
                 updateButtonsForContainer(formContainer);
             }
-        });
+            return;
+        }
+
+        // ============================
+        // ADMIN TAB CHECKBOXES (with inheritance logic)
+        // ============================
+        const hasRole = input.getAttribute('data-has-role') === '1';
+
+        if (hasRole && !input.checked) {
+            // inherited from role and user unchecks it -> DENIED
+            parent.classList.add('denied');
+            input.style.opacity = '0.3';
+
+            let mark = parent.querySelector('.denied-mark');
+            if (!mark) {
+                mark = document.createElement('span');
+                mark.className = 'denied-mark';
+                mark.textContent = '✕';
+                parent.insertBefore(mark, parent.firstChild);
+            }
+            mark.style.display = '';
+
+            let badge = parent.querySelector('.role-permission-badge');
+            if (!badge) {
+                badge = document.createElement('span');
+                badge.className = 'role-permission-badge';
+                parent.appendChild(badge);
+            }
+            badge.textContent = 'DENIED';
+            badge.style.background = '#dc2626';
+            badge.title = 'Denied (inherited from role but revoked)';
+        } else {
+            // remove denied visuals
+            parent.classList.remove('denied');
+            input.style.opacity = '';
+            const mark = parent.querySelector('.denied-mark');
+            if (mark) mark.style.display = 'none';
+
+            const badge = parent.querySelector('.role-permission-badge');
+            const hasRoleNow = input.getAttribute('data-has-role') === '1';
+
+            if (!input.checked && !hasRoleNow) {
+                // nothing to show
+                if (badge) badge.remove();
+            } else if (input.checked && !hasRoleNow) {
+                // EXTRA explicit permission
+                if (!badge) {
+                    const b = document.createElement('span');
+                    b.className = 'role-permission-badge';
+                    b.style.background = '#3b82f6';
+                    b.textContent = 'EXTRA';
+                    b.title = 'Explicitly granted';
+                    parent.appendChild(b);
+                } else {
+                    badge.textContent = 'EXTRA';
+                    badge.style.background = '#3b82f6';
+                    badge.title = 'Explicitly granted';
+                }
+            } else if (hasRoleNow) {
+                // inherited from role
+                if (!badge) {
+                    const b = document.createElement('span');
+                    b.className = 'role-permission-badge';
+                    b.textContent = 'ROLE';
+                    b.title = 'Inherited from role';
+                    parent.appendChild(b);
+                } else {
+                    badge.textContent = 'ROLE';
+                    badge.style.background = '';
+                    badge.title = 'Inherited from role';
+                }
+            }
+        }
+
+        // After visuals update, update Save/Clear button states
+        const formContainer = input.closest('.permissions-form');
+        if (formContainer) {
+            updateButtonsForContainer(formContainer);
+        }
     });
+});
+
 
     // Determine whether a container has unsaved changes compared to data-initial-checked
     function containerIsDirty(container) {
