@@ -2,7 +2,7 @@
 session_start();
 require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
-require_admin();
+require_permission('orders', 'view');
 
 if (!$pdo) {
     die("Connection failed: Unable to connect to database");
