@@ -91,7 +91,6 @@
           <?php endif; ?>
         </div>
       </nav>
-<<<<<<< Updated upstream
     </header>
 
 <script>
