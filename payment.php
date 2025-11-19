@@ -1,65 +1,96 @@
 <?php
-// checkout.php
-
+session_start();
 require 'stripe-php-master/init.php'; // Stripe PHP SDK
 require 'helper/pdo_connection.php';   // PDO connection
 
+// Check if user is logged in
+if (!isset($_SESSION['member'])) {
+    header('Location: auth/login.php');
+    exit();
+}
+
+$member_id = $_SESSION['member']['id'];
+
+// Get order_id from URL
+$order_id = $_GET['order_id'] ?? null;
+
+if (!$order_id) {
+    header('Location: checkout.php');
+    exit();
+}
+
 \Stripe\Stripe::setApiKey('sk_test_51SSdhpL3TTFqZeEiC8Zq2GlP6vX1oU0BVr1Il5xr0T5OXKXkewj27TGIxs0AvwzSfcHlY2znCsIlexDHk9gbJOXE00vbXRgf2n'); // Replace with your Secret Key
 
-// Assume user is logged in
-$member_id = 1; // Replace with session user_id
-
 try {
-    // 1️⃣ Retrieve cart items
-    $sql = "SELECT ci.quantity, p.price, p.product_id, p.name
-            FROM Cart_Item ci
-            JOIN Cart c ON ci.cart_id = c.cart_id
-            JOIN Product p ON ci.product_id = p.product_id
-            WHERE c.member_id = :member_id";
+    // 1️⃣ Retrieve order details
+    $stmt = $pdo->prepare("
+        SELECT o.*, 
+               CONCAT(o.shipping_address_line1, ', ', o.shipping_city, ', ', o.shipping_country) as shipping_address
+        FROM `Order` o
+        WHERE o.order_id = ? AND o.member_id = ? AND o.status = 'Pending'
+    ");
+    $stmt->execute([$order_id, $member_id]);
+    $order = $stmt->fetch();
 
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute(['member_id' => $member_id]);
-    $cart_items = $stmt->fetchAll();
-
-    if (!$cart_items) {
-        die("Your cart is empty.");
+    if (!$order) {
+        die("Order not found or already processed.");
     }
 
-    $total_amount = 0;
-    $product_summary = [];
-    foreach ($cart_items as $row) {
-        $total_amount += $row['price'] * $row['quantity'];
-        $product_summary[] = $row['name'] . " x" . $row['quantity'];
+    // 2️⃣ Retrieve order items with product images
+    $stmt = $pdo->prepare("
+        SELECT oi.*, p.name, p.main_image_path
+        FROM Order_Item oi
+        JOIN Product p ON oi.product_id = p.product_id
+        WHERE oi.order_id = ?
+    ");
+    $stmt->execute([$order_id]);
+    $order_items = $stmt->fetchAll();
+
+    if (!$order_items) {
+        die("No items found in this order.");
     }
 
-    $summary_str = implode(", ", $product_summary);
-    $amount_in_cents = $total_amount * 100; // Stripe expects amount in cents
-
-    // 2️⃣ Create Stripe Checkout Session
-    $domain = 'http://localhost:8000'; // Replace with your project folder or domain
-
-    $session = \Stripe\Checkout\Session::create([
-        'payment_method_types' => ['card', 'fpx', 'grabpay'],
-        'line_items' => [[
+    // Get total amount from order (already includes discounts)
+    $total_amount = $order['total_amount'];
+    
+    // Build line items for Stripe with images
+    $line_items = [];
+    $domain = 'http://localhost:8000'; 
+    
+    foreach ($order_items as $item) {
+        $product_data = [
+            'name' => $item['name'],
+        ];
+        
+        // Add product image if available
+        if (!empty($item['main_image_path'])) {
+            // Convert relative path to absolute URL
+            $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
+            $product_data['images'] = [$image_url];
+        }
+        
+        $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
-                'product_data' => [
-                    'name' => $summary_str,
-                ],
-                'unit_amount' => $amount_in_cents,
+                'product_data' => $product_data,
+                'unit_amount' => intval($item['price'] * 100), // Convert to cents
             ],
-            'quantity' => 1,
-        ]],
+            'quantity' => $item['quantity'],
+        ];
+    }
+    
+    // 3️⃣ Create Stripe Checkout Session
+    $session = \Stripe\Checkout\Session::create([
+        'payment_method_types' => ['card', 'fpx', 'grabpay'],
+        'line_items' => $line_items,
         'mode' => 'payment',
-        'success_url' => $domain . '/?session_id={CHECKOUT_SESSION_ID}',
-        'cancel_url'  => $domain . '/',
+        'success_url' => $domain . '/payment_success.php?session_id={CHECKOUT_SESSION_ID}&order_id=' . $order_id,
+        'cancel_url'  => $domain . '/payment_cancel.php?order_id=' . $order_id,
         'metadata' => [
-            'member_id' => $member_id
+            'member_id' => $member_id,
+            'order_id' => $order_id
         ],
-        'billing_address_collection' => 'required',
-        'shipping_address_collection' => [
-            'allowed_countries' => ['MY'],
-        ],
+        'customer_email' => $_SESSION['member']['email'] ?? null,
     ]);
 
     // Redirect to Stripe Checkout

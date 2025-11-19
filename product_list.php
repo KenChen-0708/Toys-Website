@@ -69,7 +69,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
           <li><a href="/index.php" class="nav__link">Home</a></li>
-          <li><a href="/product_list.php" class="nav__link active-link">Product</a></li>
+          <li><a href="/pages/product/product_list.php" class="nav__link active-link">Product</a></li>
           <li><a href="/accounts.php" class="nav__link">My Account</a></li>
           <li><a href="/compare.php" class="nav__link">Compare</a></li>
         </ul>

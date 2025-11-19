@@ -991,7 +991,7 @@ try {
       $(document).on('click', '.item-image-container, .item-details h3', function() {
         const productId = $(this).closest('.wishlist-item').data('product-id');
         if (productId) {
-          window.location.href = 'product_details.php?id=' + productId;
+          window.location.href = 'pages/product/product_details.php?id=' + productId;
         }
       });
     });
@@ -999,3 +999,4 @@ try {
 </body>
 
 </html>
+

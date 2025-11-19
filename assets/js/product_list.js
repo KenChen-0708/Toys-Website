@@ -131,7 +131,7 @@ $(document).ready(function() {
     $('#loadingOverlay').addClass('active');
 
     $.ajax({
-      url: 'ajax/load-products.php',
+      url: 'load_products.php',
       method: 'GET',
       data: params,
       dataType: 'json',
@@ -199,11 +199,11 @@ $(document).ready(function() {
         <article class="product-card">
           <div class="product-image-wrapper">
             <a href="product_details.php?id=${product.product_id}" class="product-link">
-              <img src="${escapeHtml(product.main_image_path)}" 
+              <img src="../../${escapeHtml(product.main_image_path)}" 
                    alt="${escapeHtml(product.name)}" 
                    class="product-image primary" 
                    loading="lazy" />
-              <img src="${escapeHtml(hoverImage)}" 
+              <img src="../../${escapeHtml(hoverImage)}" 
                    alt="${escapeHtml(product.name)}" 
                    class="product-image secondary" 
                    loading="lazy" />
@@ -331,7 +331,7 @@ $(document).ready(function() {
     $btn.html('<i class="fi fi-rs-spinner"></i>');
 
     $.ajax({
-      url: 'cart_actions.php',
+      url: '../cart/cart_actions.php',
       method: 'POST',
       data: {
         action: 'add',
@@ -372,7 +372,7 @@ $(document).ready(function() {
     const isActive = $btn.hasClass('active');
     
     $.ajax({
-      url: 'wishlist_actions.php',
+      url: '../wishlist/wishlist_actions.php',
       method: 'POST',
       data: {
         action: isActive ? 'remove' : 'add',
@@ -404,7 +404,7 @@ $(document).ready(function() {
    */
   function loadCartCount() {
     $.ajax({
-      url: 'get_cart_count.php',
+      url: '../cart/get_cart_count.php',
       method: 'GET',
       dataType: 'json',
       success: function(response) {
