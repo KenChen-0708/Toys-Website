@@ -2,12 +2,15 @@
 // Make sure session is started somewhere before this file is included
 // session_start();
 
+require_once __DIR__ . '/../helper/auth.php';
+
 $current_page = basename($_SERVER['PHP_SELF']); 
 
 // Prepare admin data safely
 $adminData   = $_SESSION['admin'] ?? [];
 $adminName   = $adminData['username'] ?? $adminData['name'] ?? 'Admin';
 $adminEmail  = $adminData['email'] ?? '';
+$adminRole   = get_admin_role();
 $adminInitial = strtoupper(substr($adminName, 0, 1));
 ?>
 
@@ -23,61 +26,77 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
 	</div>
 
 	<nav class="nav">
+		<?php if (can_access_page('admin_dashboard.php')): ?>
 		<a href="admin_dashboard.php" 
 		   class="nav-item <?= ($current_page == 'admin_dashboard.php') ? 'active' : '' ?>"
 		   title="Dashboard">
 			<span class="icon">📊</span>
 			<span class="nav-text">Dashboard</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('manage_member.php')): ?>
 		<a href="manage_member.php" 
 		   class="nav-item <?= ($current_page == 'manage_member.php') ? 'active' : '' ?>"
 		   title="Members">
 			<span class="icon">👥</span>
 			<span class="nav-text">Members</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('manage_admin.php')): ?>
 		<a href="manage_admin.php" 
 		   class="nav-item <?= ($current_page == 'manage_admin.php') ? 'active' : '' ?>"
 		   title="Admins">
 			<span class="icon">🧑‍💼</span>
 			<span class="nav-text">Admins</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('manage_orders.php')): ?>
 		<a href="manage_orders.php"
 		   class="nav-item <?= ($current_page == 'manage_orders.php') ? 'active' : '' ?>"
 		   title="Orders">
 			<span class="icon">🛒</span>
 			<span class="nav-text">Orders</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('manage_product.php')): ?>
 		<a href="manage_product.php" 
 		   class="nav-item <?= ($current_page == 'manage_product.php') ? 'active' : '' ?>"
 		   title="Products">
 			<span class="icon">📦</span>
 			<span class="nav-text">Products</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('feedback_management.php')): ?>
 		<a href="feedback_management.php"
 		   class="nav-item <?= ($current_page == 'feedback_management.php') ? 'active' : '' ?>"
 		   title="Feedback">
 			<span class="icon">💬</span>
 			<span class="nav-text">Feedback</span>
 		</a>
+		<?php endif; ?>
 
+		<?php if (can_access_page('analytics.php')): ?>
 		<a href="analytics.php"
 		   class="nav-item <?= ($current_page == 'analytics.php') ? 'active' : '' ?>"
 		   title="Analytics">
 			<span class="icon">📈</span>
 			<span class="nav-text">Analytics</span>
 		</a>
+		<?php endif; ?>
 
-		<a href="settings.php"
-		   class="nav-item <?= ($current_page == 'settings.php') ? 'active' : '' ?>"
-		   title="Settings">
-			<span class="icon">⚙️</span>
-			<span class="nav-text">Settings</span>
+		<?php if (get_admin_role() === 'super admin'): ?>
+		<a href="manage_permissions.php"
+		   class="nav-item <?= ($current_page == 'manage_permissions.php') ? 'active' : '' ?>"
+		   title="Permissions">
+			<span class="icon">🔐</span>
+			<span class="nav-text">Permissions</span>
 		</a>
+		<?php endif; ?>
 
 		<!-- Admin Info & Logout Section -->
 		<hr class="nav-separator">
@@ -98,7 +117,7 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
 				<?php endif; ?>
 
 				<div class="admin-role">
-					Admin
+					<?= htmlspecialchars(ucwords($adminRole), ENT_QUOTES, 'UTF-8') ?>
 				</div>
 			</div>
 		</div>

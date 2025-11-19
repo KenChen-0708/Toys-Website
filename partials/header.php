@@ -1,15 +1,32 @@
 <?php
   require_once  __DIR__ . '/../helper/auth.php';
+  require_once  __DIR__ . '/../helper/pdo_connection.php';
 
-  function user_initials($username) {
-    $parts = preg_split('/\s+/', trim((string)$username));
-    $first = mb_substr($parts[0] ?? '', 0, 1);
-    $second = mb_substr($parts[1] ?? '', 0, 1);
-    return mb_strtoupper($first . $second ?: $first);
+  if (!function_exists('user_initials')) {
+    function user_initials($username) {
+      $parts = preg_split('/\s+/', trim((string)$username));
+      $first = mb_substr($parts[0] ?? '', 0, 1);
+      $second = mb_substr($parts[1] ?? '', 0, 1);
+      return mb_strtoupper($first . $second ?: $first);
+    }
   }
 
   // Get current page for active link
   $current_page = basename($_SERVER['PHP_SELF']);
+  
+  // Fetch profile photo for logged-in users
+  $profilePhotoPath = null;
+  $defaultInitials = '';
+  if (is_logged_in() && isset($_SESSION['member']['id'])) {
+    $memberId = $_SESSION['member']['id'];
+    $profileStmt = $pdo->prepare("SELECT profile_photo_path, username FROM Member WHERE member_id = ?");
+    $profileStmt->execute([$memberId]);
+    $profileData = $profileStmt->fetch(PDO::FETCH_ASSOC);
+    if ($profileData) {
+      $profilePhotoPath = $profileData['profile_photo_path'];
+      $defaultInitials = user_initials($profileData['username']);
+    }
+  }
 ?>
 <!--=============== HEADER ===============-->
     <header class="header">
@@ -26,8 +43,12 @@
             <?php if (is_logged_in()): ?>
               <div class="header__user-profile">
                 <button class="avatar-btn" aria-haspopup="true" aria-expanded="false">
-                  <span class="avatar-circle">
-                    <?= htmlspecialchars(user_initials($_SESSION['member']['username'])) ?>
+                  <span class="avatar-circle" id="headerAvatar">
+                    <?php if (!empty($profilePhotoPath) && file_exists(__DIR__ . '/..' . $profilePhotoPath)): ?>
+                      <img src="<?= htmlspecialchars($profilePhotoPath) ?>" alt="Profile photo">
+                    <?php else: ?>
+                      <?= htmlspecialchars($defaultInitials) ?>
+                    <?php endif; ?>
                   </span>
                 </button>
                 <div class="profile-menu">

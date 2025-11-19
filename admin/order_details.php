@@ -2,7 +2,7 @@
 session_start();
 require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
-require_admin();
+require_permission('orders', 'view');
 
 if (!$pdo) {
     die('Connection failed');
@@ -15,8 +15,11 @@ if (!isset($_GET['order_id'])) {
 $order_id = (int)$_GET['order_id'];
 
 try {
-    // Fetch order + member
-    $stmt = $pdo->prepare("SELECT o.*, m.username, m.email, m.phone_number FROM `Order` o JOIN Member m ON o.member_id = m.member_id WHERE o.order_id = ? LIMIT 1");
+    // Fetch order + member info with shipping address from Order table
+    $stmt = $pdo->prepare("SELECT o.*, m.username, m.email, m.phone_number
+                           FROM `Order` o 
+                           JOIN Member m ON o.member_id = m.member_id 
+                           WHERE o.order_id = ? LIMIT 1");
     $stmt->execute([$order_id]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
     
@@ -69,7 +72,19 @@ if ($order['status'] === 'Shipped') {
             <p><strong>Member:</strong> <?php echo htmlspecialchars($order['username']); ?> (<?php echo htmlspecialchars($order['email']); ?>)</p>
             <p><strong>Order Date:</strong> <?php echo $order['order_date']; ?></p>
             <p><strong>Status:</strong> <span class="status <?php echo $order['status']; ?>"><?php echo $order['status']; ?></span></p>
-            <p><strong>Shipping Address:</strong> <?php echo htmlspecialchars($order['shipping_address']); ?></p>
+            <p><strong>Shipping Address:</strong> 
+                <?php 
+                $addr_parts = array_filter([
+                    $order['shipping_address_line1'] ?? '',
+                    $order['shipping_address_line2'] ?? '',
+                    $order['shipping_city'] ?? '',
+                    $order['shipping_state'] ?? '',
+                    $order['shipping_postal_code'] ?? '',
+                    $order['shipping_country'] ?? ''
+                ]);
+                echo htmlspecialchars(implode(', ', $addr_parts)); 
+                ?>
+            </p>
             <p><strong>Estimated Delivery:</strong> <?php echo $eta; ?></p>
             <p><strong>Total:</strong> RM<?php echo number_format($order['total_amount'], 2); ?></p>
         </div>

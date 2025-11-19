@@ -3,13 +3,13 @@ require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: ./login.php');
-  exit;
+    header('Location: ./login.php');
+    exit;
 }
 
 if (!verify_csrf($_POST['csrf_token'] ?? '')) {
-  http_response_code(403);
-  die('Invalid CSRF token');
+    http_response_code(403);
+    exit('Invalid CSRF token');
 }
 
 $username = trim($_POST['username'] ?? '');
@@ -18,54 +18,70 @@ $password = $_POST['password'] ?? '';
 $_SESSION['old'] = ['username' => $username];
 $errors = [];
 
-/**
- * Handle Remember Me cookie
- * - If checked: always store current username (even if login fails)
- * - If unchecked: always remove cookie (even if login fails)
- */
+// Failed attempts (before this try)
+$failedBefore = $_SESSION['failed_login_count'] ?? 0;
+// CAPTCHA required after 3 failed attempts
+$requireCaptcha = $failedBefore >= 3;
+
+// Remember Me
 if (!empty($_POST['remember'])) {
-    // Set / update cookie for 30 days
-    setcookie('remember_username', $username, time() + 60*60*24*30, '/', '', false, true);
+    setcookie('remember_username', $username, time() + 86400 * 30, '/', '', false, true);
 } else {
-    // Remove cookie if it exists
-    if (isset($_COOKIE['remember_username'])) {
-        setcookie('remember_username', '', time() - 3600, '/', '', false, true);
+    setcookie('remember_username', '', time() - 3600, '/', '', false, true);
+}
+
+// Basic validation
+if (!$username || strlen($password) < 6) {
+    $errors[] = "Invalid username or password.";
+}
+
+// reCAPTCHA server verification
+if ($requireCaptcha) {
+    $secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
+    $response = $_POST['g-recaptcha-response'] ?? '';
+
+    $captchaOk = false;
+
+    if ($response) {
+        $verify = file_get_contents(
+            "https://www.google.com/recaptcha/api/siteverify?secret={$secret}&response={$response}&remoteip={$_SERVER['REMOTE_ADDR']}"
+        );
+        $verify = json_decode($verify, true);
+
+        if (!empty($verify['success'])) {
+            $captchaOk = true;
+        }
+    }
+
+    if (!$captchaOk) {
+        $errors[] = "Invalid username or password.";
     }
 }
 
-/* Minimal validation */
-if (!$username) {
-  $errors[] = 'Invalid username or password.';
-}
-if (strlen($password) < 6) {
-  $errors[] = 'Invalid username or password.';
-}
-
 if (!$errors) {
-  $stmt = $pdo->prepare("
-    SELECT member_id, username, email, password
-    FROM Member
-    WHERE BINARY username = ?
-  ");
-  $stmt->execute([$username]);
-  $user = $stmt->fetch(PDO::FETCH_ASSOC);
+    $stmt = $pdo->prepare("SELECT member_id, username, email, password FROM Member WHERE BINARY username = ?");
+    $stmt->execute([$username]);
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-  if ($user && password_verify($password, $user['password'])) {
+    if ($user && password_verify($password, $user['password'])) {
+        $_SESSION['member'] = [
+            'id' => $user['member_id'],
+            'username' => $user['username'],
+            'email' => $user['email'],
+        ];
 
-    $_SESSION['member'] = [
-      'id'    => $user['member_id'],
-      'username'  => $user['username'],
-      'email' => $user['email'],
-    ];
+        unset($_SESSION['failed_login_count']);
+        unset($_SESSION['old']);
 
-    unset($_SESSION['old']);
-    header('Location: ../index.php');
-    exit;
-  }
+        header('Location: ../index.php');
+        exit;
+    }
 
-  // Generic error message (prevents user enumeration)
-  $errors[] = 'Invalid username or password.';
+    $errors[] = "Invalid username or password.";
 }
+
+// Login failed → increment fail count
+$_SESSION['failed_login_count'] = $failedBefore + 1;
 
 $_SESSION['errors'] = $errors;
 header('Location: ./login.php');

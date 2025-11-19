@@ -131,6 +131,11 @@ table {
   gap: 1.5rem;
 }
 
+.grid.two {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
 .section {
   padding-block: 2rem;
 }
@@ -557,6 +562,50 @@ table {
   font-size: var(--small-font-size);
 }
 
+.form__label span {
+  display: inline-block;
+  margin-bottom: 0.35rem;
+  font-weight: var(--weight-600);
+  font-size: var(--small-font-size);
+}
+
+.form__btn {
+  margin-top: 0.75rem;
+}
+
+.form__btn .btn {
+  width: auto;
+  min-width: 150px;
+}
+
+.placed__order-table th,
+.placed__order-table td {
+  padding: 0.65rem 0.5rem;
+  font-size: var(--small-font-size);
+  text-align: left;
+}
+
+.placed__order-table thead {
+  background-color: var(--container-color);
+}
+
+.placed__order-table tbody tr:nth-child(even) {
+  background-color: #f9fafb;
+}
+
+.placed__order-table .view__order {
+  color: var(--first-color);
+  font-weight: var(--weight-600);
+  font-size: var(--small-font-size);
+}
+
+/* Alerts on account page use existing .alert styles; add success variant */
+.alert--success {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
+
 
 /*=============== BREAKPOINTS ===============*/
 /* For large devices */
@@ -692,8 +741,9 @@ table {
     right: 36px;
   }
 
-  .account__tab {
-    padding: 0.75rem 1rem;
+  .account__tabs {
+    position: sticky;
+    top: 6rem;
   }
 
   .checkout__group:nth-child(2) {
@@ -771,6 +821,14 @@ table {
     line-height: 35px;
   }
 
+  .account-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
   .newsletter__description {
     display: none;
   }
@@ -785,6 +843,11 @@ table {
   .login,
   .register {
     padding: 1.25rem;
+  }
+
+  .auth-card {
+    max-width: 700px;
+    padding: 2rem 2.5rem;
   }
 
   .table thead tr th:nth-child(1),
@@ -823,6 +886,10 @@ table {
     max-width: 570px;
   }
 
+  .grid.two {
+    grid-template-columns: 1fr;
+  }
+
   .products__container,
   .showcase__container,
   .footer__container,
@@ -847,6 +914,11 @@ table {
 
 /* For small devices */
 @media screen and (max-width: 576px) {
+  .auth-card {
+    max-width: 100%;
+    padding: 1.5rem 1.25rem;
+  }
+
   .category__item {
     padding-bottom: 1rem;
   }
@@ -1053,12 +1125,12 @@ table {
 
 .auth-card {
   width: 100%;
-  max-width: 520px;
+  max-width: 800px;
   background: rgba(255,255,255,.8);
   backdrop-filter: blur(10px);
   border: 1px solid #eef2f7;
   border-radius: 16px;
-  padding: 2rem;
+  padding: 2.5rem 3rem;
   box-shadow: 0 10px 30px rgba(16,24,40,.06);
   margin: 0 auto;
 }
@@ -1137,6 +1209,15 @@ table {
   color: #fff;
   font-weight: 700;
   font-size: 0.9rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.avatar-circle img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 

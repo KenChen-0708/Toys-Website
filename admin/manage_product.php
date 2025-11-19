@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once '../helper/pdo_connection.php';
+require_once '../helper/auth.php';
+require_permission('products', 'view');
 require_once 'product_functions.php';
 
 // Initialize variables

@@ -4,6 +4,15 @@ require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 // For now, reuse require_guest() so logged-in users can't hit admin login.
 require_guest();
+
+// ===== reCAPTCHA CONFIG (ADMIN) =====
+// Reuse the same site key as the member login:
+$recaptcha_site_key = '6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj';
+
+// How many failed admin attempts so far
+$failedAttempts  = $_SESSION['admin_failed_login_count'] ?? 0;
+// Require CAPTCHA after 3 failed attempts (starting from the 4th try)
+$requireCaptcha  = $failedAttempts >= 3;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -20,6 +29,9 @@ require_guest();
     <!--=============== CSS ===============-->
     <link rel="stylesheet" href="/assets/css/styles.css" />
 
+    <!-- Google reCAPTCHA v2 -->
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
     <title><?= htmlspecialchars($title) ?></title>
   </head>
   <body>
@@ -35,7 +47,7 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
 <style>
   /* Extra small visual tweaks for admin card */
   .auth-card--admin {
-    border-top: 4px solid #f97316;
+    border-top: 4px solid #167cf9ff;
   }
   .auth-badge-admin {
     display: inline-flex;
@@ -48,7 +60,7 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     background: #111827;
-    color: #f97316;
+    color: #8cb8eeff;
     margin-bottom: 0.5rem;
   }
 
@@ -94,6 +106,14 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
   .form__input.input--error {
     border-color: #b91c1c;
     box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.15);
+  }
+
+  /* CAPTCHA block */
+  .captcha-row {
+    margin-top: 0.75rem;
+  }
+  .captcha-row .g-recaptcha {
+    margin-top: 0.25rem;
   }
 </style>
 
@@ -168,6 +188,19 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
           </p>
         </div>
 
+        <!-- reCAPTCHA (shown only after 3 failed attempts) -->
+        <?php if ($requireCaptcha): ?>
+          <div class="form__row captcha-row">
+            <label class="form__label">Verification</label>
+            <div class="g-recaptcha"
+                 data-sitekey="<?= htmlspecialchars($recaptcha_site_key) ?>">
+            </div>
+            <p id="adminCaptchaHint" class="field-hint field-hint--visible">
+              Please complete the CAPTCHA verification.
+            </p>
+          </div>
+        <?php endif; ?>
+
         <!-- Remember / Back to member -->
         <div class="auth-meta">
           <label class="checkbox">
@@ -204,6 +237,10 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
     const passwordField = document.getElementById('admin_password');
     const usernameHint = document.getElementById('adminUsernameHint');
     const passwordHint = document.getElementById('adminPasswordHint');
+    const captchaHint = document.getElementById('adminCaptchaHint');
+
+    // Injected from PHP: whether CAPTCHA is currently required
+    const adminRequireCaptcha = <?= $requireCaptcha ? 'true' : 'false' ?>;
 
     // Store default hint texts
     const hintDefaults = {};
@@ -272,6 +309,16 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
       } else if (password.length < 6) {
         setError(passwordField, passwordHint, 'Password must be at least 6 characters.');
         isValid = false;
+      }
+
+      // If CAPTCHA is required on this page, do a quick client-side check
+      if (adminRequireCaptcha && typeof grecaptcha !== 'undefined' && captchaHint) {
+        const response = grecaptcha.getResponse();
+        clearError(null, captchaHint, hintDefaults['adminCaptchaHint'] || 'Please complete the CAPTCHA verification.');
+        if (!response) {
+          setError(null, captchaHint, 'Please complete the CAPTCHA verification.');
+          isValid = false;
+        }
       }
 
       return isValid;

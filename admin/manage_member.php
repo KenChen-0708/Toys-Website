@@ -5,8 +5,8 @@ session_start();
 require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
-// Ensure only admin can access
-require_admin();
+// Ensure only admin can access with proper permissions
+require_permission('members', 'view');
 
 $message = '';
 $message_type = '';
@@ -17,8 +17,82 @@ $phonePattern    = '/^0\d{1,2}-?\d{6,8}$/';
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
+    /**
+     * Common helper to sanitize checkbox-selected IDs.
+     */
+    $sanitizeIds = function ($input) {
+        $ids = [];
+        if (is_array($input)) {
+            foreach ($input as $rawId) {
+                if (ctype_digit((string)$rawId)) {
+                    $ids[] = (int)$rawId;
+                }
+            }
+        }
+        return array_values(array_unique($ids));
+    };
+
+    /** BATCH DELETE MEMBERS **/
+    if (isset($_POST['batch_delete_members'])) {
+        $selectedIds = $sanitizeIds($_POST['selected_members'] ?? []);
+
+        if (!empty($selectedIds)) {
+            try {
+                $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+                $stmt = $pdo->prepare("DELETE FROM Member WHERE member_id IN ($placeholders)");
+                $stmt->execute($selectedIds);
+
+                $message = count($selectedIds) . " member(s) deleted successfully!";
+                $message_type = "success";
+            } catch (PDOException $e) {
+                $message = "Error deleting selected members: " . $e->getMessage();
+                $message_type = "error";
+            }
+        } else {
+            $message = "Please select at least one member before deleting.";
+            $message_type = "error";
+        }
+    }
+
+    /** EXPORT SELECTED MEMBERS **/
+    if (isset($_POST['export_selected_members'])) {
+        $selectedIds = $sanitizeIds($_POST['selected_members'] ?? []);
+
+        if (!empty($selectedIds)) {
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=members_selected_export.csv');
+
+            $output = fopen('php://output', 'w');
+            fputcsv($output, ['member_id', 'username', 'email', 'phone_number', 'address', 'register_date']);
+
+            $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+            $stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, address, register_date FROM Member WHERE member_id IN ($placeholders) ORDER BY member_id ASC");
+            $stmt->execute($selectedIds);
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                fputcsv($output, [
+                    $row['member_id'],
+                    $row['username'],
+                    $row['email'],
+                    $row['phone_number'],
+                    $row['address'],
+                    $row['register_date']
+                ]);
+            }
+
+            fclose($output);
+            exit;
+        } else {
+            $message = "Please select at least one member before exporting.";
+            $message_type = "error";
+        }
+    }
+
     /** CREATE MEMBER **/
     if (isset($_POST['create_member'])) {
+        if (!has_permission('members', 'create')) {
+            $message = "You don't have permission to create members.";
+            $message_type = 'error';
+        } else {
         $username         = trim($_POST['username'] ?? '');
         $email        = trim($_POST['email'] ?? '');
         $phone        = trim($_POST['phone'] ?? '');
@@ -99,10 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = implode(' ', $errors);
             $message_type = 'error';
         }
+        }
     }
 
     /** UPDATE MEMBER **/
     if (isset($_POST['update_member'])) {
+        if (!has_permission('members', 'update')) {
+            $message = "You don't have permission to update members.";
+            $message_type = 'error';
+        } else {
         $id       = (int)($_POST['member_id'] ?? 0);
         $username     = trim($_POST['username'] ?? '');
         $email    = trim($_POST['email'] ?? '');
@@ -111,6 +190,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_pass = $_POST['new_password'] ?? '';
 
         $errors = [];
+
+        // Fetch existing member data for fallback (profile photo etc.)
+        $currentMemberStmt = $pdo->prepare("SELECT profile_photo_path FROM Member WHERE member_id = ?");
+        $currentMemberStmt->execute([$id]);
+        $currentMemberData = $currentMemberStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$currentMemberData) {
+            $errors[] = 'Member not found.';
+        }
 
         // Name validation
         if (strlen($username) < 3) {
@@ -134,6 +221,57 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // New password (optional but strong if provided)
         if ($new_pass !== '' && !preg_match($passwordPattern, $new_pass)) {
             $errors[] = 'New password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
+        }
+
+        $finalPhotoPath = $currentMemberData['profile_photo_path'] ?? null;
+        $pendingPhotoUpload = null;
+        $maxPhotoSize = 2 * 1024 * 1024; // 2MB
+
+        if (isset($_FILES['profile_photo']) && $_FILES['profile_photo']['error'] !== UPLOAD_ERR_NO_FILE) {
+            $photoFile = $_FILES['profile_photo'];
+
+            if ($photoFile['error'] !== UPLOAD_ERR_OK) {
+                $errors[] = 'Error uploading profile photo. Please try again.';
+            } elseif ($photoFile['size'] > $maxPhotoSize) {
+                $errors[] = 'Profile photo must be 2MB or smaller.';
+            } else {
+                $allowedMime = [
+                    'image/jpeg' => 'jpg',
+                    'image/png'  => 'png',
+                    'image/gif'  => 'gif',
+                    'image/webp' => 'webp'
+                ];
+
+                $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                $detectedMime = $finfo ? finfo_file($finfo, $photoFile['tmp_name']) : null;
+                if ($finfo) {
+                    finfo_close($finfo);
+                }
+
+                if (!$detectedMime || !isset($allowedMime[$detectedMime])) {
+                    $errors[] = 'Profile photo must be JPG, PNG, GIF, or WebP.';
+                } else {
+                    $uploadDir = __DIR__ . '/../assets/img/profile_photo/';
+                    if (!is_dir($uploadDir)) {
+                        if (!mkdir($uploadDir, 0777, true)) {
+                            $errors[] = 'Unable to create profile photo directory.';
+                        }
+                    }
+
+                    if (empty($errors)) {
+                        $extension = $allowedMime[$detectedMime];
+                        $safeName = 'member_' . $id . '_' . time() . '.' . $extension;
+                        $absolutePath = $uploadDir . $safeName;
+                        $relativePath = '/assets/img/profile_photo/' . $safeName;
+
+                        $pendingPhotoUpload = [
+                            'tmp_name' => $photoFile['tmp_name'],
+                            'destination' => $absolutePath
+                        ];
+                        $finalPhotoPath = $relativePath;
+                    }
+                }
+            }
         }
 
         // Uniqueness checks (exclude current member)
@@ -162,15 +300,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if (empty($errors) && $pendingPhotoUpload) {
+            if (!move_uploaded_file($pendingPhotoUpload['tmp_name'], $pendingPhotoUpload['destination'])) {
+                $errors[] = 'Failed to save profile photo.';
+            }
+        }
+
         if (empty($errors)) {
             try {
                 $stmt = $pdo->prepare("UPDATE Member SET 
                         username = ?,
                         email = ?,
                         phone_number = ?,
-                        address = ?
+                        address = ?,
+                        profile_photo_path = ?
                         WHERE member_id = ?");
-                $stmt->execute([$username, $email, $phone, $address, $id]);
+                $stmt->execute([$username, $email, $phone, $address, $finalPhotoPath, $id]);
 
                 // Optional password update
                 if ($new_pass !== '') {
@@ -189,10 +334,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = implode(' ', $errors);
             $message_type = 'error';
         }
+        }
     }
 
     /** DELETE MEMBER **/
     if (isset($_POST['delete_member'])) {
+        if (!has_permission('members', 'delete')) {
+            $message = "You don't have permission to delete members.";
+            $message_type = 'error';
+        } else {
         $id = (int)$_POST['member_id'];
         try {
             $stmt = $pdo->prepare("DELETE FROM Member WHERE member_id = ?");
@@ -202,6 +352,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (PDOException $e) {
             $message = "Error deleting member: " . $e->getMessage();
             $message_type = "error";
+        }
         }
     }
 
@@ -369,6 +520,75 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
             padding: 0;
         }
 
+        /* Member profile photo thumbnail */
+        .profile-photo-thumb {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+        }
+
+        .bulk-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .bulk-actions label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        .bulk-actions .btn {
+            min-width: 160px;
+        }
+        .bulk-actions .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .enhanced-checkbox {
+            width: 18px;
+            height: 18px;
+            transform: scale(1.2);
+            transform-origin: center;
+            cursor: pointer;
+        }
+        .row-checkbox {
+            accent-color: #2563eb;
+        }
+        .selectable-row {
+            cursor: pointer;
+            transition: background-color 0.18s ease;
+        }
+        .selectable-row:hover {
+            background-color: #f3f4f6;
+        }
+        .selectable-row.row-selected {
+            background-color: #fef3c7;
+        }
+
+        .profile-photo-preview {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+        .profile-photo-preview img {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+        }
+
         /* Hints & error formatting (similar to register/login) */
         .field-hint {
             font-size: 0.8rem;
@@ -410,7 +630,6 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
             <div style="display:flex; gap:10px; align-items:center;">
                 <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
                 <button class="btn btn-success" onclick="openCSVModalMember()">📁 Import CSV</button>
-                <a href="?export=members" class="btn btn-info">⬇️ Export CSV</a>
             </div>
         </div>
 
@@ -456,49 +675,85 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
         </div>
 
         <!-- Members Table -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <!-- data-column index must match the <td> order -->
-                        <th class="sortable" data-column="0" data-type="number">ID</th>
-                        <th class="sortable" data-column="1" data-type="string">Name</th>
-                        <th class="sortable" data-column="2" data-type="string">Email</th>
-                        <th class="sortable" data-column="3" data-type="string">Phone</th>
-                        <th class="sortable" data-column="4" data-type="string">Address</th>
-                        <th class="sortable" data-column="5" data-type="string">Register Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (count($members) > 0): ?>
-                        <?php foreach ($members as $m): ?>
+        <form method="POST" id="memberBulkForm">
+            <div class="bulk-actions">
+                <label>
+                    <input type="checkbox" id="select_all_members" class="enhanced-checkbox">
+                    Select All
+                </label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="submit" name="batch_delete_members" id="deleteSelectedMembersBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                    <button type="submit" name="export_selected_members" id="exportSelectedMembersBtn" class="btn btn-info" disabled>Export Selected CSV</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                    <thead>
                         <tr>
-                            <td><?= $m['member_id'] ?></td>
-                            <td><?= htmlspecialchars($m['username']) ?></td>
-                            <td><?= htmlspecialchars($m['email']) ?></td>
-                            <td><?= htmlspecialchars($m['phone_number']) ?></td>
-                            <td><?= htmlspecialchars($m['address']) ?></td>
-                            <td><?= $m['register_date'] ?></td>
-
-                            <td>
-                                <button class="btn btn-warning btn-sm"
-                                    onclick='openEditModal(<?= json_encode($m) ?>)'>
-                                    Edit
-                                </button>
-                                <button class="btn btn-danger btn-sm"
-                                    onclick="confirmDelete(<?= $m['member_id'] ?>)">
-                                    Delete
-                                </button>
-                            </td>
+                            <th style="width:40px;"></th>
+                            <!-- data-column index must match the <td> order -->
+                            <th class="sortable" data-column="1" data-type="number">ID</th>
+                            <th data-column="2">Profile Photo</th>
+                            <th class="sortable" data-column="3" data-type="string">Name</th>
+                            <th class="sortable" data-column="4" data-type="string">Email</th>
+                            <th class="sortable" data-column="5" data-type="string">Phone</th>
+                            <th class="sortable" data-column="6" data-type="string">Address</th>
+                            <th class="sortable" data-column="7" data-type="string">Register Date</th>
+                            <th>Actions</th>
                         </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="7" style="text-align:center;padding:40px;">No members found.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                    </thead>
+                    <tbody>
+                        <?php if (count($members) > 0): ?>
+                        <?php foreach ($members as $m): ?>
+                        <?php $rowCheckboxId = 'member-select-' . $m['member_id']; ?>
+                        <tr class="selectable-row" data-checkbox-id="<?= $rowCheckboxId ?>">
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        name="selected_members[]"
+                                        value="<?= $m['member_id'] ?>"
+                                        class="row-checkbox enhanced-checkbox"
+                                        id="<?= $rowCheckboxId ?>"
+                                    >
+                                </td>
+                                <td><?= $m['member_id'] ?></td>
+                                <td>
+                                    <?php
+                                        $profilePhotoPath = !empty($m['profile_photo_path'])
+                                            ? $m['profile_photo_path']
+                                            : '/assets/img/profile_photo/test.jpg';
+                                    ?>
+                                    <img
+                                        src="<?= htmlspecialchars($profilePhotoPath) ?>"
+                                        alt="Profile photo of <?= htmlspecialchars($m['username']) ?>"
+                                        class="profile-photo-thumb"
+                                    >
+                                </td>
+                                <td><?= htmlspecialchars($m['username']) ?></td>
+                                <td><?= htmlspecialchars($m['email']) ?></td>
+                                <td><?= htmlspecialchars($m['phone_number']) ?></td>
+                                <td><?= htmlspecialchars($m['address']) ?></td>
+                                <td><?= $m['register_date'] ?></td>
+
+                                <td>
+                                <button type="button" class="btn btn-warning btn-sm"
+                                    onclick='openEditModal(<?= json_encode($m) ?>)'>
+                                        Edit
+                                    </button>
+                                <button type="button" class="btn btn-danger btn-sm"
+                                        onclick="confirmDelete(<?= $m['member_id'] ?>)">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="9" style="text-align:center;padding:40px;">No members found.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </form>
 
     </div>
 </div>
@@ -634,7 +889,7 @@ alice,alice@example.com,AlicePass1!,,"34 Rose Ave, City"
             <button class="close" onclick="closeModal('editModal')">&times;</button>
         </div>
 
-        <form method="POST" id="editMemberForm" novalidate>
+        <form method="POST" id="editMemberForm" novalidate enctype="multipart/form-data">
             <input type="hidden" name="member_id" id="edit_member_id">
 
             <div class="form-group">
@@ -712,6 +967,24 @@ alice,alice@example.com,AlicePass1!,,"34 Rose Ave, City"
                 </p>
             </div>
 
+            <div class="form-group">
+                <label>Profile Photo (optional)</label>
+                <div class="profile-photo-preview">
+                    <img id="edit_profile_photo_preview" src="/assets/img/profile_photo/test.jpg" alt="Profile photo preview">
+                    <div>
+                        <input
+                            type="file"
+                            name="profile_photo"
+                            id="edit_profile_photo_input"
+                            accept="image/png, image/jpeg, image/jpg, image/webp, image/gif"
+                        >
+                        <p class="field-hint field-hint--visible" style="margin:6px 0 0 0;">
+                            Max 2MB. Accepted formats: JPG, PNG, GIF, WebP.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             <button type="submit" name="update_member" class="btn btn-success">Update</button>
         </form>
     </div>
@@ -738,6 +1011,20 @@ function openEditModal(data) {
     document.getElementById('edit_phone').value = data.phone_number;
     document.getElementById('edit_address').value = data.address;
 
+    const preview = document.getElementById('edit_profile_photo_preview');
+    if (preview) {
+        const fallbackPhoto = '/assets/img/profile_photo/test.jpg';
+        const src = data.profile_photo_path && data.profile_photo_path.trim() !== ''
+            ? data.profile_photo_path
+            : fallbackPhoto;
+        preview.src = src;
+        preview.alt = `Profile photo of ${data.username}`;
+    }
+    const fileInput = document.getElementById('edit_profile_photo_input');
+    if (fileInput) {
+        fileInput.value = '';
+    }
+
     document.getElementById('editModal').style.display = 'block';
 }
 
@@ -750,6 +1037,100 @@ function confirmDelete(id) {
 
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
+}
+
+function setupBulkSelect(config) {
+    const form = document.getElementById(config.formId);
+    if (!form) return;
+
+    const selectAll = document.getElementById(config.selectAllId);
+    const deleteBtn = document.getElementById(config.deleteButtonId);
+    const exportBtn = document.getElementById(config.exportButtonId);
+    const checkboxSelector = `input[name="${config.checkboxName}"]`;
+
+    const getRowCheckboxes = () =>
+        Array.from(form.querySelectorAll(checkboxSelector)).filter(cb => !cb.disabled);
+
+    function updateRowHighlights() {
+        getRowCheckboxes().forEach(cb => {
+            const row = cb.closest('.selectable-row');
+            if (row) {
+                row.classList.toggle('row-selected', cb.checked);
+            }
+        });
+    }
+
+    function updateButtons() {
+        const anyChecked = getRowCheckboxes().some(cb => cb.checked);
+        [deleteBtn, exportBtn].forEach(btn => {
+            if (btn) {
+                btn.disabled = !anyChecked;
+            }
+        });
+        updateRowHighlights();
+    }
+
+    function syncSelectAll() {
+        if (!selectAll) return;
+        const checkboxes = getRowCheckboxes();
+        if (checkboxes.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+        const checkedCount = checkboxes.filter(cb => cb.checked).length;
+        if (checkedCount === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checkedCount === checkboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+
+    selectAll?.addEventListener('change', () => {
+        const checkboxes = getRowCheckboxes();
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+        });
+        selectAll.indeterminate = false;
+        updateButtons();
+    });
+
+    form.addEventListener('change', (event) => {
+        if (event.target.matches(checkboxSelector)) {
+            updateButtons();
+            syncSelectAll();
+        }
+    });
+
+    updateButtons();
+    syncSelectAll();
+}
+
+function setupRowClickSelection(rowSelector) {
+    document.querySelectorAll(rowSelector).forEach(row => {
+        const checkboxId = row.getAttribute('data-checkbox-id');
+        if (!checkboxId) return;
+        const checkbox = document.getElementById(checkboxId);
+        if (!checkbox) return;
+
+        row.addEventListener('click', (event) => {
+            if (event.target === checkbox) {
+                return;
+            }
+            const interactive = event.target.closest('a, button, input, label, select, textarea');
+            if (interactive) {
+                return;
+            }
+            if (checkbox.disabled) return;
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
 }
 
 /* ===== TABLE SORTING (CLIENT-SIDE) ===== */
@@ -1020,6 +1401,16 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+    
+    setupBulkSelect({
+        formId: 'memberBulkForm',
+        checkboxName: 'selected_members[]',
+        selectAllId: 'select_all_members',
+        deleteButtonId: 'deleteSelectedMembersBtn',
+        exportButtonId: 'exportSelectedMembersBtn'
+    });
+
+    setupRowClickSelection('#memberBulkForm .selectable-row');
 });
 </script>
 

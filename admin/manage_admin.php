@@ -2,7 +2,7 @@
 session_start();
 include '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
-require_admin();
+require_permission('admins', 'view');
 
 $message = '';
 $message_type = '';
@@ -14,7 +14,7 @@ $currentAdminId = $_SESSION['admin']['id'] ?? 0;
 $passwordPattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/';
 
 /* ========== SORTING SETUP ========== */
-$allowedSortColumns = ['admin_id', 'username', 'email'];   // columns you allow sorting
+$allowedSortColumns = ['admin_id', 'username', 'email', 'role'];   // columns you allow sorting
 $sort = isset($_GET['sort']) ? $_GET['sort'] : 'admin_id';
 $order = isset($_GET['order']) ? strtolower($_GET['order']) : 'asc';
 
@@ -31,11 +31,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $errors = [];
 
+    /**
+     * Helper to sanitize checkbox-selected IDs.
+     */
+    $sanitizeIds = function ($input) {
+        $ids = [];
+        if (is_array($input)) {
+            foreach ($input as $rawId) {
+                if (ctype_digit((string)$rawId)) {
+                    $ids[] = (int)$rawId;
+                }
+            }
+        }
+        return array_values(array_unique($ids));
+    };
+
+    /** BATCH DELETE ADMINS **/
+    if (isset($_POST['batch_delete_admins'])) {
+        $selectedIds = $sanitizeIds($_POST['selected_admins'] ?? []);
+        $initialCount = count($selectedIds);
+        $selectedIds = array_values(array_filter($selectedIds, function ($id) use ($currentAdminId) {
+            return $id !== (int)$currentAdminId;
+        }));
+        $skippedSelf = $initialCount !== count($selectedIds);
+
+        if (!empty($selectedIds)) {
+            try {
+                $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+                $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id IN ($placeholders)");
+                $stmt->execute($selectedIds);
+
+                $message = count($selectedIds) . " admin(s) deleted successfully!";
+                if ($skippedSelf) {
+                    $message .= " Your own admin account was skipped.";
+                }
+                $message_type = "success";
+            } catch (PDOException $e) {
+                $message = "Error deleting selected admins: " . $e->getMessage();
+                $message_type = "error";
+            }
+        } else {
+            $message = $skippedSelf
+                ? "You cannot delete your own admin account."
+                : "Please select at least one admin before deleting.";
+            $message_type = "error";
+        }
+    }
+
+    /** EXPORT SELECTED ADMINS **/
+    if (isset($_POST['export_selected_admins'])) {
+        $selectedIds = $sanitizeIds($_POST['selected_admins'] ?? []);
+
+        if (!empty($selectedIds)) {
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=admins_selected_export.csv');
+
+            $output = fopen('php://output', 'w');
+            fputcsv($output, ['admin_id', 'username', 'email', 'role']);
+
+            $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+            $stmt = $pdo->prepare("SELECT admin_id, username, email, role FROM Admin WHERE admin_id IN ($placeholders) ORDER BY admin_id ASC");
+            $stmt->execute($selectedIds);
+
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                fputcsv($output, [$row['admin_id'], $row['username'], $row['email'], $row['role']]);
+            }
+
+            fclose($output);
+            exit;
+        } else {
+            $message = "Please select at least one admin before exporting.";
+            $message_type = "error";
+        }
+    }
+
     /** CREATE ADMIN **/
     if (isset($_POST['create_admin'])) {
         $username         = trim($_POST['username'] ?? '');
         $email        = trim($_POST['email'] ?? '');
         $password_raw = $_POST['password'] ?? '';
+        $role         = trim($_POST['role'] ?? 'user admin');
 
         // SERVER-SIDE VALIDATION (username/email/password)
         // Name – same style as member register
@@ -81,8 +156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $password = password_hash($password_raw, PASSWORD_BCRYPT);
 
             try {
-                $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
-                $stmt->execute([$username, $email, $password]);
+                $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password, role) VALUES (?, ?, ?, ?)");
+                $stmt->execute([$username, $email, $password, $role]);
                 $message = "Admin created successfully!";
                 $message_type = "success";
             } catch (PDOException $e) {
@@ -103,6 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username            = trim($_POST['username'] ?? '');
         $email           = trim($_POST['email'] ?? '');
         $new_password_raw = $_POST['new_password'] ?? '';
+        $role            = trim($_POST['role'] ?? 'user admin');
 
         // SERVER-SIDE VALIDATION (username/email)
         if (strlen($username) < 3) {
@@ -144,8 +220,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = 'error';
         } else {
             try {
-                $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ? WHERE admin_id = ?");
-                $stmt->execute([$username, $email, $id]);
+                $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ?, role = ? WHERE admin_id = ?");
+                $stmt->execute([$username, $email, $role, $id]);
 
                 // Update password if provided
                 if (!empty($new_password_raw)) {
@@ -198,11 +274,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $pdo->beginTransaction();
 
                     while (($data = fgetcsv($handle)) !== false) {
-                        // Expect username,email,password (password REQUIRED)
+                        // Expect username,email,password,role (password REQUIRED, role optional)
                         if (count($data) >= 3) {
                             $username = trim($data[0]);
                             $email = trim($data[1]);
                             $password_raw = trim($data[2]);
+                            $role = isset($data[3]) ? trim($data[3]) : 'user admin';
 
                             if (empty($username) || empty($email) || $password_raw === '') {
                                 // missing required field
@@ -220,8 +297,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $password_hash = password_hash($password_raw, PASSWORD_BCRYPT);
 
-                            $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password) VALUES (?, ?, ?)");
-                            $stmt->execute([$username, $email, $password_hash]);
+                            $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password, role) VALUES (?, ?, ?, ?)");
+                            $stmt->execute([$username, $email, $password_hash, $role]);
                             $successCount++;
                         } else {
                             $errorCount++;
@@ -253,11 +330,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'admins') {
     header('Content-Disposition: attachment; filename=admins_export.csv');
 
     $output = fopen('php://output', 'w');
-    fputcsv($output, ['admin_id', 'username', 'email']);
+    fputcsv($output, ['admin_id', 'username', 'email', 'role']);
 
-    $stmt = $pdo->query("SELECT admin_id, username, email FROM Admin ORDER BY admin_id ASC");
+    $stmt = $pdo->query("SELECT admin_id, username, email, role FROM Admin ORDER BY admin_id ASC");
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        fputcsv($output, [$row['admin_id'], $row['username'], $row['email']]);
+        fputcsv($output, [$row['admin_id'], $row['username'], $row['email'], $row['role']]);
     }
 
     fclose($output);
@@ -270,8 +347,9 @@ $search = isset($_GET['search']) ? trim($_GET['search']) : '';
 $sql = "SELECT * FROM Admin WHERE 1=1";
 $params = [];
 if (!empty($search)) {
-    $sql .= " AND (username LIKE ? OR email LIKE ?)";
+    $sql .= " AND (username LIKE ? OR email LIKE ? OR role LIKE ?)";
     $searchParam = "%$search%";
+    $params[] = $searchParam;
     $params[] = $searchParam;
     $params[] = $searchParam;
 }
@@ -340,6 +418,50 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             padding: 0;
         }
 
+        .bulk-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .bulk-actions label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        .bulk-actions .btn {
+            min-width: 160px;
+        }
+        .bulk-actions .btn:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .enhanced-checkbox {
+            width: 18px;
+            height: 18px;
+            transform: scale(1.2);
+            transform-origin: center;
+            cursor: pointer;
+        }
+        .row-checkbox {
+            accent-color: #2563eb;
+        }
+        .selectable-row {
+            cursor: pointer;
+            transition: background-color 0.18s ease;
+        }
+        .selectable-row:hover {
+            background-color: #f3f4f6;
+        }
+        .selectable-row.row-selected {
+            background-color: #fef3c7;
+        }
+
         /* Hints & error formatting (similar to register/login) */
         .field-hint {
             font-size: 0.8rem;
@@ -377,7 +499,6 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             <div style="display:flex; gap:10px; align-items:center;">
                 <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
                 <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
-                <a href="?export=admins" class="btn btn-info">⬇️ Export CSV</a>
             </div>
         </div>
 
@@ -409,42 +530,68 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
         </div>
 
         <!-- Admins Table -->
-        <div class="table-container">
-            <table>
-               <thead>
-                    <tr>
-                        <th class="sortable" data-column="0" data-type="number">ID</th>
-                        <th class="sortable" data-column="1" data-type="string">Name</th>
-                        <th class="sortable" data-column="2" data-type="string">Email</th>
-                        <th>Actions</th>
-                    </tr>
-               </thead>
-
-                <tbody>
-                    <?php if ($admins && count($admins) > 0): ?>
-                        <?php foreach ($admins as $a): ?>
+        <form method="POST" id="adminBulkForm">
+            <div class="bulk-actions">
+                <label>
+                    <input type="checkbox" id="select_all_admins" class="enhanced-checkbox">
+                    Select All
+                </label>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                    <button type="submit" name="export_selected_admins" id="exportSelectedAdminsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
+                </div>
+            </div>
+            <div class="table-container">
+                <table>
+                   <thead>
                         <tr>
-                            <td><?= $a['admin_id'] ?></td>
-                            <td><?= htmlspecialchars($a['username']) ?></td>
-                            <td><?= htmlspecialchars($a['email']) ?></td>
-                            <td>
-                                <button class="btn btn-warning btn-sm"
-                                    onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
-                                <?php if ((int)$a['admin_id'] !== (int)$currentAdminId): ?>
-                                    <button class="btn btn-danger btn-sm"
-                                        onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
-                                <?php else: ?>
-                                    <span style="color:#777; font-size:0.85rem;">(You)</span>
-                                <?php endif; ?>
-                            </td>
+                            <th style="width:40px;"></th>
+                            <th class="sortable" data-column="1" data-type="number">ID</th>
+                            <th class="sortable" data-column="2" data-type="string">Name</th>
+                            <th class="sortable" data-column="3" data-type="string">Email</th>
+                            <th class="sortable" data-column="4" data-type="string">Role</th>
+                            <th>Actions</th>
                         </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="4" style="text-align:center;padding:40px;">No admins found.</td></tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
+                   </thead>
+
+                    <tbody>
+                        <?php if ($admins && count($admins) > 0): ?>
+                            <?php foreach ($admins as $a): ?>
+                            <?php $adminCheckboxId = 'admin-select-' . $a['admin_id']; ?>
+                            <tr class="selectable-row" data-checkbox-id="<?= $adminCheckboxId ?>">
+                                <td>
+                                    <input
+                                        type="checkbox"
+                                        name="selected_admins[]"
+                                        value="<?= $a['admin_id'] ?>"
+                                        class="row-checkbox enhanced-checkbox"
+                                        id="<?= $adminCheckboxId ?>"
+                                        <?= (int)$a['admin_id'] === (int)$currentAdminId ? 'disabled title="You cannot delete your own account."' : '' ?>
+                                    >
+                                </td>
+                                <td><?= $a['admin_id'] ?></td>
+                                <td><?= htmlspecialchars($a['username']) ?></td>
+                                <td><?= htmlspecialchars($a['email']) ?></td>
+                                <td><?= htmlspecialchars($a['role'] ?? 'user admin') ?></td>
+                                <td>
+                                    <button type="button" class="btn btn-warning btn-sm"
+                                        onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
+                                    <?php if ((int)$a['admin_id'] !== (int)$currentAdminId): ?>
+                                        <button type="button" class="btn btn-danger btn-sm"
+                                            onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
+                                    <?php else: ?>
+                                        <span style="color:#777; font-size:0.85rem;">(You)</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="6" style="text-align:center;padding:40px;">No admins found.</td></tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -460,6 +607,8 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
             <ul style="margin:0 0 8px 18px;color:#374151;">
                 <li><strong>Required columns:</strong> <code>username,email,password</code></li>
+                <li><strong>Optional column:</strong> <code>role</code> (defaults to 'user admin' if not provided)</li>
+                <li><strong>Available roles:</strong> super admin, user admin, admin manager, product admin, order admin, support admin, analyst</li>
                 <li>Rows with existing usernames or emails will be skipped (they are not overwritten).</li>
             </ul>
 
@@ -468,9 +617,9 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
                 <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
             </div>
 
-            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password
-admin2,admin2@example.com,Secret123!
-jane_admin,jane@example.com,Password!234
+            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password,role
+admin2,admin2@example.com,Secret123!,user admin
+jane_admin,jane@example.com,Password!234,super admin
 </pre>
         </div>
         <form method="POST" enctype="multipart/form-data">
@@ -515,6 +664,22 @@ jane_admin,jane@example.com,Password!234
                 <p id="create_email_hint" class="field-hint">
                     Use a valid email like name@example.com.
                 </p>
+            </div>
+            <div class="form-group">
+                <label>Role *</label>
+                <select
+                    name="role"
+                    id="create_role"
+                    required
+                >
+                    <option value="super admin">Super Admin</option>
+                    <option value="user admin">User Admin</option>
+                    <option value="admin manager">Admin Manager</option>
+                    <option value="product admin">Product Admin</option>
+                    <option value="order admin">Order Admin</option>
+                    <option value="support admin">Support Admin</option>
+                    <option value="analyst">Analyst</option>
+                </select>
             </div>
             <div class="form-group">
                 <label>Password *</label>
@@ -582,6 +747,22 @@ jane_admin,jane@example.com,Password!234
                 </p>
             </div>
             <div class="form-group">
+                <label>Role *</label>
+                <select
+                    name="role"
+                    id="edit_role"
+                    required
+                >
+                    <option value="super admin">Super Admin</option>
+                    <option value="user admin">User Admin</option>
+                    <option value="admin manager">Admin Manager</option>
+                    <option value="product admin">Product Admin</option>
+                    <option value="order admin">Order Admin</option>
+                    <option value="support admin">Support Admin</option>
+                    <option value="analyst">Analyst</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>New Password (optional)</label>
                 <div class="input-with-icon">
                     <input
@@ -625,6 +806,7 @@ function openEditModal(data) {
     document.getElementById('edit_admin_id').value = data.admin_id;
     document.getElementById('edit_name').value = data.username;
     document.getElementById('edit_email').value = data.email;
+    document.getElementById('edit_role').value = data.role || 'user admin';
     document.getElementById('editModal').style.display = 'block';
 }
 function confirmDelete(id) {
@@ -635,6 +817,100 @@ function confirmDelete(id) {
 }
 function closeModal(modalId) {
     document.getElementById(modalId).style.display = 'none';
+}
+
+function setupBulkSelect(config) {
+    const form = document.getElementById(config.formId);
+    if (!form) return;
+
+    const selectAll = document.getElementById(config.selectAllId);
+    const deleteBtn = document.getElementById(config.deleteButtonId);
+    const exportBtn = document.getElementById(config.exportButtonId);
+    const checkboxSelector = `input[name="${config.checkboxName}"]`;
+
+    const getRowCheckboxes = () =>
+        Array.from(form.querySelectorAll(checkboxSelector)).filter(cb => !cb.disabled);
+
+    function updateRowHighlights() {
+        getRowCheckboxes().forEach(cb => {
+            const row = cb.closest('.selectable-row');
+            if (row) {
+                row.classList.toggle('row-selected', cb.checked);
+            }
+        });
+    }
+
+    function updateButtons() {
+        const anyChecked = getRowCheckboxes().some(cb => cb.checked);
+        [deleteBtn, exportBtn].forEach(btn => {
+            if (btn) {
+                btn.disabled = !anyChecked;
+            }
+        });
+        updateRowHighlights();
+    }
+
+    function syncSelectAll() {
+        if (!selectAll) return;
+        const checkboxes = getRowCheckboxes();
+        if (checkboxes.length === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+            return;
+        }
+        const checkedCount = checkboxes.filter(cb => cb.checked).length;
+        if (checkedCount === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (checkedCount === checkboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+
+    selectAll?.addEventListener('change', () => {
+        const checkboxes = getRowCheckboxes();
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+        });
+        selectAll.indeterminate = false;
+        updateButtons();
+    });
+
+    form.addEventListener('change', (event) => {
+        if (event.target.matches(checkboxSelector)) {
+            updateButtons();
+            syncSelectAll();
+        }
+    });
+
+    updateButtons();
+    syncSelectAll();
+}
+
+function setupRowClickSelection(rowSelector) {
+    document.querySelectorAll(rowSelector).forEach(row => {
+        const checkboxId = row.getAttribute('data-checkbox-id');
+        if (!checkboxId) return;
+        const checkbox = document.getElementById(checkboxId);
+        if (!checkbox) return;
+
+        row.addEventListener('click', (event) => {
+            if (event.target === checkbox) {
+                return;
+            }
+            const interactive = event.target.closest('a, button, input, label, select, textarea');
+            if (interactive) {
+                return;
+            }
+            if (checkbox.disabled) return;
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+        });
+    });
 }
 
 /* ===== TABLE SORTING (CLIENT-SIDE) + password toggles + FORM VALIDATION ===== */
@@ -863,6 +1139,16 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     }
+
+    setupBulkSelect({
+        formId: 'adminBulkForm',
+        checkboxName: 'selected_admins[]',
+        selectAllId: 'select_all_admins',
+        deleteButtonId: 'deleteSelectedAdminsBtn',
+        exportButtonId: 'exportSelectedAdminsBtn'
+    });
+
+    setupRowClickSelection('#adminBulkForm .selectable-row');
 });
 </script>
 
