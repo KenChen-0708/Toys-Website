@@ -31,7 +31,7 @@ if ($product_id > 0) {
 }
 
 if (!$product) {
-  header("Location: product_list.php");
+  header("Location: pages/product/product_list.php");
   exit();
 }
 
@@ -1077,7 +1077,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       <div class="nav__menu">
         <ul class="nav__list">
           <li><a href="/index.php" class="nav__link">Home</a></li>
-          <li><a href="/product_list.php" class="nav__link active-link">Product</a></li>
+          <li><a href="/pages/product/product_list.php" class="nav__link active-link">Product</a></li>
           <li><a href="/accounts.php" class="nav__link">My Account</a></li>
           <li><a href="/compare.php" class="nav__link">Compare</a></li>
         </ul>
@@ -1316,7 +1316,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         ?>
           <article class="product-card">
             <div class="product-image-wrapper">
-              <a href="product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
+              <a href="pages/product/product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
                 <img src="<?= htmlspecialchars($related['main_image_path']) ?>"
                   alt="<?= htmlspecialchars($related['name']) ?>"
                   class="product-image primary" />
@@ -1329,7 +1329,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 <button class="action-btn wishlist-btn" data-product-id="<?= $related['product_id'] ?>">
                   <i class="fi fi-rs-heart"></i>
                 </button>
-                <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
+                <a href="pages/product/product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
                   <i class="fi fi-rs-eye"></i>
                 </a>
               </div>
@@ -1338,7 +1338,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
             <div class="product-card-info">
               <span class="product-category"><?= htmlspecialchars($related['category']) ?></span>
               <h3 class="product-name">
-                <a href="product_details.php?id=<?= $related['product_id'] ?>">
+                <a href="pages/product/product_details.php?id=<?= $related['product_id'] ?>">
                   <?= htmlspecialchars($related['name']) ?>
                 </a>
               </h3>

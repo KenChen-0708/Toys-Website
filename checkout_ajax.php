@@ -51,7 +51,7 @@ if (isset($_POST['apply_voucher'])) {
         $voucher = $stmt->fetch();
         
         if (!$voucher) {
-            echo json_encode(['success' => false, 'message' => 'Invalid or expired voucher code.']);
+            echo json_encode(['success' => false, 'message' => 'Invalid voucher code.']);
             exit();
         }
         
@@ -97,35 +97,56 @@ if (isset($_POST['apply_voucher'])) {
 
 // Handle add new address
 if (isset($_POST['add_address'])) {
-    $address_line1 = trim($_POST['address_line1']);
-    $address_line2 = trim($_POST['address_line2']);
-    $city = trim($_POST['city']);
-    $state = trim($_POST['state']);
-    $postal_code = trim($_POST['postal_code']);
-    $country = trim($_POST['country']);
+    $address_line1 = trim($_POST['address_line1'] ?? '');
+    $address_line2 = trim($_POST['address_line2'] ?? '');
+    $city = trim($_POST['city'] ?? '');
+    $state = trim($_POST['state'] ?? '');
+    $postal_code = trim($_POST['postal_code'] ?? '');
+    $country = trim($_POST['country'] ?? '');
     
+    // Validate required fields
     if (empty($address_line1) || empty($city) || empty($country)) {
-        echo json_encode(['success' => false, 'message' => 'Please fill in all required fields.']);
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Please fill in all required fields (Address Line 1, City, and Country).'
+        ]);
         exit();
     }
     
     try {
+        // Insert new address
         $stmt = $pdo->prepare("
             INSERT INTO Shipping_Address 
-            (member_id, address_line1, address_line2, city, state, postal_code, country)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (member_id, address_line1, address_line2, city, state, postal_code, country, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
         ");
-        $stmt->execute([
+        
+        $result = $stmt->execute([
             $member_id, $address_line1, $address_line2, 
             $city, $state, $postal_code, $country
         ]);
         
+        if (!$result) {
+            echo json_encode(['success' => false, 'message' => 'Failed to insert address into database.']);
+            exit();
+        }
+        
         $new_address_id = $pdo->lastInsertId();
+        
+        if (!$new_address_id) {
+            echo json_encode(['success' => false, 'message' => 'Failed to get new address ID.']);
+            exit();
+        }
         
         // Fetch the newly added address
         $stmt = $pdo->prepare("SELECT * FROM Shipping_Address WHERE shipping_address_id = ?");
         $stmt->execute([$new_address_id]);
-        $address = $stmt->fetch();
+        $address = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$address) {
+            echo json_encode(['success' => false, 'message' => 'Failed to retrieve newly added address.']);
+            exit();
+        }
         
         echo json_encode([
             'success' => true,
@@ -134,7 +155,11 @@ if (isset($_POST['add_address'])) {
         ]);
         
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Error adding address: ' . $e->getMessage()]);
+        error_log("Address addition error: " . $e->getMessage());
+        echo json_encode([
+            'success' => false, 
+            'message' => 'Database error occurred while adding address. Please try again.'
+        ]);
     }
     exit();
 }
