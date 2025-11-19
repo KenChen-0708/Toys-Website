@@ -61,6 +61,11 @@ function check_custom_permission_with_pdo($pdo, $adminId, $resource, $action) {
  * @return bool
  */
 function has_permission($resource, $action = 'view', $pdo = null) {
+  // Get PDO from global if not provided
+  if ($pdo === null && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
+    $pdo = $GLOBALS['pdo'];
+  }
+  
   $role = get_admin_role();
   
   // Super Admin has all permissions
