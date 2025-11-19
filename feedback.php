@@ -66,7 +66,6 @@ try {
 }
 
 $title = "Feedback";
-include 'partials/header.php';
 ?>
 
 <!DOCTYPE html>
@@ -75,11 +74,13 @@ include 'partials/header.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Feedback - Evara</title>
-    <link rel="stylesheet" href="assets/css/feedback.css">
     <link rel="stylesheet" href="assets/css/styles.css">
+
+    <link rel="stylesheet" href="assets/css/feedback.css">
 
 </head>
 <body>
+    <?php include 'partials/header.php'; ?>
     <div class="feedback-page">
         <div class="feedback-container">
             <!-- Page Header -->
