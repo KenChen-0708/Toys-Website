@@ -36,9 +36,9 @@ try {
         die("Order not found or already processed.");
     }
 
-    // 2️⃣ Retrieve order items
+    // 2️⃣ Retrieve order items with product images
     $stmt = $pdo->prepare("
-        SELECT oi.*, p.name
+        SELECT oi.*, p.name, p.main_image_path
         FROM Order_Item oi
         JOIN Product p ON oi.product_id = p.product_id
         WHERE oi.order_id = ?
@@ -50,31 +50,39 @@ try {
         die("No items found in this order.");
     }
 
-    // Build product summary
-    $product_summary = [];
-    foreach ($order_items as $item) {
-        $product_summary[] = $item['name'] . " x" . $item['quantity'];
-    }
-    $summary_str = implode(", ", $product_summary);
-    
     // Get total amount from order (already includes discounts)
     $total_amount = $order['total_amount'];
-    $amount_in_cents = $total_amount * 100; // Stripe expects amount in cents
-
+    
+    // Build line items for Stripe with images
+    $line_items = [];
     $domain = 'http://localhost:8000'; 
     
-    $session = \Stripe\Checkout\Session::create([
-        'payment_method_types' => ['card', 'fpx', 'grabpay'],
-        'line_items' => [[
+    foreach ($order_items as $item) {
+        $product_data = [
+            'name' => $item['name'],
+        ];
+        
+        // Add product image if available
+        if (!empty($item['main_image_path'])) {
+            // Convert relative path to absolute URL
+            $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
+            $product_data['images'] = [$image_url];
+        }
+        
+        $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
-                'product_data' => [
-                    'name' => 'Order #' . $order_id . ' - ' . $summary_str,
-                ],
-                'unit_amount' => $amount_in_cents,
+                'product_data' => $product_data,
+                'unit_amount' => intval($item['price'] * 100), // Convert to cents
             ],
-            'quantity' => 1,
-        ]],
+            'quantity' => $item['quantity'],
+        ];
+    }
+    
+    // 3️⃣ Create Stripe Checkout Session
+    $session = \Stripe\Checkout\Session::create([
+        'payment_method_types' => ['card', 'fpx', 'grabpay'],
+        'line_items' => $line_items,
         'mode' => 'payment',
         'success_url' => $domain . '/payment_success.php?session_id={CHECKOUT_SESSION_ID}&order_id=' . $order_id,
         'cancel_url'  => $domain . '/payment_cancel.php?order_id=' . $order_id,

@@ -49,7 +49,6 @@ try {
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;

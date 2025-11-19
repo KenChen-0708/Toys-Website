@@ -25,15 +25,10 @@ try {
     $session = \Stripe\Checkout\Session::retrieve($session_id);
     
     if ($session->payment_status === 'paid') {
-        // Update order status to 'Shipped' (or whatever status you want after payment)
-        $stmt = $pdo->prepare("
-            UPDATE `Order` 
-            SET status = 'Shipped' 
-            WHERE order_id = ? AND member_id = ?
-        ");
-        $stmt->execute([$order_id, $member_id]);
+        // Start transaction
+        $pdo->beginTransaction();
         
-        // Get order details for display
+        // Get order details first
         $stmt = $pdo->prepare("
             SELECT o.*, 
                    (SELECT COUNT(*) FROM Order_Item WHERE order_id = o.order_id) as item_count
@@ -42,11 +37,63 @@ try {
         ");
         $stmt->execute([$order_id, $member_id]);
         $order = $stmt->fetch();
+        
+        if (!$order) {
+            throw new Exception("Order not found");
+        }
+        
+        // Check if payment record already exists (prevent duplicate)
+        $stmt = $pdo->prepare("SELECT payment_id FROM Payment WHERE order_id = ?");
+        $stmt->execute([$order_id]);
+        $existing_payment = $stmt->fetch();
+        
+        if (!$existing_payment) {
+            // Determine payment method from Stripe
+            $payment_method = 'Credit Card'; // Default
+            if (isset($session->payment_method_types[0])) {
+                $stripe_method = $session->payment_method_types[0];
+                switch ($stripe_method) {
+                    case 'card':
+                        $payment_method = 'Credit Card';
+                        break;
+                    case 'fpx':
+                        $payment_method = 'Online Banking';
+                        break;
+                    case 'grabpay':
+                        $payment_method = 'E-Wallet';
+                        break;
+                    default:
+                        $payment_method = 'Credit Card';
+                }
+            }
+            
+            // Insert payment record
+            $stmt = $pdo->prepare("
+                INSERT INTO Payment (order_id, payment_method, payment_date, amount, status)
+                VALUES (?, ?, NOW(), ?, 'Completed')
+            ");
+            $stmt->execute([$order_id, $payment_method, $order['total_amount']]);
+        }
+        
+        // Update order status to 'Shipped'
+        $stmt = $pdo->prepare("
+            UPDATE `Order` 
+            SET status = 'Shipped' 
+            WHERE order_id = ? AND member_id = ?
+        ");
+        $stmt->execute([$order_id, $member_id]);
+        
+        // Commit transaction
+        $pdo->commit();
+        
     } else {
         header('Location: payment_cancel.php?order_id=' . $order_id);
         exit();
     }
 } catch (Exception $e) {
+    if ($pdo->inTransaction()) {
+        $pdo->rollBack();
+    }
     die("Error verifying payment: " . $e->getMessage());
 }
 ?>
@@ -66,7 +113,6 @@ try {
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -230,8 +276,24 @@ try {
                 <span class="order-label">Total Amount</span>
                 <span class="order-value amount">RM<?php echo number_format($order['total_amount'], 2); ?></span>
             </div>
+            <?php
+            // Get payment details
+            $stmt = $pdo->prepare("SELECT * FROM Payment WHERE order_id = ?");
+            $stmt->execute([$order_id]);
+            $payment = $stmt->fetch();
+            ?>
+            <?php if ($payment): ?>
             <div class="order-row">
-                <span class="order-label">Status</span>
+                <span class="order-label">Payment Method</span>
+                <span class="order-value"><?php echo htmlspecialchars($payment['payment_method']); ?></span>
+            </div>
+            <div class="order-row">
+                <span class="order-label">Payment Status</span>
+                <span class="order-value" style="color: #4CAF50;"><?php echo $payment['status']; ?></span>
+            </div>
+            <?php endif; ?>
+            <div class="order-row">
+                <span class="order-label">Order Status</span>
                 <span class="order-value" style="color: #2196F3;"><?php echo $order['status']; ?></span>
             </div>
             <div class="order-row">
