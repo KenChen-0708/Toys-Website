@@ -312,17 +312,16 @@ INSERT INTO Product (name, price, description, category, stock, status, main_ima
 -- password: Password123!
 INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_number`, `address`, `profile_photo_path`, `register_date`) VALUES
 (1, 'Ken', '$2y$10$eoth.o.tQ99RPZPv/HxUHeyV3PjQDSMb1mD2Sx.lBD1CNzJg.uEvu', 'ken@example.com', '012-3456789', '123 Jalan A, KL', '/assets/img/profile_photo/test.jpg', '2023-01-15 10:00:00'),
-(2, 'SiuYee', '$2y$10$QYh/ifao5wHJkDip75hg..fpYkWIvdH2y/mqro6Xv/L7ZJK0u.R7K', 'sy@example.com', '013-9876543', '456 Jalan B, Penang', '/assets/img/profile_photo/member_2_1763459011.png', '2024-03-22 14:30:00'),
-(3, 'Ronaldo', '$2y$10$tZm3kToa/ukNH6oc9zm98uSoF8/5gfLda0zSErhSYsVYS1kOiqIUW', 'r@example.com', '014-5556677', '789 Jalan C, Johor', NULL, '2024-07-05 09:15:00'),
-(4, 'TzeChuen', '$2y$10$l5arISf17ngsVxyXOvhp4es70pkYXtgbxJ33OizV01MKrGB47oDBW', 'tc@example.com', '015-4445566', '321 Jalan D, KL', NULL, '2023-12-18 16:45:00'),
-(5, 'Chris', '$2y$10$Uegr.5wKiXfY6gi9qhgtveK0W/JI0rQ39BS0PFIkApogDmsrwZyb6', 'c@example.com', '016-3334455', '654 Jalan E, Penang', NULL, '2025-02-01 11:20:00'),
-(6, 'KherQin', '$2y$10$qraWdzTC/72ZSjtUhOvUeOPx5Sg66EohiHWuvo9xLawZrmHit.bmW', 'kq@example.com', '017-2223344', '987 Jalan F, Selangor', NULL, '2025-05-19 08:50:00'),
-(7, 'WenChing', '$2y$10$0ING2O.sQdVXog21.brR8uL3MD3dIzpS2C.bNsypl/Ars1NX/ga2e', 'wc@example.com', '018-1112233', '111 Jalan G, KL', NULL, '2023-08-25 12:10:00'),
-(8, 'Isaac', '$2y$10$EPaLeuF8FKcSTu9GE3qbMOHEmDEotDB4pmBUnAJCeYRH0Rn3i.e7u', 'i@example.com', '019-0001122', '222 Jalan H, Johor', NULL, '2024-11-30 17:35:00'),
-(9, 'Jun', '$2y$10$V4GifmEJ0OW/8A0dMfa9W.KpeATjJvStzcjOPrIlaoeiMNBdKiC9y', 'j@example.com', '010-9998877', '333 Jalan I, Penang', NULL, '2025-06-07 13:00:00'),
-(10, 'Quan', '$2y$10$lFsQiKXW3LA9YB8Wk7QKleI2wwUXkhJiKw00Sg7xxzA6VglelQ6GS', 'q@example.com', '011-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00'),
-(11, 'ChaoZe', '$2y$10$28p0m4HDn4y7EiVU66t65OoGnCEcZx3E8h6Uhgglv60ZgbF061O1S', 'cz@example.com', '012-8887766', '444 Jalan J, Selangor', NULL, '2023-04-12 15:45:00');
-
+(2, 'SiuYee', '$2y$10$QYh/ifao5wHJkDip75hg..fpYkWIvdH2y/mqro6Xv/L7ZJK0u.R7K', 'sy@example.com', '013-9876543', '456 Jalan B, Penang', '/assets/img/profile_photo/member_2_1763524510.png', '2024-03-22 14:30:00'),
+(3, 'Ronaldo', '$2y$10$tZm3kToa/ukNH6oc9zm98uSoF8/5gfLda0zSErhSYsVYS1kOiqIUW', 'r@example.com', '014-5556677', '789 Jalan C, Johor', '/assets/img/profile_photo/member_3_1763524437.png', '2024-07-05 09:15:00'),
+(4, 'TzeChuen', '$2y$10$l5arISf17ngsVxyXOvhp4es70pkYXtgbxJ33OizV01MKrGB47oDBW', 'tc@example.com', '015-4445566', '321 Jalan D, KL', '/assets/img/profile_photo/member_4_1763524469.png', '2023-12-18 16:45:00'),
+(5, 'Chris', '$2y$10$Uegr.5wKiXfY6gi9qhgtveK0W/JI0rQ39BS0PFIkApogDmsrwZyb6', 'c@example.com', '016-3334455', '654 Jalan E, Penang', '/assets/img/profile_photo/member_5_1763524407.png', '2025-02-01 11:20:00'),
+(6, 'KherQin', '$2y$10$qraWdzTC/72ZSjtUhOvUeOPx5Sg66EohiHWuvo9xLawZrmHit.bmW', 'kq@example.com', '017-2223344', '987 Jalan F, Selangor', '/assets/img/profile_photo/member_6_1763524938.png', '2025-05-19 08:50:00'),
+(7, 'WenChing', '$2y$10$0ING2O.sQdVXog21.brR8uL3MD3dIzpS2C.bNsypl/Ars1NX/ga2e', 'wc@example.com', '018-1112233', '111 Jalan G, KL', '/assets/img/profile_photo/member_7_1763524947.png', '2023-08-25 12:10:00'),
+(8, 'Isaac', '$2y$10$EPaLeuF8FKcSTu9GE3qbMOHEmDEotDB4pmBUnAJCeYRH0Rn3i.e7u', 'i@example.com', '019-0001122', '222 Jalan H, Johor', '/assets/img/profile_photo/member_8_1763524973.png', '2024-11-30 17:35:00'),
+(9, 'Jun', '$2y$10$V4GifmEJ0OW/8A0dMfa9W.KpeATjJvStzcjOPrIlaoeiMNBdKiC9y', 'j@example.com', '010-9998877', '333 Jalan I, Penang', '/assets/img/profile_photo/member_9_1763524994.png', '2025-06-07 13:00:00'),
+(10, 'Quan', '$2y$10$lFsQiKXW3LA9YB8Wk7QKleI2wwUXkhJiKw00Sg7xxzA6VglelQ6GS', 'q@example.com', '011-8887766', '444 Jalan J, Selangor', '/assets/img/profile_photo/member_10_1763525042.png', '2023-04-12 15:45:00'),
+(11, 'ChaoZe', '$2y$10$28p0m4HDn4y7EiVU66t65OoGnCEcZx3E8h6Uhgglv60ZgbF061O1S', 'cz@example.com', '012-8887766', '444 Jalan J, Selangor', '/assets/img/profile_photo/member_11_1763525011.png', '2023-04-12 15:45:00');
 
 -- password: Password123!
 INSERT INTO admin (admin_id, username, password, email, role) VALUES
