@@ -1478,7 +1478,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
               if (response.wishlist_count !== undefined) {
                 $('.count:not(.cart-count)').text(response.wishlist_count);
               }
-              $btn.html('<i class="fi fi-ss-heart"></i> Added!');
+              $btn.html('<i class="fi fi-ss-heart"></i>');
               setTimeout(() => {
                 $btn.html(originalHtml).prop('disabled', false);
               }, 1500);
