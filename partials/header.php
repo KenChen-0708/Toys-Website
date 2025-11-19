@@ -82,6 +82,7 @@
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
             <li><a href="/index.php" class="nav__link <?= $current_page === 'index.php' ? 'active-link' : '' ?>">Home</a></li>
+            <li><a href="/about.php" class="nav__link <?= $current_page === 'about.php' ? 'active-link' : '' ?>">About us</a></li>
             <li><a href="/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
             <li><a href="/feedback.php" class="nav__link <?= $current_page === 'feedback.php' ? 'active-link' : '' ?>">Feedback</a></li>
           </ul>
