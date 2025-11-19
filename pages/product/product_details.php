@@ -1212,7 +1212,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
             <i class="fi fi-rs-shopping-cart-add"></i>
             Add to Cart
           </button>
-          <button class="btn btn-secondary" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-secondary" id="buyNowBtn" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
             <i class="fi fi-rs-shopping-bag"></i>
             Buy Now
           </button>
@@ -1478,12 +1478,53 @@ $title = htmlspecialchars($product['name']) . " — Details";
               if (response.wishlist_count !== undefined) {
                 $('.count:not(.cart-count)').text(response.wishlist_count);
               }
-              $btn.html('<i class="fi fi-ss-heart"></i>');
+              $btn.html('<i class="fi fi-ss-heart"></i> Added!');
               setTimeout(() => {
                 $btn.html(originalHtml).prop('disabled', false);
               }, 1500);
             } else {
               showToast(response.message || 'Failed to add to wishlist', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              }
+              $btn.html(originalHtml).prop('disabled', false);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
+      // Buy Now functionality - Add to cart and redirect to checkout
+      $('#buyNowBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        const $btn = $(this);
+        if ($btn.is(':disabled')) return;
+
+        const productId = <?= $product_id ?>;
+        const quantity = parseInt($('#quantity').val());
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Processing...');
+
+        $.ajax({
+          url: '../cart/cart_actions.php',
+          method: 'POST',
+          data: {
+            action: 'add',
+            product_id: productId,
+            quantity: quantity
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              // Redirect to checkout page
+              window.location.href = '../checkout/checkout.php';
+            } else {
+              showToast(response.message || 'Failed to process. Please try again.', 'error');
               if (response.redirect) {
                 setTimeout(() => window.location.href = response.redirect, 1500);
               }
