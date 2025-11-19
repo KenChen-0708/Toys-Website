@@ -10,9 +10,30 @@ $email = trim($_POST['email'] ?? '');
 $password = $_POST['password'] ?? '';
 $password_confirm = $_POST['password_confirm'] ?? '';
 $phone = trim($_POST['phone'] ?? '');
-$address = trim($_POST['address'] ?? '');
 
-$_SESSION['old'] = compact('username','email','phone','address');
+// Address fields
+$addressStreet = trim($_POST['address_street'] ?? '');
+$addressState = trim($_POST['address_state'] ?? '');
+$addressPostcode = trim($_POST['address_postcode'] ?? '');
+$addressCountry = trim($_POST['address_country'] ?? 'Malaysia');
+$addressCity = trim($_POST['address_city'] ?? '');
+
+// Combine address fields into formatted string
+$address = '';
+$addressParts = [];
+if ($addressStreet !== '') $addressParts[] = $addressStreet;
+if ($addressCity !== '') $addressParts[] = $addressCity;
+if ($addressState !== '' || $addressPostcode !== '') {
+  $statePostcode = trim($addressState . ' ' . $addressPostcode);
+  if ($statePostcode !== '') $addressParts[] = $statePostcode;
+}
+if ($addressCountry !== '') $addressParts[] = $addressCountry;
+
+if (!empty($addressParts)) {
+  $address = implode(', ', $addressParts);
+}
+
+$_SESSION['old'] = compact('username','email','phone','address_street','address_city','address_state','address_postcode','address_country');
 $errors = [];
 
 // Username 
@@ -46,12 +67,17 @@ if (!$errors) {
   if (!$errors) {
     $hash = password_hash($password, PASSWORD_DEFAULT);
     $now = date('Y-m-d H:i:s');
+    
+    // Convert empty strings to NULL for optional fields
+    $phoneValue = ($phone !== '') ? $phone : null;
+    $addressValue = ($address !== '') ? $address : null;
+    
     try {
       $stmt = $pdo->prepare("
         INSERT INTO Member (username, password, email, phone_number, address, register_date)
         VALUES (?, ?, ?, ?, ?, ?)
       ");
-      $stmt->execute([$username, $hash, $email, $phone, $address, $now]);
+      $stmt->execute([$username, $hash, $email, $phoneValue, $addressValue, $now]);
 
       $member_id = $pdo->lastInsertId();
       $cart = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
@@ -65,7 +91,9 @@ if (!$errors) {
         // handles UNIQUE index collisions on username/email
         $errors[] = 'Username or email already exists.';
       } else {
-        $errors[] = 'Something went wrong. Please try again.';
+        // Log the actual error for debugging (remove in production or use proper logging)
+        error_log('Registration error: ' . $e->getMessage() . ' | Code: ' . $e->getCode());
+        $errors[] = 'Something went wrong. Please try again. Error: ' . $e->getMessage();
       }
     }
   }
