@@ -1,84 +1,3 @@
-// Handle URL hash to show correct tab on page load
-(function() {
-  function activateTabFromHash() {
-    const hash = window.location.hash;
-    if (hash) {
-      const targetTab = document.querySelector(`[data-target="${hash}"]`);
-      const targetContent = document.querySelector(hash);
-      
-      if (targetTab && targetContent) {
-        // Remove active class from all tabs and contents
-        document.querySelectorAll('[data-target]').forEach(tab => {
-          tab.classList.remove('active-tab');
-        });
-        document.querySelectorAll('[content]').forEach(content => {
-          content.classList.remove('active-tab');
-        });
-        
-        // Activate the target tab and content
-        targetTab.classList.add('active-tab');
-        targetContent.classList.add('active-tab');
-      }
-    } else {
-      // No hash - ensure dashboard is active (default)
-      const dashboardTab = document.querySelector('[data-target="#dashboard"]');
-      const dashboardContent = document.querySelector('#dashboard');
-      
-      if (dashboardTab && dashboardContent) {
-        // Remove active class from all tabs and contents
-        document.querySelectorAll('[data-target]').forEach(tab => {
-          tab.classList.remove('active-tab');
-        });
-        document.querySelectorAll('[content]').forEach(content => {
-          content.classList.remove('active-tab');
-        });
-        
-        // Activate dashboard
-        dashboardTab.classList.add('active-tab');
-        dashboardContent.classList.add('active-tab');
-      }
-    }
-  }
-
-  // Run after all scripts are loaded and DOM is ready
-  function initTabFromHash() {
-    // Use setTimeout to ensure this runs after main.js tab initialization
-    setTimeout(activateTabFromHash, 100);
-  }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initTabFromHash);
-  } else {
-    initTabFromHash();
-  }
-
-  // Also handle hash changes (when user clicks tabs or browser back/forward)
-  window.addEventListener('hashchange', activateTabFromHash);
-  
-  // Update hash when tabs are clicked (so refresh stays on same tab)
-  document.querySelectorAll('[data-target]').forEach(tab => {
-    tab.addEventListener('click', function() {
-      const target = this.getAttribute('data-target');
-      if (target && target.startsWith('#')) {
-        // Update URL hash without scrolling
-        history.pushState(null, null, target);
-        activateTabFromHash();
-        
-        // If switching to dashboard, refresh the profile photo
-        if (target === '#dashboard') {
-          setTimeout(() => {
-            const dashboardImg = document.getElementById('dashboardProfileImg');
-            if (dashboardImg && dashboardImg.src) {
-              const baseSrc = dashboardImg.src.split('?')[0];
-              dashboardImg.src = baseSrc + '?v=' + Date.now();
-            }
-          }, 100);
-        }
-      }
-    });
-  });
-})();
-
 // Theme preference (account page only)
 (function () {
   const STORAGE_KEY = 'account_theme';
@@ -93,6 +12,55 @@
       root.dataset.accountTheme = radio.value;
     });
   });
+})();
+
+// Tab navigation for account page
+(function () {
+  const tabs = document.querySelectorAll('.account__tab');
+  const tabContents = document.querySelectorAll('.tab__content');
+
+  function switchTab(targetId) {
+    // Remove active class from all tabs
+    tabs.forEach(tab => {
+      tab.classList.remove('active-tab');
+    });
+
+    // Remove active class from all content sections
+    tabContents.forEach(content => {
+      content.classList.remove('active-tab');
+    });
+
+    // Add active class to clicked tab
+    const activeTab = document.querySelector(`[data-target="${targetId}"]`);
+    if (activeTab) {
+      activeTab.classList.add('active-tab');
+    }
+
+    // Add active class to target content section
+    const targetContent = document.querySelector(targetId);
+    if (targetContent) {
+      targetContent.classList.add('active-tab');
+    }
+  }
+
+  // Add click event listeners to all tabs
+  tabs.forEach(tab => {
+    tab.addEventListener('click', function() {
+      const targetId = this.getAttribute('data-target');
+      if (targetId) {
+        switchTab(targetId);
+      }
+    });
+  });
+
+  // Handle hash navigation (e.g., #update-profile from address section)
+  if (window.location.hash) {
+    const hash = window.location.hash;
+    const targetTab = document.querySelector(`[data-target="${hash}"]`);
+    if (targetTab) {
+      switchTab(hash);
+    }
+  }
 })();
 
 // Drag-and-drop + webcam for profile photo
@@ -795,6 +763,3 @@
     }, 300);
   }
 })();
-
-
-

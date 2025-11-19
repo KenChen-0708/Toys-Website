@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'helper/pdo_connection.php';
+require_once '../../helper/pdo_connection.php';
 
 header('Content-Type: application/json');
 

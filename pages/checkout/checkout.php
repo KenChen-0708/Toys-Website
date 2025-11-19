@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'helper/pdo_connection.php';
+require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: auth/login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
@@ -16,33 +16,55 @@ $voucher_discount = 0;
 $voucher_code = '';
 $voucher_applied = false;
 
-// Fetch cart items
-try {
-    $stmt = $pdo->prepare("
-        SELECT c.cart_id, ci.cart_item_id, ci.product_id, ci.quantity, 
-               p.name, p.price, p.stock, p.main_image_path,
-               (ci.quantity * p.price) as subtotal
-        FROM Cart c
-        INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
-        INNER JOIN Product p ON ci.product_id = p.product_id
-        WHERE c.member_id = ? AND p.status = 'Available'
-    ");
-    $stmt->execute([$member_id]);
-    $cart_items = $stmt->fetchAll();
-    
-    // if (empty($cart_items)) {
-    //     header(header: 'Location: cart.php');
-    //     exit();
-    // }
-    
-    // Calculate cart total
-    $cart_total = 0;
-    foreach ($cart_items as $item) {
-        $cart_total += $item['subtotal'];
+// Check if this is a "Buy Now" checkout or regular cart checkout
+// If user came from cart page, clear any existing buy_now session
+if (isset($_GET['from']) && $_GET['from'] === 'cart') {
+    unset($_SESSION['buy_now_item']);
+}
+
+$is_buy_now = isset($_SESSION['buy_now_item']);
+$cart_items = [];
+$cart_total = 0;
+
+if ($is_buy_now) {
+    // Use buy_now item from session (doesn't affect actual cart)
+    $buy_now_item = $_SESSION['buy_now_item'];
+    $cart_items = [[
+        'cart_id' => null,
+        'cart_item_id' => null,
+        'product_id' => $buy_now_item['product_id'],
+        'quantity' => $buy_now_item['quantity'],
+        'name' => $buy_now_item['name'],
+        'price' => $buy_now_item['price'],
+        'stock' => 999,
+        'main_image_path' => $buy_now_item['main_image_path'],
+        'subtotal' => $buy_now_item['quantity'] * $buy_now_item['price']
+    ]];
+    $cart_total = $cart_items[0]['subtotal'];
+} else {
+    // Fetch cart items (regular checkout)
+    try {
+        $stmt = $pdo->prepare("
+            SELECT c.cart_id, ci.cart_item_id, ci.product_id, ci.quantity, 
+                   p.name, p.price, p.stock, p.main_image_path,
+                   (ci.quantity * p.price) as subtotal
+            FROM Cart c
+            INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
+            INNER JOIN Product p ON ci.product_id = p.product_id
+            WHERE c.member_id = ? AND p.status = 'Available'
+        ");
+        $stmt->execute([$member_id]);
+        $cart_items = $stmt->fetchAll();
+        
+        // Calculate cart total
+        $cart_total = 0;
+        foreach ($cart_items as $item) {
+            $cart_total += $item['subtotal'];
+        }
+        
+    } catch (PDOException $e) {
+        $error_message = "Error fetching cart items: " . $e->getMessage();
     }
-    
-} catch (PDOException $e) {
-    $error_message = "Error fetching cart items: " . $e->getMessage();
 }
 
 // Fetch existing shipping addresses
@@ -106,23 +128,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_voucher'])) {
     }
 }
 
-// Handle new shipping address
+// Handle new shipping address (fallback for non-AJAX)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
-    $address_line1 = trim($_POST['address_line1']);
-    $address_line2 = trim($_POST['address_line2']);
-    $city = trim($_POST['city']);
-    $state = trim($_POST['state']);
-    $postal_code = trim($_POST['postal_code']);
-    $country = trim($_POST['country']);
+    $address_line1 = trim($_POST['address_line1'] ?? '');
+    $address_line2 = trim($_POST['address_line2'] ?? '');
+    $city = trim($_POST['city'] ?? '');
+    $state = trim($_POST['state'] ?? '');
+    $postal_code = trim($_POST['postal_code'] ?? '');
+    $country = trim($_POST['country'] ?? '');
     
     if (empty($address_line1) || empty($city) || empty($country)) {
-        $error_message = "Please fill in all required address fields.";
+        $error_message = "Please fill in all required fields (Address Line 1, City, and Country).";
     } else {
         try {
             $stmt = $pdo->prepare("
                 INSERT INTO Shipping_Address 
-                (member_id, address_line1, address_line2, city, state, postal_code, country)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (member_id, address_line1, address_line2, city, state, postal_code, country, created_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $member_id, $address_line1, $address_line2, 
@@ -131,6 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
             
             $success_message = "Address added successfully!";
             
+            // Refresh the addresses list
             $stmt = $pdo->prepare("
                 SELECT * FROM Shipping_Address 
                 WHERE member_id = ? 
@@ -191,11 +214,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             
             $final_amount = $cart_total - $final_discount;
             
+            // Get the selected shipping address details
+            $stmt = $pdo->prepare("SELECT * FROM Shipping_Address WHERE shipping_address_id = ? AND member_id = ?");
+            $stmt->execute([$shipping_address_id, $member_id]);
+            $selected_address = $stmt->fetch();
+            
+            if (!$selected_address) {
+                throw new Exception("Invalid shipping address selected.");
+            }
+            
+            // Insert order with shipping address details
             $stmt = $pdo->prepare("
-                INSERT INTO `Order` (member_id, shipping_address_id, total_amount, status)
-                VALUES (?, ?, ?, 'Pending')
+                INSERT INTO `Order` (
+                    member_id, 
+                    shipping_address_line1, 
+                    shipping_address_line2, 
+                    shipping_city, 
+                    shipping_state, 
+                    shipping_postal_code, 
+                    shipping_country, 
+                    total_amount, 
+                    status
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
             ");
-            $stmt->execute([$member_id, $shipping_address_id, $final_amount]);
+            $stmt->execute([
+                $member_id, 
+                $selected_address['address_line1'],
+                $selected_address['address_line2'],
+                $selected_address['city'],
+                $selected_address['state'],
+                $selected_address['postal_code'],
+                $selected_address['country'],
+                $final_amount
+            ]);
             $order_id = $pdo->lastInsertId();
             
             foreach ($cart_items as $item) {
@@ -226,12 +277,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 $stmt->execute([$voucher_id, $member_id, $order_id]);
             }
             
-            $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
-            $stmt->execute([$member_id]);
+            // Clear cart only if not buy_now (buy_now doesn't affect cart)
+            if (!$is_buy_now) {
+                $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
+                $stmt->execute([$member_id]);
+            } else {
+                // Clear buy_now session data
+                unset($_SESSION['buy_now_item']);
+            }
             
             $pdo->commit();
             
-            header("Location: payment.php?order_id=" . $order_id);
+            header("Location: ../payment/payment.php?order_id=" . $order_id);
             exit();
             
         } catch (PDOException $e) {
@@ -340,6 +397,14 @@ $final_total = $cart_total - $voucher_discount;
             display: grid;
             gap: 15px;
             margin-bottom: 20px;
+        }
+        
+        .no-addresses {
+            background-color: #f8f9fa;
+            border: 2px dashed #ddd;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
         }
         
         .address-option {
@@ -557,7 +622,7 @@ $final_total = $cart_total - $voucher_discount;
             padding-top: 15px;
             font-size: 22px;
             font-weight: 700;
-            color: #4CAF50;
+            color: #696969ff;
         }
         
         /* Buttons */
@@ -639,8 +704,8 @@ $final_total = $cart_total - $voucher_discount;
                     <div class="section">
                         <h2 class="section-title">Shipping Address</h2>
                         
-                        <?php if (!empty($shipping_addresses)): ?>
-                            <div class="address-grid">
+                        <div class="address-grid" id="addressGrid">
+                            <?php if (!empty($shipping_addresses)): ?>
                                 <?php foreach ($shipping_addresses as $address): ?>
                                     <label class="address-option">
                                         <input type="radio" 
@@ -668,8 +733,14 @@ $final_total = $cart_total - $voucher_discount;
                                         <div class="check-icon">✓</div>
                                     </label>
                                 <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
+                            <?php else: ?>
+                                <div class="no-addresses" id="noAddressesMessage">
+                                    <p style="color: #666; font-style: italic; text-align: center; padding: 20px;">
+                                        No addresses found. Please add a new address below.
+                                    </p>
+                                </div>
+                            <?php endif; ?>
+                        </div>
                         
                         <a href="#" class="add-address-toggle" onclick="toggleAddressForm(event)">
                             + Add New Address
@@ -708,9 +779,12 @@ $final_total = $cart_total - $voucher_discount;
                                 </div>
                                 
                                 <div class="form-group full-width">
-                                    <button type="submit" name="add_address" class="btn btn-secondary">
+                                    <button type="submit" name="add_address" class="btn btn-secondary" id="saveAddressBtn">
                                         Save Address
                                     </button>
+                                    <p style="font-size: 12px; color: #666; margin-top: 8px;">
+                                        <em>Address will be saved and available for selection immediately.</em>
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -726,11 +800,11 @@ $final_total = $cart_total - $voucher_discount;
                         <?php foreach ($cart_items as $item): ?>
                             <div class="summary-product">
                                 <?php if ($item['main_image_path']): ?>
-                                    <img src="<?php echo htmlspecialchars($item['main_image_path']); ?>" 
+                                    <img src="../../<?php echo htmlspecialchars($item['main_image_path']); ?>" 
                                          alt="<?php echo htmlspecialchars($item['name']); ?>"
                                          class="summary-product-img">
                                 <?php else: ?>
-                                    <img src="images/no-image.png" alt="No image" class="summary-product-img">
+                                    <img src="../../images/no-image.png" alt="No image" class="summary-product-img">
                                 <?php endif; ?>
                                 
                                 <div class="summary-product-info">
@@ -821,6 +895,18 @@ $final_total = $cart_total - $voucher_discount;
             });
         }, 5000);
         
+        // Add progressive enhancement - if JavaScript fails, form still works
+        document.body.classList.add('js-enabled');
+        
+        // Prevent form submission conflicts
+        document.addEventListener('submit', function(e) {
+            // Only prevent default for AJAX-handled forms when JS is working
+            if (e.target.querySelector('button[name="add_address"]') || e.target.querySelector('button[name="apply_voucher"]')) {
+                // These are handled by AJAX, don't prevent
+                return;
+            }
+        });
+        
         // AJAX for voucher application
         document.addEventListener('DOMContentLoaded', function() {
             const voucherForm = document.querySelector('form[method="POST"]');
@@ -879,14 +965,24 @@ $final_total = $cart_total - $voucher_discount;
                 addAddressBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     
+                    // Client-side validation
+                    const addressLine1 = document.querySelector('input[name="address_line1"]').value.trim();
+                    const city = document.querySelector('input[name="city"]').value.trim();
+                    const country = document.querySelector('input[name="country"]').value.trim();
+                    
+                    if (!addressLine1 || !city || !country) {
+                        showAlert('Please fill in all required fields (Address Line 1, City, and Country).', 'error');
+                        return;
+                    }
+                    
                     const formData = new FormData();
                     formData.append('add_address', '1');
-                    formData.append('address_line1', document.querySelector('input[name="address_line1"]').value);
-                    formData.append('address_line2', document.querySelector('input[name="address_line2"]').value);
-                    formData.append('city', document.querySelector('input[name="city"]').value);
-                    formData.append('state', document.querySelector('input[name="state"]').value);
-                    formData.append('postal_code', document.querySelector('input[name="postal_code"]').value);
-                    formData.append('country', document.querySelector('input[name="country"]').value);
+                    formData.append('address_line1', addressLine1);
+                    formData.append('address_line2', document.querySelector('input[name="address_line2"]').value.trim());
+                    formData.append('city', city);
+                    formData.append('state', document.querySelector('input[name="state"]').value.trim());
+                    formData.append('postal_code', document.querySelector('input[name="postal_code"]').value.trim());
+                    formData.append('country', country);
                     
                     // Show loading state
                     addAddressBtn.disabled = true;
@@ -896,8 +992,15 @@ $final_total = $cart_total - $voucher_discount;
                         method: 'POST',
                         body: formData
                     })
-                    .then(response => response.json())
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
                     .then(data => {
+                        console.log('Address addition response:', data); // Debug log
+                        
                         // Remove existing alerts
                         document.querySelectorAll('.alert').forEach(a => a.remove());
                         
@@ -928,7 +1031,7 @@ $final_total = $cart_total - $voucher_discount;
                     })
                     .catch(error => {
                         console.error('Error:', error);
-                        showAlert('An error occurred. Please try again.', 'error');
+                        showAlert('An error occurred while saving the address. Please try again.', 'error');
                         addAddressBtn.disabled = false;
                         addAddressBtn.innerHTML = 'Save Address';
                     });
@@ -980,14 +1083,21 @@ $final_total = $cart_total - $voucher_discount;
         }
         
         function addAddressToList(address) {
-            const addressGrid = document.querySelector('.address-grid');
+            const addressGrid = document.querySelector('#addressGrid');
+            const noAddressesMessage = document.querySelector('#noAddressesMessage');
+            
+            // Remove "no addresses" message if it exists
+            if (noAddressesMessage) {
+                noAddressesMessage.remove();
+            }
             
             const addressHTML = `
-                <label class="address-option">
+                <label class="address-option newly-added">
                     <input type="radio" 
                            name="shipping_address_id" 
                            value="${address.shipping_address_id}" 
-                           required>
+                           required
+                           checked>
                     <div class="address-content">
                         <div class="address-line primary">
                             ${address.address_line1}
@@ -1012,11 +1122,20 @@ $final_total = $cart_total - $voucher_discount;
                     document.querySelectorAll('.address-option').forEach(opt => {
                         opt.style.borderColor = '#ddd';
                         opt.style.boxShadow = 'none';
+                        opt.classList.remove('newly-added');
                     });
                     this.style.borderColor = '#4CAF50';
                     this.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
                 });
             });
+            
+            // Remove the highlight class after animation completes
+            setTimeout(() => {
+                const newAddressOption = addressGrid.querySelector('.newly-added');
+                if (newAddressOption) {
+                    newAddressOption.classList.remove('newly-added');
+                }
+            }, 2000);
         }
     </script>
     <style>
@@ -1029,6 +1148,24 @@ $final_total = $cart_total - $voucher_discount;
                 transform: translateX(100%);
                 opacity: 0;
             }
+        }
+        
+        /* Loading state for buttons */
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        /* Highlight newly added address */
+        .address-option.newly-added {
+            border-color: #4CAF50 !important;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+            animation: highlightNew 2s ease-in-out;
+        }
+        
+        @keyframes highlightNew {
+            0% { background-color: rgba(76, 175, 80, 0.1); }
+            100% { background-color: transparent; }
         }
     </style>
 </body>

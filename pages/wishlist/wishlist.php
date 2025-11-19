@@ -1,10 +1,10 @@
 <?php
 session_start();
-require_once 'helper/pdo_connection.php';
+require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: auth/login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
@@ -636,7 +636,7 @@ try {
   <div class="container">
     <div class="wishlist-header">
       <h1>My Wishlist</h1>
-      <a href="index.php" class="btn btn-primary">Continue Shopping</a>
+      <a href="../../index.php" class="btn btn-primary">Continue Shopping</a>
     </div>
 
     <div id="alert-container"></div>
@@ -658,7 +658,7 @@ try {
           <h2>Your wishlist is empty</h2>
           <p>Save items you love for later</p>
           <br>
-          <a href="index.php" class="btn btn-primary">Browse Products</a>
+          <a href="../../index.php" class="btn btn-primary">Browse Products</a>
         </div>
       <?php else: ?>
         <div class="wishlist-table">
@@ -669,7 +669,7 @@ try {
               </div>
 
               <div class="item-image-container">
-                <img src="<?= htmlspecialchars($item['main_image_path'] ?: 'assets/images/no-image.png') ?>"
+                <img src="../../<?= htmlspecialchars($item['main_image_path'] ?: 'assets/images/no-image.png') ?>"
                   alt="<?= htmlspecialchars($item['name']) ?>"
                   class="item-image">
               </div>
@@ -710,7 +710,7 @@ try {
 
         <div class="wishlist-actions">
           <button class="btn btn-danger" id="clear-wishlist">Clear Wishlist</button>
-          <a href="cart.php" class="btn btn-success" style="margin-left: auto;">View Cart</a>
+          <a href="../cart/cart.php" class="btn btn-success" style="margin-left: auto;">View Cart</a>
         </div>
       <?php endif; ?>
     </section>
@@ -991,7 +991,7 @@ try {
       $(document).on('click', '.item-image-container, .item-details h3', function() {
         const productId = $(this).closest('.wishlist-item').data('product-id');
         if (productId) {
-          window.location.href = 'product_details.php?id=' + productId;
+          window.location.href = '../product/product_details.php?id=' + productId;
         }
       });
     });
@@ -999,3 +999,4 @@ try {
 </body>
 
 </html>
+

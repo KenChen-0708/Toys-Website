@@ -1,14 +1,20 @@
 <?php
 session_start();
-require_once 'helper/pdo_connection.php';
+require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: auth/login.php');
+    header('Location: ../../auth/login.php');
     exit();
 }
 
 $member_id = $_SESSION['member']['id'];
+
+// Clear buy_now session when user visits cart page
+// This ensures cart checkout always shows cart items, not buy_now items
+if (isset($_SESSION['buy_now_item'])) {
+    unset($_SESSION['buy_now_item']);
+}
 
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
@@ -583,7 +589,7 @@ foreach ($cart_items as $item) {
   <div class="container">
     <div class="cart-header">
       <h1>Shopping Cart</h1>
-      <a href="index.php" class="btn btn-primary">Continue Shopping</a>
+      <a href="../../index.php" class="btn btn-primary">Continue Shopping</a>
     </div>
 
     <div id="alert-container"></div>
@@ -605,7 +611,7 @@ foreach ($cart_items as $item) {
           <h2>Your cart is empty</h2>
           <p>Add items to get started</p>
           <br>
-          <a href="index.php" class="btn btn-primary">Browse Products</a>
+          <a href="../../index.php" class="btn btn-primary">Browse Products</a>
         </div>
       <?php else: ?>
         <div class="cart-table">
@@ -616,7 +622,7 @@ foreach ($cart_items as $item) {
               </div>
 
               <div class="item-image-container">
-                <img src="<?= htmlspecialchars($item['main_image_path'] ?: 'assets/images/no-image.png') ?>"
+                <img src="../../<?= htmlspecialchars($item['main_image_path'] ?: 'assets/images/no-image.png') ?>"
                   alt="<?= htmlspecialchars($item['name']) ?>"
                   class="item-image">
               </div>
@@ -670,7 +676,7 @@ foreach ($cart_items as $item) {
 
         <div class="cart-actions">
           <button class="btn btn-danger" id="clear-cart">Clear Cart</button>
-          <a href="checkout.php" class="btn btn-success" style="margin-left: auto;">Proceed to Checkout</a>
+          <a href="../checkout/checkout.php?from=cart" class="btn btn-success" style="margin-left: auto;">Proceed to Checkout</a>
         </div>
       <?php endif; ?>
     </section>

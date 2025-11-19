@@ -1,7 +1,7 @@
 <?php
 session_start();
-require_once 'helper/pdo_connection.php';
-require_once 'helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
 function user_initials($name)
 {
@@ -31,7 +31,7 @@ if ($product_id > 0) {
 }
 
 if (!$product) {
-  header("Location: product_list.php");
+  header("Location: pages/product/product_list.php");
   exit();
 }
 
@@ -1077,7 +1077,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       <div class="nav__menu">
         <ul class="nav__list">
           <li><a href="/index.php" class="nav__link">Home</a></li>
-          <li><a href="/product_list.php" class="nav__link active-link">Product</a></li>
+          <li><a href="/pages/product/product_list.php" class="nav__link active-link">Product</a></li>
           <li><a href="/accounts.php" class="nav__link">My Account</a></li>
           <li><a href="/compare.php" class="nav__link">Compare</a></li>
         </ul>
@@ -1089,13 +1089,13 @@ $title = htmlspecialchars($product['name']) . " — Details";
         </div>
       </div>
       <div class="header__user-actions">
-        <a href="/wishlist.php" class="header__action-btn" title="Wishlist">
+        <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="Wishlist" />
-          <span class="count">0</span>
+          <span class="count wishlist-count">0</span>
         </a>
-        <a href="/cart.php" class="header__action-btn" title="Cart">
+        <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="Cart" />
-          <span class="count">0</span>
+          <span class="count cart-count">0</span>
         </a>
       </div>
     </nav>
@@ -1110,21 +1110,21 @@ $title = htmlspecialchars($product['name']) . " — Details";
       <!-- Image Gallery -->
       <div class="gallery">
         <div class="gallery__main">
-          <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="gallery__main-img" id="mainImage" />
+          <img src="../../<?= htmlspecialchars($product['main_image_path']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="gallery__main-img" id="mainImage" />
         </div>
         <div class="gallery__thumbs">
           <?php if (!empty($sub_images)): ?>
             <div class="gallery__thumb">
-              <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+              <img src="../../<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
             </div>
             <?php foreach (array_slice($sub_images, 0, 3) as $sub_image): ?>
               <div class="gallery__thumb">
-                <img src="<?= htmlspecialchars($sub_image) ?>" alt="Product" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+                <img src="../../<?= htmlspecialchars($sub_image) ?>" alt="Product" class="gallery__thumb-img" onclick="changeImage(this.src)" />
               </div>
             <?php endforeach; ?>
           <?php else: ?>
             <div class="gallery__thumb">
-              <img src="<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
+              <img src="../../<?= htmlspecialchars($product['main_image_path']) ?>" alt="Main" class="gallery__thumb-img" onclick="changeImage(this.src)" />
             </div>
           <?php endif; ?>
         </div>
@@ -1212,7 +1212,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
             <i class="fi fi-rs-shopping-cart-add"></i>
             Add to Cart
           </button>
-          <button class="btn btn-secondary" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-secondary" id="buyNowBtn" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
             <i class="fi fi-rs-shopping-bag"></i>
             Buy Now
           </button>
@@ -1317,10 +1317,10 @@ $title = htmlspecialchars($product['name']) . " — Details";
           <article class="product-card">
             <div class="product-image-wrapper">
               <a href="product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
-                <img src="<?= htmlspecialchars($related['main_image_path']) ?>"
+                <img src="../../<?= htmlspecialchars($related['main_image_path']) ?>"
                   alt="<?= htmlspecialchars($related['name']) ?>"
                   class="product-image primary" />
-                <img src="<?= htmlspecialchars($hover_image) ?>"
+                <img src="../../<?= htmlspecialchars($hover_image) ?>"
                   alt="<?= htmlspecialchars($related['name']) ?>"
                   class="product-image secondary" />
               </a>
@@ -1421,7 +1421,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Adding...');
 
         $.ajax({
-          url: 'cart_actions.php',
+          url: '../cart/cart_actions.php',
           method: 'POST',
           data: {
             action: 'add',
@@ -1465,7 +1465,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
 
         $.ajax({
-          url: 'wishlist_actions.php',
+          url: '../wishlist/wishlist_actions.php',
           method: 'POST',
           data: {
             action: 'add',
@@ -1478,7 +1478,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
               if (response.wishlist_count !== undefined) {
                 $('.count:not(.cart-count)').text(response.wishlist_count);
               }
-              $btn.html('<i class="fi fi-ss-heart"></i> Added!');
+              $btn.html('<i class="fi fi-ss-heart"></i>');
               setTimeout(() => {
                 $btn.html(originalHtml).prop('disabled', false);
               }, 1500);
@@ -1488,6 +1488,48 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 setTimeout(() => window.location.href = response.redirect, 1500);
               }
               $btn.html(originalHtml).prop('disabled', false);
+            }
+          },
+          error: function() {
+            showToast('An error occurred. Please try again.', 'error');
+            $btn.html(originalHtml).prop('disabled', false);
+          }
+        });
+      });
+
+      // Buy Now functionality - Go directly to checkout without affecting cart
+      $('#buyNowBtn').on('click', function(e) {
+        e.preventDefault();
+        
+        const $btn = $(this);
+        if ($btn.is(':disabled')) return;
+
+        const productId = <?= $product_id ?>;
+        const quantity = parseInt($('#quantity').val());
+        const originalHtml = $btn.html();
+
+        $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Processing...');
+
+        $.ajax({
+          url: '../cart/cart_actions.php',
+          method: 'POST',
+          data: {
+            action: 'buy_now',
+            product_id: productId,
+            quantity: quantity
+          },
+          dataType: 'json',
+          success: function(response) {
+            if (response.success) {
+              // Redirect to checkout page
+              window.location.href = '../checkout/checkout.php';
+            } else {
+              showToast(response.message || 'Failed to process. Please try again.', 'error');
+              if (response.redirect) {
+                setTimeout(() => window.location.href = response.redirect, 1500);
+              } else {
+                $btn.html(originalHtml).prop('disabled', false);
+              }
             }
           },
           error: function() {
@@ -1509,7 +1551,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
 
         $.ajax({
-          url: 'cart_actions.php',
+          url: '../cart/cart_actions.php',
           method: 'POST',
           data: {
             action: 'add',
@@ -1552,7 +1594,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         $btn.html('<i class="fi fi-rs-spinner"></i>');
 
         $.ajax({
-          url: 'wishlist_actions.php',
+          url: '../wishlist/wishlist_actions.php',
           method: 'POST',
           data: {
             action: 'add',
@@ -1587,7 +1629,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       // Load cart count
       function loadCartCount() {
         $.ajax({
-          url: 'get_cart_count.php',
+          url: '../cart/get_cart_count.php',
           method: 'GET',
           dataType: 'json',
           success: function(response) {

@@ -1,8 +1,8 @@
 <?php 
 session_start();
 $title = "Products";
-require_once 'helper/pdo_connection.php';
-require_once 'helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
 function user_initials($name) {
   $parts = preg_split('/\s+/', trim((string)$name));
@@ -22,7 +22,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-solid-straight/css/uicons-solid-straight.css" />
-  <link rel="stylesheet" href="assets/css/product_list.css" />
+  <link rel="stylesheet" href="../../assets/css/product_list.css" />
   <title><?= htmlspecialchars($title) ?></title>
 </head>
 <body>
@@ -69,7 +69,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
           <li><a href="/index.php" class="nav__link">Home</a></li>
-          <li><a href="/product_list.php" class="nav__link active-link">Product</a></li>
+          <li><a href="/pages/product/product_list.php" class="nav__link active-link">Product</a></li>
           <li><a href="/accounts.php" class="nav__link">My Account</a></li>
           <li><a href="/compare.php" class="nav__link">Compare</a></li>
         </ul>
@@ -82,11 +82,11 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
       </div>
 
       <div class="header__user-actions">
-        <a href="/wishlist.php" class="header__action-btn" title="Wishlist">
+        <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="Wishlist" />
           <span class="count wishlist-count">0</span>
         </a>
-        <a href="/cart.php" class="header__action-btn" title="Cart">
+        <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="Cart" />
           <span class="count cart-count">0</span>
         </a>
@@ -192,6 +192,6 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
   </main>
 
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script src="assets/js/product_list.js"></script>
+  <script src="../../assets/js/product_list.js"></script>
 </body>
 </html>
