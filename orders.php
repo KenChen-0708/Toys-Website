@@ -76,7 +76,7 @@ if ($search !== '') {
     if (ctype_digit($search)) {
         $sql .= " AND o.order_id = ?";
         $params[] = (int)$search;
-    } 
+    }
     // Otherwise, text search → search in address fields and product names
     else {
         $sql .= " AND (CONCAT_WS(' ', o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, o.shipping_state, o.shipping_postal_code, o.shipping_country) LIKE ?
@@ -143,14 +143,11 @@ try {
     error_log("Database error: " . $e->getMessage());
 }
 ?>
-<?php 
-  $title = "Home";
-  include 'partials/header.php';
 
-?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -159,7 +156,13 @@ try {
     <link rel="stylesheet" href="assets/css/styles.css">
 
 </head>
+
 <body>
+    <?php
+    $title = "Home";
+    include 'partials/header.php';
+
+    ?>
     <div class="user-container">
 
         <h1>My Orders</h1>
@@ -180,8 +183,8 @@ try {
 
                     <label>Sort</label>
                     <select name="sort">
-                        <option value="desc"<?php if ($sort === 'DESC') echo ' selected'; ?>>Newest</option>
-                        <option value="asc"<?php if ($sort === 'ASC') echo ' selected'; ?>>Oldest</option>
+                        <option value="desc" <?php if ($sort === 'DESC') echo ' selected'; ?>>Newest</option>
+                        <option value="asc" <?php if ($sort === 'ASC') echo ' selected'; ?>>Oldest</option>
                     </select>
 
                     <div class="button-group">
@@ -197,10 +200,10 @@ try {
                             <label>Status</label>
                             <select name="status">
                                 <option value="">All Statuses</option>
-                                <option value="Pending"<?php if ($filter_status == 'Pending') echo ' selected'; ?>>Pending</option>
-                                <option value="Shipped"<?php if ($filter_status == 'Shipped') echo ' selected'; ?>>Shipped</option>
-                                <option value="Delivered"<?php if ($filter_status == 'Delivered') echo ' selected'; ?>>Delivered</option>
-                                <option value="Cancelled"<?php if ($filter_status == 'Cancelled') echo ' selected'; ?>>Cancelled</option>
+                                <option value="Pending" <?php if ($filter_status == 'Pending') echo ' selected'; ?>>Pending</option>
+                                <option value="Shipped" <?php if ($filter_status == 'Shipped') echo ' selected'; ?>>Shipped</option>
+                                <option value="Delivered" <?php if ($filter_status == 'Delivered') echo ' selected'; ?>>Delivered</option>
+                                <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo ' selected'; ?>>Cancelled</option>
                             </select>
                         </div>
 
@@ -232,9 +235,9 @@ try {
 
         <!-- Results Info -->
         <?php if ($total_results > 0): ?>
-        <div class="results-info">
-            <span>Showing <strong><?php echo ($offset + 1); ?>-<?php echo min($offset + $per_page, $total_results); ?></strong> of <strong><?php echo $total_results; ?></strong> orders</span>
-        </div>
+            <div class="results-info">
+                <span>Showing <strong><?php echo ($offset + 1); ?>-<?php echo min($offset + $per_page, $total_results); ?></strong> of <strong><?php echo $total_results; ?></strong> orders</span>
+            </div>
         <?php endif; ?>
 
         <!-- Orders Table -->
@@ -276,7 +279,7 @@ try {
                                     $state = htmlspecialchars($row['shipping_state'] ?? '');
                                     $postal_code = htmlspecialchars($row['shipping_postal_code'] ?? '');
                                     $country = htmlspecialchars($row['shipping_country'] ?? '');
-                                    
+
                                     // Build address string, skipping empty parts
                                     $address_parts = array_filter([
                                         $address_line1,
@@ -307,30 +310,33 @@ try {
 
     <!-- Pagination -->
     <?php if ($total_pages > 1): ?>
-    <div class="pagination">
-        <?php
-        $query_params = [
-            'search' => $search,
-            'sort' => strtolower($sort),
-            'status' => $filter_status,
-            'date_from' => $filter_date_from,
-            'date_to' => $filter_date_to,
-            'amount_min' => $filter_amount_min,
-            'amount_max' => $filter_amount_max
-        ];
-        
-        function build_query($params, $page) {
-            $params['page'] = $page;
-            return '?' . http_build_query(array_filter($params, function($val) { return $val !== null && $val !== ''; }));
-        }
-        ?>
-        
-        <a href="orders.php<?php echo build_query($query_params, 1); ?>" class="btn <?php if($page == 1) echo 'disabled'; ?>">First</a>
-        <a href="orders.php<?php echo build_query($query_params, max(1, $page - 1)); ?>" class="btn <?php if($page == 1) echo 'disabled'; ?>">Previous</a>
-        <span class="page-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
-        <a href="orders.php<?php echo build_query($query_params, min($total_pages, $page + 1)); ?>" class="btn <?php if($page == $total_pages) echo 'disabled'; ?>">Next</a>
-        <a href="orders.php<?php echo build_query($query_params, $total_pages); ?>" class="btn <?php if($page == $total_pages) echo 'disabled'; ?>">Last</a>
-    </div>
+        <div class="pagination">
+            <?php
+            $query_params = [
+                'search' => $search,
+                'sort' => strtolower($sort),
+                'status' => $filter_status,
+                'date_from' => $filter_date_from,
+                'date_to' => $filter_date_to,
+                'amount_min' => $filter_amount_min,
+                'amount_max' => $filter_amount_max
+            ];
+
+            function build_query($params, $page)
+            {
+                $params['page'] = $page;
+                return '?' . http_build_query(array_filter($params, function ($val) {
+                    return $val !== null && $val !== '';
+                }));
+            }
+            ?>
+
+            <a href="orders.php<?php echo build_query($query_params, 1); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">First</a>
+            <a href="orders.php<?php echo build_query($query_params, max(1, $page - 1)); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">Previous</a>
+            <span class="page-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
+            <a href="orders.php<?php echo build_query($query_params, min($total_pages, $page + 1)); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Next</a>
+            <a href="orders.php<?php echo build_query($query_params, $total_pages); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Last</a>
+        </div>
     <?php endif; ?>
 
     <script>
@@ -338,7 +344,7 @@ try {
             const advancedDiv = document.getElementById('advancedSearch');
             const toggleText = document.getElementById('toggle-text');
             const toggleIcon = document.getElementById('toggle-icon');
-            
+
             if (advancedDiv.style.display === 'none') {
                 advancedDiv.style.display = 'block';
                 toggleText.textContent = 'Hide Advanced Search';
@@ -352,17 +358,18 @@ try {
 
         // Auto-show advanced search if any advanced filters are active
         window.addEventListener('DOMContentLoaded', function() {
-            const hasAdvancedFilters = <?php 
-                echo ($filter_status || $filter_date_from || $filter_date_to || 
-                      $filter_amount_min !== null || $filter_amount_max !== null) ? 'true' : 'false'; 
-            ?>;
-            
+            const hasAdvancedFilters = <?php
+                                        echo ($filter_status || $filter_date_from || $filter_date_to ||
+                                            $filter_amount_min !== null || $filter_amount_max !== null) ? 'true' : 'false';
+                                        ?>;
+
             if (hasAdvancedFilters) {
                 toggleAdvanced();
             }
         });
     </script>
 </body>
+
 </html>
 
 <?php include 'partials/footer.php'; ?>

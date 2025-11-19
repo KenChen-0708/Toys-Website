@@ -82,7 +82,12 @@
         <div class="nav__menu" id="nav-menu">
           <ul class="nav__list">
             <li><a href="/index.php" class="nav__link <?= $current_page === 'index.php' ? 'active-link' : '' ?>">Home</a></li>
+<<<<<<< HEAD
+            <li><a href="/about.php" class="nav__link <?= $current_page === 'about.php' ? 'active-link' : '' ?>">About us</a></li>
+            <li><a href="/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
+=======
             <li><a href="/pages/product/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
+>>>>>>> 12f45da74bd705543e50f45a9d4bfb7711795a9e
             <li><a href="/feedback.php" class="nav__link <?= $current_page === 'feedback.php' ? 'active-link' : '' ?>">Feedback</a></li>
           </ul>
           <div class="header__search">
