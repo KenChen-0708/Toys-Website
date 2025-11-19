@@ -31,7 +31,7 @@ if ($product_id > 0) {
 }
 
 if (!$product) {
-  header("Location: product_list.php");
+  header("Location: pages/product/product_list.php");
   exit();
 }
 
@@ -1091,11 +1091,11 @@ $title = htmlspecialchars($product['name']) . " — Details";
       <div class="header__user-actions">
         <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="Wishlist" />
-          <span class="count">0</span>
+          <span class="count wishlist-count">0</span>
         </a>
         <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="Cart" />
-          <span class="count">0</span>
+          <span class="count cart-count">0</span>
         </a>
       </div>
     </nav>
@@ -1478,7 +1478,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
               if (response.wishlist_count !== undefined) {
                 $('.count:not(.cart-count)').text(response.wishlist_count);
               }
-              $btn.html('<i class="fi fi-ss-heart"></i> Added!');
+              $btn.html('<i class="fi fi-ss-heart"></i>');
               setTimeout(() => {
                 $btn.html(originalHtml).prop('disabled', false);
               }, 1500);
@@ -1497,7 +1497,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         });
       });
 
-      // Buy Now functionality - Add to cart and redirect to checkout
+      // Buy Now functionality - Go directly to checkout without affecting cart
       $('#buyNowBtn').on('click', function(e) {
         e.preventDefault();
         
@@ -1514,7 +1514,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
           url: '../cart/cart_actions.php',
           method: 'POST',
           data: {
-            action: 'add',
+            action: 'buy_now',
             product_id: productId,
             quantity: quantity
           },
@@ -1527,8 +1527,9 @@ $title = htmlspecialchars($product['name']) . " — Details";
               showToast(response.message || 'Failed to process. Please try again.', 'error');
               if (response.redirect) {
                 setTimeout(() => window.location.href = response.redirect, 1500);
+              } else {
+                $btn.html(originalHtml).prop('disabled', false);
               }
-              $btn.html(originalHtml).prop('disabled', false);
             }
           },
           error: function() {

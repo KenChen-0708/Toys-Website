@@ -121,6 +121,50 @@ try {
             ]);
             break;
 
+        case 'buy_now':
+            $product_id = (int)($_POST['product_id'] ?? 0);
+            $quantity = (int)($_POST['quantity'] ?? 1);
+
+            if ($product_id <= 0 || $quantity <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Invalid product or quantity']);
+                exit();
+            }
+
+            // Check if product exists and is available
+            $stmt = $pdo->prepare("SELECT product_id, name, price, stock, status, main_image_path FROM Product WHERE product_id = ?");
+            $stmt->execute([$product_id]);
+            $product = $stmt->fetch();
+
+            if (!$product) {
+                echo json_encode(['success' => false, 'message' => 'Product not found']);
+                exit();
+            }
+
+            if ($product['status'] !== 'Available') {
+                echo json_encode(['success' => false, 'message' => 'Product is not available']);
+                exit();
+            }
+
+            if ($quantity > $product['stock']) {
+                echo json_encode(['success' => false, 'message' => 'Insufficient stock available']);
+                exit();
+            }
+
+            // Store buy now item in session (doesn't affect cart)
+            $_SESSION['buy_now_item'] = [
+                'product_id' => $product_id,
+                'name' => $product['name'],
+                'price' => $product['price'],
+                'quantity' => $quantity,
+                'main_image_path' => $product['main_image_path']
+            ];
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Redirecting to checkout...'
+            ]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'message' => 'Invalid action']);
     }

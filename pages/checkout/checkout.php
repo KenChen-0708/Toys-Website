@@ -16,33 +16,55 @@ $voucher_discount = 0;
 $voucher_code = '';
 $voucher_applied = false;
 
-// Fetch cart items
-try {
-    $stmt = $pdo->prepare("
-        SELECT c.cart_id, ci.cart_item_id, ci.product_id, ci.quantity, 
-               p.name, p.price, p.stock, p.main_image_path,
-               (ci.quantity * p.price) as subtotal
-        FROM Cart c
-        INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
-        INNER JOIN Product p ON ci.product_id = p.product_id
-        WHERE c.member_id = ? AND p.status = 'Available'
-    ");
-    $stmt->execute([$member_id]);
-    $cart_items = $stmt->fetchAll();
-    
-    // if (empty($cart_items)) {
-    //     header(header: 'Location: cart.php');
-    //     exit();
-    // }
-    
-    // Calculate cart total
-    $cart_total = 0;
-    foreach ($cart_items as $item) {
-        $cart_total += $item['subtotal'];
+// Check if this is a "Buy Now" checkout or regular cart checkout
+// If user came from cart page, clear any existing buy_now session
+if (isset($_GET['from']) && $_GET['from'] === 'cart') {
+    unset($_SESSION['buy_now_item']);
+}
+
+$is_buy_now = isset($_SESSION['buy_now_item']);
+$cart_items = [];
+$cart_total = 0;
+
+if ($is_buy_now) {
+    // Use buy_now item from session (doesn't affect actual cart)
+    $buy_now_item = $_SESSION['buy_now_item'];
+    $cart_items = [[
+        'cart_id' => null,
+        'cart_item_id' => null,
+        'product_id' => $buy_now_item['product_id'],
+        'quantity' => $buy_now_item['quantity'],
+        'name' => $buy_now_item['name'],
+        'price' => $buy_now_item['price'],
+        'stock' => 999,
+        'main_image_path' => $buy_now_item['main_image_path'],
+        'subtotal' => $buy_now_item['quantity'] * $buy_now_item['price']
+    ]];
+    $cart_total = $cart_items[0]['subtotal'];
+} else {
+    // Fetch cart items (regular checkout)
+    try {
+        $stmt = $pdo->prepare("
+            SELECT c.cart_id, ci.cart_item_id, ci.product_id, ci.quantity, 
+                   p.name, p.price, p.stock, p.main_image_path,
+                   (ci.quantity * p.price) as subtotal
+            FROM Cart c
+            INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
+            INNER JOIN Product p ON ci.product_id = p.product_id
+            WHERE c.member_id = ? AND p.status = 'Available'
+        ");
+        $stmt->execute([$member_id]);
+        $cart_items = $stmt->fetchAll();
+        
+        // Calculate cart total
+        $cart_total = 0;
+        foreach ($cart_items as $item) {
+            $cart_total += $item['subtotal'];
+        }
+        
+    } catch (PDOException $e) {
+        $error_message = "Error fetching cart items: " . $e->getMessage();
     }
-    
-} catch (PDOException $e) {
-    $error_message = "Error fetching cart items: " . $e->getMessage();
 }
 
 // Fetch existing shipping addresses
@@ -255,8 +277,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 $stmt->execute([$voucher_id, $member_id, $order_id]);
             }
             
-            $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
-            $stmt->execute([$member_id]);
+            // Clear cart only if not buy_now (buy_now doesn't affect cart)
+            if (!$is_buy_now) {
+                $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
+                $stmt->execute([$member_id]);
+            } else {
+                // Clear buy_now session data
+                unset($_SESSION['buy_now_item']);
+            }
             
             $pdo->commit();
             

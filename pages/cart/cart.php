@@ -10,6 +10,12 @@ if (!isset($_SESSION['member'])) {
 
 $member_id = $_SESSION['member']['id'];
 
+// Clear buy_now session when user visits cart page
+// This ensures cart checkout always shows cart items, not buy_now items
+if (isset($_SESSION['buy_now_item'])) {
+    unset($_SESSION['buy_now_item']);
+}
+
 // Handle AJAX requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
   header('Content-Type: application/json');
@@ -670,7 +676,7 @@ foreach ($cart_items as $item) {
 
         <div class="cart-actions">
           <button class="btn btn-danger" id="clear-cart">Clear Cart</button>
-          <a href="../checkout/checkout.php" class="btn btn-success" style="margin-left: auto;">Proceed to Checkout</a>
+          <a href="../checkout/checkout.php?from=cart" class="btn btn-success" style="margin-left: auto;">Proceed to Checkout</a>
         </div>
       <?php endif; ?>
     </section>
