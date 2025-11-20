@@ -30,14 +30,6 @@ $success = $_SESSION['success'] ?? null;
 unset($_SESSION['errors'], $_SESSION['success']);
 ?>
 <main class="main">
-  <section class="breadcrumb">
-    <ul class="breadcrumb__list flex container">
-      <li><a href="../index.php" class="breadcrumb__link">Home</a></li>
-      <li><span class="breadcrumb__link">></span></li>
-      <li><span class="breadcrumb__link">Forgot Username</span></li>
-    </ul>
-  </section>
-
   <section class="auth-hero">
     <div class="auth-card">
       <h1 class="auth-title">Forgot your username?</h1>
