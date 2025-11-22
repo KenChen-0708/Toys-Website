@@ -288,26 +288,25 @@ GROUP BY category;
 
 -- INSERT DATA
 INSERT INTO Product (name, price, description, category, stock, status, main_image_path) VALUES
-('Ninja Lego Set', 25.00, 'A small ninja-themed Lego kit.', 'Lego', 10, 'Available', '../assets/img/product_6917146a4c05f.jpg'),
-('Ninja Turtle Blue', 480.00, 'Blue turtle action figure.', 'Ninja Turtle', 5, 'Available', '../assets/img/product_691714da857ba.jpg'),
-('Star War Blaster', 55.00, 'Replica toy blaster from Star War series.', 'Star War', 15, 'Available', '../assets/img/default.jpg'),
-('Robot Builder Kit', 90.00, 'STEM kit for building robots.', 'Lego', 30, 'Available', '../assets/img/default.jpg'),
-('Super Ninja Mask', 35.00, 'High quality ninja mask for kids.', 'Ninja Turtle', 12, 'Available', '../assets/img/product_6917146a4c05f.jpg'),
-('Star War Droid', 75.00, 'Mini droid figure with sound effects.', 'Star War', 18, 'Available', '../assets/img/product_691714da857ba.jpg'),
-('Lego City Car', 40.00, 'Lego city racing car set.', 'Lego', 22, 'Available', '../assets/img/default.jpg'),
-('Ninja Turtle Bike', 110.00, 'Motorbike for ninja turtle action figure.', 'Ninja Turtle', 6, 'Available', '../assets/img/product_6917146a4c05f.jpg'),
-('Star War Spaceship', 150.00, 'Medium-size spaceship model.', 'Star War', 9, 'Available', '../assets/img/default.jpg'),
-('Lego Monster Truck', 60.00, 'Big monster truck Lego set.', 'Lego', 14, 'Available', '../assets/img/product_691714da857ba.jpg'),
-('Ninja Turtle Helmet', 45.00, 'Protective helmet for ninja action play.', 'Ninja Turtle', 20, 'Available', '../assets/img/default.jpg'),
-('Star War Saber Blue', 85.00, 'Blue light saber toy.', 'Star War', 19, 'Available', '../assets/img/product_6917146a4c05f.jpg'),
-('Lego Pirate Ship', 120.00, 'Classic pirate ship building kit.', 'Lego', 7, 'Available', '../assets/img/default.jpg'),
-('Ninja Training Set', 58.00, 'Training gear bundle for ninja roleplay.', 'Ninja Turtle', 9, 'Available', '../assets/img/product_691714da857ba.jpg'),
-('Star War Jetpack', 98.00, 'Wearable jetpack toy from Star War.', 'Star War', 16, 'Available', '../assets/img/default.jpg'),
-('Lego Police Patrol', 48.00, 'Police car and station mini-set.', 'Lego', 25, 'Available', '../assets/img/product_6917146a4c05f.jpg'),
-('Ninja Turtle Staff', 33.00, 'Turtle warrior combat staff.', 'Ninja Turtle', 11, 'Available', '../assets/img/default.jpg'),
-('Star War Clone Figure', 29.00, 'Clone trooper mini figure.', 'Star War', 40, 'Available', '../assets/img/product_691714da857ba.jpg'),
-('Lego Space Explorer', 88.00, 'Space exploration building kit.', 'Lego', 13, 'Available', '../assets/img/default.jpg'),
-('Ninja Turtle Van', 160.00, 'The iconic turtle van toy.', 'Ninja Turtle', 4, 'Available', '../assets/img/product_6917146a4c05f.jpg');
+('LCD Color Drawing Pad', 13.50, 'LCD Color Drawing Pad product.', 'artCraft', 10, 'Available', '../assets/img/Product1_artCraft_13.50_LCD Color Drawing Pad.png'),
+('Play-Doh Noodles', 60.80, 'Play-Doh Noodles product.', 'artCraft', 5, 'Available', '../assets/img/Product2_artCraft_60.80_Play-Doh Noodles.png'),
+('Mould & Paint', 36.90, 'Mould & Paint product.', 'artCraft', 15, 'Available', '../assets/img/Product3_artCraft_36.90_Mould&Paint.png'),
+('Cupcake Cuddle Doll', 48.90, 'Cupcake Cuddle Doll product.', 'dolls', 30, 'Available', '../assets/img/Product4_dolls_48.90_CupcakeCuddleDoll.png'),
+('Barbie Doll & Party Fashions', 80.00, 'Barbie Doll & Party Fashions product.', 'dolls', 12, 'Available', '../assets/img/Product5_dolls_80.00_Barbie Doll & Party Fashions.png'),
+('Little Bianca Doll', 99.99, 'Little Bianca Doll product.', 'dolls', 18, 'Available', '../assets/img/Product6_dolls_99.99_LittleBiancaDoll.png'),
+('Busy Play Box', 86.00, 'Busy Play Box product.', 'activityToys', 22, 'Available', '../assets/img/Product7_activityToys_86.00_BusyPlayBox.png'),
+('Play Book', 39.00, 'Play Book product.', 'activityToys', 6, 'Available', '../assets/img/Product8_activityToys_39_PlayBook.png'),
+('Push & Spin Aquarium', 45.00, 'Push & Spin Aquarium product.', 'activityToys', 9, 'Available', '../assets/img/Product9_activityToys_45_Push&Spin Aquarium.png'),
+('Little Driver 5-Pack', 36.00, 'Little Driver 5-Pack product.', 'vehicles', 14, 'Available', '../assets/img/Product10_vehicles_36_LittleDriver 5-Pack.png'),
+('Scout Car Building Set', 29.31, 'Scout Car Building Set product.', 'vehicles', 20, 'Available', '../assets/img/Product11_vehicles_29.31_Scout Car Building Set.jpg'),
+('Audi Quattro Toys Cars', 63.05, 'Audi Quattro Toys Cars product.', 'vehicles', 19, 'Available', '../assets/img/Product12_vehicles_63.05_AudiQuattroToysCars.jpg'),
+('Musical Rhymes Book', 41.27, 'Musical Rhymes Book product.', 'books', 7, 'Available', '../assets/img/Product13_books_41.27_MusicalRhymesBook.jpg'),
+('Soft Book', 21.36, 'Soft Book product.', 'books', 9, 'Available', '../assets/img/Product14_books_21.36_Soft Book.jpg'),
+('Flipbook', 30.97, 'Flipbook product.', 'books', 16, 'Available', '../assets/img/Product15_books_30.97_Flipbook.jpg'),
+('Playpopo Puzzle Ball', 49.90, 'Playpopo Puzzle Ball product.', 'puzzles', 25, 'Available', '../assets/img/Product16_puzzles_49.90_playpopo puzzle ball.jpg'),
+('Cube Puzzle Toys', 6.66, 'Cube Puzzle Toys product.', 'puzzles', 11, 'Available', '../assets/img/Product17_puzzles_6.66_cube puzze toys.jpg'),
+('Lion City 100-Piece Puzzle', 60.42, 'Lion City 100-Piece Puzzle product.', 'puzzles', 40, 'Available', '../assets/img/Product18_puzzles_60.42_Lion City 100-Piece Puzzle.jpg');
+
 
 -- password: Password123!
 INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_number`, `address`, `profile_photo_path`, `register_date`) VALUES
@@ -457,7 +456,7 @@ INSERT INTO Review (product_id, member_id, rating, review_text, created_date) VA
 (14,7,4,'Good training set, my kids enjoyed playing with it.','2023-09-05 11:40:00'),
 (16,8,5,'Police patrol Lego kit has great details!','2024-12-08 19:10:00'),
 (18,9,3,'Clone figure looks fine but plastic quality feels cheap.','2025-06-11 13:50:00'),
-(20,10,5,'The turtle van is amazing! Great collectible item.','2023-04-20 17:25:00');
+(17,10,5,'The turtle van is amazing! Great collectible item.','2023-04-20 17:25:00');
 
 INSERT INTO Wishlist (member_id) VALUES
 (1),
@@ -489,9 +488,8 @@ INSERT INTO Wishlist_Item (wishlist_id, product_id) VALUES
 (7, 16),
 (8, 13),
 (8, 18),
-(9, 17),
-(9, 19),
-(10, 20);
+(9, 17);
+
 
 INSERT INTO Voucher (code, discount_value, discount_type, min_spend, max_discount, usage_limit, usage_per_user, start_date, end_date, status)
 VALUES
