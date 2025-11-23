@@ -590,7 +590,7 @@ foreach ($cart_items as $item) {
   </style>
 </head>
 
-<body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
   <div class="container">
     <div class="cart-header">
       <h1>Shopping Cart</h1>

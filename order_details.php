@@ -75,74 +75,73 @@ if ($order['status'] === 'Shipped') {
 
 </head>
 
-<body>
-    <?php
-    $title = "Home";
-    include 'partials/header.php';
+<?php
+$title = "Home";
+include 'partials/header.php';
 
-    ?>
-    <div class="detail-container">
-        <div class="back-btn">
-            <a href="orders.php" class="btn">← Back to Orders</a>
-        </div>
-
-        <h1>Order #<?php echo $order_id; ?></h1>
-
-        <div class="order-meta">
-            <p><strong>Customer:</strong> <?php echo htmlspecialchars($order['username']); ?></p>
-            <p><strong>Email:</strong> <?php echo htmlspecialchars($order['email']); ?></p>
-            <?php if (!empty($order['phone_number'])): ?>
-                <p><strong>Phone:</strong> <?php echo htmlspecialchars($order['phone_number']); ?></p>
-            <?php endif; ?>
-            <p><strong>Order Date:</strong> <?php echo $order['order_date']; ?></p>
-            <p><strong>Status:</strong> <span class="status <?php echo $order['status']; ?>"><?php echo $order['status']; ?></span></p>
-            <p><strong>Shipping Address:</strong>
-                <?php
-                $addr_parts = array_filter([
-                    $order['shipping_address_line1'] ?? '',
-                    $order['shipping_address_line2'] ?? '',
-                    $order['shipping_city'] ?? '',
-                    $order['shipping_state'] ?? '',
-                    $order['shipping_postal_code'] ?? '',
-                    $order['shipping_country'] ?? ''
-                ]);
-                echo htmlspecialchars(implode(', ', $addr_parts));
-                ?>
-            </p>
-            <p><strong>Estimated Delivery:</strong> <?php echo $eta; ?></p>
-            <p><strong>Total Amount:</strong> RM<?php echo number_format($order['total_amount'], 2); ?></p>
-        </div>
-
-
-        <h3>Order Items</h3>
-        <div class="items-grid">
-            <?php foreach ($items as $it): ?>
-                <div class="item-card">
-                    <img src="<?php echo htmlspecialchars($it['main_image_path'] ?: 'assets/img/default.jpg'); ?>" alt="<?php echo htmlspecialchars($it['name']); ?>">
-                    <div class="it-name"><?php echo htmlspecialchars($it['name']); ?></div>
-                    <div>Quantity: <?php echo (int)$it['quantity']; ?></div>
-                    <div>Price: RM<?php echo number_format($it['price'], 2); ?></div>
-                    <div><strong>Subtotal: RM<?php echo number_format($it['price'] * $it['quantity'], 2); ?></strong></div>
-                </div>
-            <?php endforeach; ?>
-        </div>
-
-
-        <h3>Payment Information</h3>
-        <?php if ($payment): ?>
-            <div class="payment-info">
-                <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
-                <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
-                <p><strong>Status:</strong> <span class="status <?php echo $payment['status']; ?>"><?php echo htmlspecialchars($payment['status']); ?></span></p>
-                <p><strong>Payment Date:</strong> <?php echo $payment['payment_date']; ?></p>
-            </div>
-        <?php else: ?>
-            <div class="payment-info">
-                <p>No payment record found for this order.</p>
-            </div>
-        <?php endif; ?>
-
+?>
+<div class="detail-container">
+    <div class="back-btn">
+        <a href="orders.php" class="btn">← Back to Orders</a>
     </div>
+
+    <h1>Order #<?php echo $order_id; ?></h1>
+
+    <div class="order-meta">
+        <p><strong>Customer:</strong> <?php echo htmlspecialchars($order['username']); ?></p>
+        <p><strong>Email:</strong> <?php echo htmlspecialchars($order['email']); ?></p>
+        <?php if (!empty($order['phone_number'])): ?>
+            <p><strong>Phone:</strong> <?php echo htmlspecialchars($order['phone_number']); ?></p>
+        <?php endif; ?>
+        <p><strong>Order Date:</strong> <?php echo $order['order_date']; ?></p>
+        <p><strong>Status:</strong> <span class="status <?php echo $order['status']; ?>"><?php echo $order['status']; ?></span></p>
+        <p><strong>Shipping Address:</strong>
+            <?php
+            $addr_parts = array_filter([
+                $order['shipping_address_line1'] ?? '',
+                $order['shipping_address_line2'] ?? '',
+                $order['shipping_city'] ?? '',
+                $order['shipping_state'] ?? '',
+                $order['shipping_postal_code'] ?? '',
+                $order['shipping_country'] ?? ''
+            ]);
+            echo htmlspecialchars(implode(', ', $addr_parts));
+            ?>
+        </p>
+        <p><strong>Estimated Delivery:</strong> <?php echo $eta; ?></p>
+        <p><strong>Total Amount:</strong> RM<?php echo number_format($order['total_amount'], 2); ?></p>
+    </div>
+
+
+    <h3>Order Items</h3>
+    <div class="items-grid">
+        <?php foreach ($items as $it): ?>
+            <div class="item-card">
+                <img src="<?php echo htmlspecialchars($it['main_image_path'] ?: 'assets/img/default.jpg'); ?>" alt="<?php echo htmlspecialchars($it['name']); ?>">
+                <div class="it-name"><?php echo htmlspecialchars($it['name']); ?></div>
+                <div>Quantity: <?php echo (int)$it['quantity']; ?></div>
+                <div>Price: RM<?php echo number_format($it['price'], 2); ?></div>
+                <div><strong>Subtotal: RM<?php echo number_format($it['price'] * $it['quantity'], 2); ?></strong></div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+
+    <h3>Payment Information</h3>
+    <?php if ($payment): ?>
+        <div class="payment-info">
+            <p><strong>Method:</strong> <?php echo htmlspecialchars($payment['payment_method']); ?></p>
+            <p><strong>Amount:</strong> RM<?php echo number_format($payment['amount'], 2); ?></p>
+            <p><strong>Status:</strong> <span class="status <?php echo $payment['status']; ?>"><?php echo htmlspecialchars($payment['status']); ?></span></p>
+            <p><strong>Payment Date:</strong> <?php echo $payment['payment_date']; ?></p>
+        </div>
+    <?php else: ?>
+        <div class="payment-info">
+            <p>No payment record found for this order.</p>
+        </div>
+    <?php endif; ?>
+
+</div>
 </body>
 
 </html>

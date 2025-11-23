@@ -691,7 +691,7 @@ $final_total = $cart_total - $voucher_discount;
     </style>
 </head>
 
-<body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
     <div class="container">
         <h1 class="page-title">Checkout</h1>
 
