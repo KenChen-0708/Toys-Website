@@ -52,6 +52,47 @@
 			const msg = $(this).attr('data-confirm') || 'Are you sure?';
 			return window.confirm(msg);
 		});
+
+		// Block/Unblock member functionality
+		window.toggleBlockMember = function (memberId, currentStatus, memberName) {
+			const action = currentStatus == 1 ? 'unblock' : 'block';
+			const actionText = action === 'block' ? 'block' : 'unblock';
+			const confirmMsg = `Are you sure you want to ${actionText} the member "${memberName}"?`;
+
+			if (!confirm(confirmMsg)) {
+				return;
+			}
+
+			// Send AJAX request
+			$.ajax({
+				url: 'block_member.php',
+				method: 'POST',
+				contentType: 'application/json',
+				dataType: 'json',
+				data: JSON.stringify({
+					member_id: memberId,
+					action: action
+				}),
+				success: function (response) {
+					if (response.success) {
+						window.location.reload();
+					} else {
+						alert('Error: ' + response.message);
+					}
+				},
+				error: function (xhr) {
+					let errorMsg = 'An error occurred while trying to ' + actionText + ' the member.';
+					try {
+						const response = JSON.parse(xhr.responseText);
+						if (response.message) {
+							errorMsg = response.message;
+						}
+					} catch (e) {
+						// Use default error message
+					}
+					alert(errorMsg);
+				}
+			});
+		};
 	});
 })(jQuery);
-
