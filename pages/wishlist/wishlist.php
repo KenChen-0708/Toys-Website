@@ -4,162 +4,162 @@ require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: ../../auth/login.php');
-    exit();
+  header('Location: /pages/auth/login.php');
+  exit();
 }
 
 $member_id = $_SESSION['member']['id'];
 
 // Handle AJAX requests
-if ($_SERVER['REQUEST_METHOD'] === 'POST' &&
-    isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
-    strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
+if (
+  $_SERVER['REQUEST_METHOD'] === 'POST' &&
+  isset($_SERVER['HTTP_X_REQUESTED_WITH']) &&
+  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest'
+) {
 
-    header('Content-Type: application/json');
-    $action = $_POST['action'] ?? '';
+  header('Content-Type: application/json');
+  $action = $_POST['action'] ?? '';
 
-    try {
-        switch ($action) {
+  try {
+    switch ($action) {
 
-            /* -----------------------------------
+      /* -----------------------------------
                 REMOVE SINGLE ITEM
             -----------------------------------*/
-            case 'remove_item':
-                $wishlist_item_id = (int)$_POST['wishlist_item_id'];
+      case 'remove_item':
+        $wishlist_item_id = (int)$_POST['wishlist_item_id'];
 
-                $stmt = $pdo->prepare("
+        $stmt = $pdo->prepare("
                     DELETE wi
                     FROM Wishlist_Item wi
                     JOIN Wishlist w ON wi.wishlist_id = w.wishlist_id
                     WHERE wi.wishlist_item_id = ? AND w.member_id = ?
                 ");
-                $stmt->execute([$wishlist_item_id, $member_id]);
+        $stmt->execute([$wishlist_item_id, $member_id]);
 
-                echo json_encode(['success' => true, 'message' => 'Item removed from wishlist']);
-                break;
+        echo json_encode(['success' => true, 'message' => 'Item removed from wishlist']);
+        break;
 
 
-            /* -----------------------------------
+      /* -----------------------------------
                 ADD TO CART
             -----------------------------------*/
-            case 'add_to_cart':
-                $product_id = (int)$_POST['product_id'];
+      case 'add_to_cart':
+        $product_id = (int)$_POST['product_id'];
 
-                // Product available?
-                $stmt = $pdo->prepare("SELECT stock, status FROM Product WHERE product_id = ?");
-                $stmt->execute([$product_id]);
-                $product = $stmt->fetch();
+        // Product available?
+        $stmt = $pdo->prepare("SELECT stock, status FROM Product WHERE product_id = ?");
+        $stmt->execute([$product_id]);
+        $product = $stmt->fetch();
 
-                if (!$product || $product['status'] === 'Unavailable' || $product['stock'] < 1) {
-                    echo json_encode(['success' => false, 'message' => 'Product is not available']);
-                    exit();
-                }
+        if (!$product || $product['status'] === 'Unavailable' || $product['stock'] < 1) {
+          echo json_encode(['success' => false, 'message' => 'Product is not available']);
+          exit();
+        }
 
-                // Get or create cart (FIXED: user_id → member_id)
-                $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE member_id = ?");
-                $stmt->execute([$member_id]);
-                $cart = $stmt->fetch();
+        // Get or create cart (FIXED: user_id → member_id)
+        $stmt = $pdo->prepare("SELECT cart_id FROM Cart WHERE member_id = ?");
+        $stmt->execute([$member_id]);
+        $cart = $stmt->fetch();
 
-                if (!$cart) {
-                    $stmt = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
-                    $stmt->execute([$member_id]);
-                    $cart_id = $pdo->lastInsertId();
-                } else {
-                    $cart_id = $cart['cart_id'];
-                }
+        if (!$cart) {
+          $stmt = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
+          $stmt->execute([$member_id]);
+          $cart_id = $pdo->lastInsertId();
+        } else {
+          $cart_id = $cart['cart_id'];
+        }
 
-                // Check if product already in cart
-                $stmt = $pdo->prepare("SELECT cart_item_id, quantity FROM Cart_Item WHERE cart_id = ? AND product_id = ?");
-                $stmt->execute([$cart_id, $product_id]);
-                $cart_item = $stmt->fetch();
+        // Check if product already in cart
+        $stmt = $pdo->prepare("SELECT cart_item_id, quantity FROM Cart_Item WHERE cart_id = ? AND product_id = ?");
+        $stmt->execute([$cart_id, $product_id]);
+        $cart_item = $stmt->fetch();
 
-                if ($cart_item) {
-                    $new_quantity = $cart_item['quantity'] + 1;
+        if ($cart_item) {
+          $new_quantity = $cart_item['quantity'] + 1;
 
-                    if ($new_quantity > $product['stock']) {
-                        echo json_encode(['success' => false, 'message' => 'Insufficient stock']);
-                        exit();
-                    }
+          if ($new_quantity > $product['stock']) {
+            echo json_encode(['success' => false, 'message' => 'Insufficient stock']);
+            exit();
+          }
 
-                    $stmt = $pdo->prepare("UPDATE Cart_Item SET quantity = ? WHERE cart_item_id = ?");
-                    $stmt->execute([$new_quantity, $cart_item['cart_item_id']]);
+          $stmt = $pdo->prepare("UPDATE Cart_Item SET quantity = ? WHERE cart_item_id = ?");
+          $stmt->execute([$new_quantity, $cart_item['cart_item_id']]);
+        } else {
+          $stmt = $pdo->prepare("INSERT INTO Cart_Item (cart_id, product_id, quantity) VALUES (?, ?, 1)");
+          $stmt->execute([$cart_id, $product_id]);
+        }
 
-                } else {
-                    $stmt = $pdo->prepare("INSERT INTO Cart_Item (cart_id, product_id, quantity) VALUES (?, ?, 1)");
-                    $stmt->execute([$cart_id, $product_id]);
-                }
-
-                echo json_encode(['success' => true, 'message' => 'Item added to cart']);
-                break;
+        echo json_encode(['success' => true, 'message' => 'Item added to cart']);
+        break;
 
 
-            /* -----------------------------------
+      /* -----------------------------------
                 CLEAR WISHLIST
             -----------------------------------*/
-            case 'clear_wishlist':
-                $stmt = $pdo->prepare("
+      case 'clear_wishlist':
+        $stmt = $pdo->prepare("
                     DELETE wi
                     FROM Wishlist_Item wi
                     JOIN Wishlist w ON wi.wishlist_id = w.wishlist_id
                     WHERE w.member_id = ?
                 ");
-                $stmt->execute([$member_id]);
+        $stmt->execute([$member_id]);
 
-                echo json_encode(['success' => true, 'message' => 'Wishlist cleared']);
-                break;
+        echo json_encode(['success' => true, 'message' => 'Wishlist cleared']);
+        break;
 
 
-            /* -----------------------------------
+      /* -----------------------------------
                 ADD TO WISHLIST
             -----------------------------------*/
-            case 'add_to_wishlist':
-                $product_id = (int)$_POST['product_id'];
+      case 'add_to_wishlist':
+        $product_id = (int)$_POST['product_id'];
 
-                // Ensure wishlist exists (member_id UNIQUE)
-                $stmt = $pdo->prepare("SELECT wishlist_id FROM Wishlist WHERE member_id = ?");
-                $stmt->execute([$member_id]);
-                $wishlist = $stmt->fetch();
+        // Ensure wishlist exists (member_id UNIQUE)
+        $stmt = $pdo->prepare("SELECT wishlist_id FROM Wishlist WHERE member_id = ?");
+        $stmt->execute([$member_id]);
+        $wishlist = $stmt->fetch();
 
-                if (!$wishlist) {
-                    $stmt = $pdo->prepare("INSERT INTO Wishlist (member_id) VALUES (?)");
-                    $stmt->execute([$member_id]);
-                    $wishlist_id = $pdo->lastInsertId();
-                } else {
-                    $wishlist_id = $wishlist['wishlist_id'];
-                }
-
-                // Check if item already exists
-                $stmt = $pdo->prepare("SELECT wishlist_item_id FROM Wishlist_Item WHERE wishlist_id = ? AND product_id = ?");
-                $stmt->execute([$wishlist_id, $product_id]);
-
-                if ($stmt->fetch()) {
-                    echo json_encode(['success' => false, 'message' => 'Already in wishlist']);
-                    exit();
-                }
-
-                // Add
-                $stmt = $pdo->prepare("INSERT INTO Wishlist_Item (wishlist_id, product_id) VALUES (?, ?)");
-                $stmt->execute([$wishlist_id, $product_id]);
-
-                echo json_encode(['success' => true, 'message' => 'Added to wishlist']);
-                break;
-
-
-            default:
-                echo json_encode(['success' => false, 'message' => 'Invalid action']);
+        if (!$wishlist) {
+          $stmt = $pdo->prepare("INSERT INTO Wishlist (member_id) VALUES (?)");
+          $stmt->execute([$member_id]);
+          $wishlist_id = $pdo->lastInsertId();
+        } else {
+          $wishlist_id = $wishlist['wishlist_id'];
         }
 
-    } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => $e->getMessage()]);
-    }
+        // Check if item already exists
+        $stmt = $pdo->prepare("SELECT wishlist_item_id FROM Wishlist_Item WHERE wishlist_id = ? AND product_id = ?");
+        $stmt->execute([$wishlist_id, $product_id]);
 
-    exit();
+        if ($stmt->fetch()) {
+          echo json_encode(['success' => false, 'message' => 'Already in wishlist']);
+          exit();
+        }
+
+        // Add
+        $stmt = $pdo->prepare("INSERT INTO Wishlist_Item (wishlist_id, product_id) VALUES (?, ?)");
+        $stmt->execute([$wishlist_id, $product_id]);
+
+        echo json_encode(['success' => true, 'message' => 'Added to wishlist']);
+        break;
+
+
+      default:
+        echo json_encode(['success' => false, 'message' => 'Invalid action']);
+    }
+  } catch (PDOException $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+  }
+
+  exit();
 }
 
 
 // FETCH WISHLIST ITEMS FOR PAGE
 try {
-    $stmt = $pdo->prepare("
+  $stmt = $pdo->prepare("
         SELECT 
             wi.wishlist_item_id,
             w.wishlist_id,
@@ -177,11 +177,10 @@ try {
         ORDER BY wi.date_added DESC
     ");
 
-    $stmt->execute([$member_id]);
-    $wishlist_items = $stmt->fetchAll();
-
+  $stmt->execute([$member_id]);
+  $wishlist_items = $stmt->fetchAll();
 } catch (PDOException $e) {
-    $wishlist_items = [];
+  $wishlist_items = [];
 }
 ?>
 
@@ -303,8 +302,13 @@ try {
     }
 
     @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
     }
 
     .alert-success {
@@ -691,9 +695,9 @@ try {
               </div>
 
               <div class="item-actions">
-                <button class="btn-add-cart" 
-                        data-product-id="<?= $item['product_id'] ?>"
-                        <?= ($item['status'] === 'Unavailable' || $item['stock'] < 1) ? 'disabled' : '' ?>>
+                <button class="btn-add-cart"
+                  data-product-id="<?= $item['product_id'] ?>"
+                  <?= ($item['status'] === 'Unavailable' || $item['stock'] < 1) ? 'disabled' : '' ?>>
                   <i class="fi fi-rs-shopping-cart-add"></i>
                   Add to Cart
                 </button>
@@ -999,4 +1003,3 @@ try {
 </body>
 
 </html>
-

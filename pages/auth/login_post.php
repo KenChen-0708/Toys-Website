@@ -1,6 +1,6 @@
 <?php
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ./login.php');
@@ -73,7 +73,7 @@ if (!$errors) {
         unset($_SESSION['failed_login_count']);
         unset($_SESSION['old']);
 
-        header('Location: ../index.php');
+        header('Location: /index.php');
         exit;
     }
 

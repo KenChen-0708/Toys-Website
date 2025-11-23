@@ -8,12 +8,13 @@ require_once '../helper/auth.php';
 require_admin();
 
 // Helper to show initials in avatar
-function admin_initials($name) {
-    $parts = preg_split('/\s+/', trim((string)$name));
-    $first  = mb_substr($parts[0] ?? '', 0, 1);
-    $second = mb_substr($parts[1] ?? '', 0, 1);
-    $initials = $first . ($second ?: '');
-    return mb_strtoupper($initials ?: 'AD');
+function admin_initials($name)
+{
+  $parts = preg_split('/\s+/', trim((string)$name));
+  $first  = mb_substr($parts[0] ?? '', 0, 1);
+  $second = mb_substr($parts[1] ?? '', 0, 1);
+  $initials = $first . ($second ?: '');
+  return mb_strtoupper($initials ?: 'AD');
 }
 ?>
 <style>
@@ -103,31 +104,31 @@ function admin_initials($name) {
 
 
 <header class="header">
-    <div class="header-left">
-        <h1>Dashboard</h1>
-    </div>
-    <div class="header-right">
-        <div class="admin-user-profile">
-            <button class="avatar-btn" aria-haspopup="true" aria-expanded="false">
-                <span class="avatar-circle">
-                    <?= htmlspecialchars(admin_initials($_SESSION['admin']['name'] ?? 'Admin')) ?>
-                </span>
-            </button>
-            <div class="profile-menu">
-                <div class="profile-menu__header">
-                    <strong><?= htmlspecialchars($_SESSION['admin']['name'] ?? 'Administrator') ?></strong>
-                    <small><?= htmlspecialchars($_SESSION['admin']['email'] ?? '') ?></small>
-                </div>
-                <a href="./manage_admin.php">Manage Admins</a>
-                <a href="./manage_member.php">Manage Members</a>
-                <a href="./manage_product.php">Manage Products</a>
-                <form action="../auth/admin_logout.php" method="post">
-                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                    <button type="submit" class="logout-btn">Log Out</button>
-                </form>
-            </div>
+  <div class="header-left">
+    <h1>Dashboard</h1>
+  </div>
+  <div class="header-right">
+    <div class="admin-user-profile">
+      <button class="avatar-btn" aria-haspopup="true" aria-expanded="false">
+        <span class="avatar-circle">
+          <?= htmlspecialchars(admin_initials($_SESSION['admin']['name'] ?? 'Admin')) ?>
+        </span>
+      </button>
+      <div class="profile-menu">
+        <div class="profile-menu__header">
+          <strong><?= htmlspecialchars($_SESSION['admin']['name'] ?? 'Administrator') ?></strong>
+          <small><?= htmlspecialchars($_SESSION['admin']['email'] ?? '') ?></small>
         </div>
+        <a href="./manage_admin.php">Manage Admins</a>
+        <a href="./manage_member.php">Manage Members</a>
+        <a href="./manage_product.php">Manage Products</a>
+        <form action="/pages/auth/admin_logout.php" method="post">
+          <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <button type="submit" class="logout-btn">Log Out</button>
+        </form>
+      </div>
     </div>
+  </div>
 </header>
 
 

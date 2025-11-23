@@ -1,6 +1,6 @@
 <?php
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
 // Ensure guest only
 require_guest();
@@ -89,5 +89,5 @@ $deleteToken->execute([$email]);
 // Step 6: Redirect with success message to login page
 $_SESSION['success'] = "Your password has been successfully updated. Please log in.";
 
-header("Location: ../auth/login.php");
+header("Location: /pages/auth/login.php");
 exit;

@@ -5,7 +5,7 @@ require '../../helper/pdo_connection.php';   // PDO connection
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: ../../auth/login.php');
+    header('Location: /pages/auth/login.php');
     exit();
 }
 
@@ -52,23 +52,23 @@ try {
 
     // Get total amount from order (already includes discounts)
     $total_amount = $order['total_amount'];
-    
+
     // Build line items for Stripe with images
     $line_items = [];
-    $domain = 'http://localhost:8000'; 
-    
+    $domain = 'http://localhost:8000';
+
     foreach ($order_items as $item) {
         $product_data = [
             'name' => $item['name'],
         ];
-        
+
         // Add product image if available
         if (!empty($item['main_image_path'])) {
             // Convert relative path to absolute URL
             $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
             $product_data['images'] = [$image_url];
         }
-        
+
         $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
@@ -78,7 +78,7 @@ try {
             'quantity' => $item['quantity'],
         ];
     }
-    
+
     // 3️⃣ Create Stripe Checkout Session
     $session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card', 'fpx', 'grabpay'],
@@ -96,8 +96,6 @@ try {
     // Redirect to Stripe Checkout
     header("Location: " . $session->url);
     exit();
-
 } catch (Exception $e) {
     die("Error: " . $e->getMessage());
 }
-

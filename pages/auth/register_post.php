@@ -1,14 +1,43 @@
 <?php
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { 
-    header('Location: ./register.php'); 
-    exit; 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ./register.php');
+    exit;
 }
-if (!verify_csrf($_POST['csrf_token'] ?? '')) { 
-    http_response_code(403); 
-    die('Invalid CSRF token'); 
+if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    die('Invalid CSRF token');
+}
+
+// reCAPTCHA verification
+$recaptcha_secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
+$recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
+
+$verify_url = 'https://www.google.com/recaptcha/api/siteverify';
+$verify_data = [
+    'secret' => $recaptcha_secret,
+    'response' => $recaptcha_response,
+    'remoteip' => $_SERVER['REMOTE_ADDR']
+];
+
+$options = [
+    'http' => [
+        'header' => "Content-type: application/x-www-form-urlencoded\r\n",
+        'method' => 'POST',
+        'content' => http_build_query($verify_data)
+    ]
+];
+
+$context = stream_context_create($options);
+$verify_response = file_get_contents($verify_url, false, $context);
+$response_data = json_decode($verify_response);
+
+if (!$response_data->success) {
+    $_SESSION['errors'] = ['Please complete the CAPTCHA verification.'];
+    header('Location: ./register.php');
+    exit;
 }
 
 $username = trim($_POST['username'] ?? '');
@@ -17,7 +46,7 @@ $password = $_POST['password'] ?? '';
 $password_confirm = $_POST['password_confirm'] ?? '';
 $phone = trim($_POST['phone'] ?? '');
 
-$_SESSION['old'] = compact('username','email','phone');
+$_SESSION['old'] = compact('username', 'email', 'phone');
 $errors = [];
 
 // Username checks
@@ -68,14 +97,13 @@ if (!$errors) {
 
             unset($_SESSION['old']);
             $_SESSION['member'] = [
-                'id'=>$member_id,
-                'username'=>$username,
-                'email'=>$email
+                'id' => $member_id,
+                'username' => $username,
+                'email' => $email
             ];
 
-            header('Location: ../index.php'); 
+            header('Location: /index.php');
             exit;
-
         } catch (PDOException $e) {
             $errors[] = ($e->getCode() == 23000)
                 ? 'Username or email already exists.'

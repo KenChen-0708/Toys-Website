@@ -4,8 +4,8 @@ require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: ../../auth/login.php');
-    exit();
+  header('Location: /pages/auth/login.php');
+  exit();
 }
 
 $member_id = $_SESSION['member']['id'];
@@ -13,7 +13,7 @@ $member_id = $_SESSION['member']['id'];
 // Clear buy_now session when user visits cart page
 // This ensures cart checkout always shows cart items, not buy_now items
 if (isset($_SESSION['buy_now_item'])) {
-    unset($_SESSION['buy_now_item']);
+  unset($_SESSION['buy_now_item']);
 }
 
 // Handle AJAX requests
@@ -248,9 +248,14 @@ foreach ($cart_items as $item) {
 
 
     @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
 
     .alert-success {
       background-color: #1a1a1a;
