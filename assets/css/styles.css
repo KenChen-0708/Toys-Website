@@ -16,11 +16,11 @@
   --container-color: hsl(0, 0%, 93%);
   --border-color: hsl(129, 36%, 85%);
   --border-color-alt: hsl(113, 15%, 90%);
-  
+
   /*========== Colors (Custom Overrides) ==========*/
   --header-top-bg: #0e1b14;
   --header-top-text: #e7f4ec;
-  --nav-bg: #CFE7DC;     
+  --nav-bg: #CFE7DC;
   --footer-bg: #CFE7DC;
   --nav-link-color: #0D3B2F;
   --nav-link-active: #0A6A50;
@@ -60,7 +60,9 @@ html {
   scroll-behavior: smooth;
 }
 
-input, textarea, body {
+input,
+textarea,
+body {
   color: var(--text-color);
   font-family: var(--body-font);
   font-size: var(--normal-font-size);
@@ -71,7 +73,10 @@ body {
   background-color: var(--body-color);
 }
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
   font-family: var(--second-font);
   color: var(--title-color);
   font-weight: var(--weight-600);
@@ -93,7 +98,9 @@ img {
   max-width: 100%;
 }
 
-button, textarea, input {
+button,
+textarea,
+input {
   background-color: transparent;
   border: none;
   outline: none;
@@ -162,7 +169,7 @@ table {
 
 .form__input:focus {
   border-color: var(--title-color);
-  box-shadow: 0 0 0 4px rgba(17,24,39,.09);
+  box-shadow: 0 0 0 4px rgba(17, 24, 39, .09);
 }
 
 .textarea {
@@ -236,12 +243,12 @@ table {
   background-color: var(--nav-bg);
   position: relative;
   z-index: 1000;
-  border-bottom: 1px solid rgba(0,0,0,.05);
+  border-bottom: 1px solid rgba(0, 0, 0, .05);
 }
 
 .header__top {
   background: var(--header-top-bg);
-  border-bottom: 1px solid rgba(255,255,255,.2);
+  border-bottom: 1px solid rgba(255, 255, 255, .2);
   color: var(--header-top-text);
   padding-block: 0.875rem;
 }
@@ -276,7 +283,8 @@ table {
   justify-content: space-between;
   align-items: center;
   column-gap: 1rem;
-  background: transparent; /* Handled by .header */
+  background: transparent;
+  /* Handled by .header */
 }
 
 .nav__logo-img {
@@ -315,7 +323,7 @@ table {
 
 .header__search .form__input {
   width: 100%;
-  border-color: rgba(0,0,0,.1);
+  border-color: rgba(0, 0, 0, .1);
 }
 
 .search__btn {
@@ -361,7 +369,8 @@ table {
 }
 
 /* Login/Register Buttons */
-.login-btn, .register-btn {
+.login-btn,
+.register-btn {
   display: inline-block;
   padding: 10px 20px;
   border: 1px solid var(--border-color);
@@ -374,7 +383,8 @@ table {
   cursor: pointer;
 }
 
-.login-btn:hover, .register-btn:hover {
+.login-btn:hover,
+.register-btn:hover {
   background-color: var(--first-color-alt);
   border-color: var(--first-color);
   color: var(--first-color);
@@ -451,7 +461,8 @@ table {
   font-size: var(--smaller-font-size);
 }
 
-.profile-menu a, .profile-menu .logout-btn {
+.profile-menu a,
+.profile-menu .logout-btn {
   display: block;
   padding: 5px 0;
   color: var(--title-color);
@@ -463,11 +474,13 @@ table {
   text-align: left;
 }
 
-.profile-menu a:hover, .profile-menu .logout-btn:hover {
+.profile-menu a:hover,
+.profile-menu .logout-btn:hover {
   color: var(--first-color);
 }
 
-.nav__menu-top, .nav__toggle {
+.nav__menu-top,
+.nav__toggle {
   display: none;
 }
 
@@ -484,54 +497,104 @@ table {
 
 /*=============== AUTH PAGES ===============*/
 .auth-hero {
-  min-height: calc(100dvh - 140px); 
+  min-height: calc(100dvh - 140px);
   display: grid;
-  place-items: center;   
+  place-items: center;
   background: radial-gradient(1000px 600px at 20% 10%, #f1f5ff 0, transparent 60%),
-              radial-gradient(1000px 600px at 80% 90%, #fef3f2 0, transparent 60%),
-              linear-gradient(180deg, #fff, #fafafa);
+    radial-gradient(1000px 600px at 80% 90%, #fef3f2 0, transparent 60%),
+    linear-gradient(180deg, #fff, #fafafa);
   padding: 2rem 1rem;
 }
 
 .auth-card {
   width: 100%;
   max-width: 520px;
-  background: rgba(255,255,255,.8);
+  background: rgba(255, 255, 255, .8);
   backdrop-filter: blur(10px);
   border: 1px solid #eef2f7;
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(16,24,40,.06);
+  box-shadow: 0 10px 30px rgba(16, 24, 40, .06);
   margin: 0 auto;
 }
 
-.auth-title { margin: 0 0 .25rem; font-size: 1.75rem; line-height: 1.2; text-align: center; }
-.auth-sub   { margin: 0 0 1.25rem; color: #667085; text-align: center; }
+.auth-title {
+  margin: 0 0 .25rem;
+  font-size: 1.75rem;
+  line-height: 1.2;
+  text-align: center;
+}
 
-.form__row { display:grid; gap:.35rem; }
-.form__label { font-weight: 600; color:#111827; }
+.auth-sub {
+  margin: 0 0 1.25rem;
+  color: #667085;
+  text-align: center;
+}
 
-.input-affix { position: relative; }
+.form__row {
+  display: grid;
+  gap: .35rem;
+}
+
+.form__label {
+  font-weight: 600;
+  color: #111827;
+}
+
+.input-affix {
+  position: relative;
+}
+
 .input-affix button {
-  position: absolute; right: .5rem; top: 50%;
+  position: absolute;
+  right: .5rem;
+  top: 50%;
   transform: translateY(-50%);
-  border: 0; background: transparent;
-  padding: .25rem .5rem; cursor: pointer; font-weight:600;
+  border: 0;
+  background: transparent;
+  padding: .25rem .5rem;
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .auth-meta {
-  display:flex; justify-content:space-between;
-  align-items:center; gap:.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem;
 }
 
-.checkbox { display:inline-flex; align-items:center; gap:.5rem; color:#374151; }
-.link { color:#111827; text-decoration:underline; text-underline-offset:2px; }
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: .5rem;
+  color: #374151;
+}
+
+.link {
+  color: #111827;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
 
 .alert {
-  padding:.875rem 1rem; border-radius:12px; border:1px solid; margin-bottom:1rem;
+  padding: .875rem 1rem;
+  border-radius: 12px;
+  border: 1px solid;
+  margin-bottom: 1rem;
 }
-.alert--danger { background:#fef2f2; border-color:#fee2e2; color:#7f1d1d; }
-.alert--success { background: #dcfce7; border-color: #bbf7d0; color: #166534; }
+
+.alert--danger {
+  background: #fef2f2;
+  border-color: #fee2e2;
+  color: #7f1d1d;
+}
+
+.alert--success {
+  background: #dcfce7;
+  border-color: #bbf7d0;
+  color: #166534;
+}
 
 /*=============== TABLES ===============*/
 .placed__order-table th,
@@ -560,7 +623,7 @@ table {
   /* Kept clip-path for footer as it's a specific design choice and rarely has overflow issues */
   box-shadow: 0 0 0 100vmax var(--footer-bg);
   clip-path: inset(0 -100vmax);
-  border-top: 1px solid rgba(0,0,0,.06);
+  border-top: 1px solid rgba(0, 0, 0, .06);
 }
 
 .footer__container {
@@ -570,9 +633,16 @@ table {
   padding-block: 2.5rem;
 }
 
-.footer__logo-img { width: 120px; }
+.footer__logo-img {
+  width: 120px;
+}
 
-.footer__title, .footer__link, .footer__description, .footer__subtitle, .copyright, .designer {
+.footer__title,
+.footer__link,
+.footer__description,
+.footer__subtitle,
+.copyright,
+.designer {
   color: #0f3c2f;
 }
 
@@ -581,12 +651,28 @@ table {
   margin-block: 1.25rem 0.625rem;
 }
 
-.footer__description { margin-bottom: 0.25rem; }
-.footer__description span { font-weight: var(--weight-600); }
+.footer__description {
+  margin-bottom: 0.25rem;
+}
 
-.footer__social .footer__subtitle { margin-top: 1.875rem; }
-.footer__social-links { display: flex; column-gap: 0.25rem; }
-.footer__social-icon { width: 20px; opacity: 0.7; filter: saturate(0) brightness(0.25); }
+.footer__description span {
+  font-weight: var(--weight-600);
+}
+
+.footer__social .footer__subtitle {
+  margin-top: 1.875rem;
+}
+
+.footer__social-links {
+  display: flex;
+  column-gap: 0.25rem;
+}
+
+.footer__social-icon {
+  width: 20px;
+  opacity: 0.7;
+  filter: saturate(0) brightness(0.25);
+}
 
 .footer__title {
   font-size: var(--large-font-size);
@@ -612,16 +698,29 @@ table {
   border-top: 1px solid var(--border-color-alt);
 }
 
-.copyright, .designer { font-size: var(--small-font-size); color: var(--text-color-light); }
+.copyright,
+.designer {
+  font-size: var(--small-font-size);
+  color: var(--text-color-light);
+}
 
 
 /*=============== BREAKPOINTS (Consolidated) ===============*/
 
 /* For Large Devices (1400px) */
 @media screen and (max-width: 1400px) {
-  .container { max-width: 1140px; }
-  .products__container, .showcase__container { grid-template-columns: repeat(3, 1fr); }
-  .accounts__container { grid-template-columns: 3fr 9fr; }
+  .container {
+    max-width: 1140px;
+  }
+
+  .products__container,
+  .showcase__container {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .accounts__container {
+    grid-template-columns: 3fr 9fr;
+  }
 }
 
 /* For Medium-Large Devices (1200px) */
@@ -639,11 +738,22 @@ table {
     --tiny-font-size: 0.625rem;
   }
 
-  .container { max-width: 960px; }
-  .header__top { display: none; }
-  .nav { height: calc(var(--header-height) + 1.5rem); }
-  .nav__logo-img { width: 116px; }
-  
+  .container {
+    max-width: 960px;
+  }
+
+  .header__top {
+    display: none;
+  }
+
+  .nav {
+    height: calc(var(--header-height) + 1.5rem);
+  }
+
+  .nav__logo-img {
+    width: 116px;
+  }
+
   /* Mobile Menu Logic */
   .nav__menu {
     position: fixed;
@@ -662,13 +772,31 @@ table {
     transition: right 0.5s ease-in-out;
   }
 
-  .nav__menu.show-menu { right: 0; }
-  .nav__list { order: 1; flex-direction: column; align-items: flex-start; row-gap: 1.5rem; }
-  .nav__link { font-size: var(--large-font-size); }
-  
-  .nav__menu-top, .nav__toggle { display: flex; }
-  .nav__toggle, .nav__close { cursor: pointer; }
-  
+  .nav__menu.show-menu {
+    right: 0;
+  }
+
+  .nav__list {
+    order: 1;
+    flex-direction: column;
+    align-items: flex-start;
+    row-gap: 1.5rem;
+  }
+
+  .nav__link {
+    font-size: var(--large-font-size);
+  }
+
+  .nav__menu-top,
+  .nav__toggle {
+    display: flex;
+  }
+
+  .nav__toggle,
+  .nav__close {
+    cursor: pointer;
+  }
+
   .nav__menu-top {
     align-items: center;
     justify-content: space-between;
@@ -676,95 +804,227 @@ table {
     margin-bottom: 1.25rem;
   }
 
-  .nav__menu-logo img { width: 100px; }
-  .nav__close { font-size: var(--h1-font-size); margin-right: 10px; }
-  
-  .header__action-btn { width: 21px; }
-  .header__search .form__input { border-color: var(--first-color); }
+  .nav__menu-logo img {
+    width: 100px;
+  }
+
+  .nav__close {
+    font-size: var(--h1-font-size);
+    margin-right: 10px;
+  }
+
+  .header__action-btn {
+    width: 21px;
+  }
+
+  .header__search .form__input {
+    border-color: var(--first-color);
+  }
 
   /* Page Specifics */
-  .home__container { grid-template-columns: 5.5fr 6.5fr; }
-  .countdown { column-gap: 1rem; }
-  .countdown__period { width: 36px; height: 36px; line-height: 36px; }
-  
-  .swiper-button-next, .swiper-button-prev {
+  .home__container {
+    grid-template-columns: 5.5fr 6.5fr;
+  }
+
+  .countdown {
+    column-gap: 1rem;
+  }
+
+  .countdown__period {
+    width: 36px;
+    height: 36px;
+    line-height: 36px;
+  }
+
+  .swiper-button-next,
+  .swiper-button-prev {
     top: -28px;
     width: 26px;
     height: 26px;
-    background: rgba(255,255,255,.8);
-    border-color: rgba(0,0,0,.08);
+    background: rgba(255, 255, 255, .8);
+    border-color: rgba(0, 0, 0, .08);
   }
-  .swiper-button-prev { right: 36px; }
-  
-  .account__tabs { position: sticky; top: 6rem; }
+
+  .swiper-button-prev {
+    right: 36px;
+  }
+
+  .account__tabs {
+    position: sticky;
+    top: 6rem;
+  }
 }
 
 /* For Medium Devices (992px) */
 @media screen and (max-width: 992px) {
-  .container { max-width: 776px; }
-  
-  .home__container, .deals__container, .checkout__container,
-  .newsletter__container, .accounts__container, .cart__group {
+  .container {
+    max-width: 776px;
+  }
+
+  .home__container,
+  .deals__container,
+  .checkout__container,
+  .newsletter__container,
+  .accounts__container,
+  .cart__group {
     grid-template-columns: 1fr;
   }
-  
-  .cart__group { row-gap: 2.75rem; }
-  .home__img { justify-self: center; }
-  
-  .products__container, .showcase__container, .footer__container, .details__container {
+
+  .cart__group {
+    row-gap: 2.75rem;
+  }
+
+  .home__img {
+    justify-self: center;
+  }
+
+  .products__container,
+  .showcase__container,
+  .footer__container,
+  .details__container {
     grid-template-columns: repeat(2, 1fr);
   }
-  
-  .newsletter__description { display: none; }
-  .login, .register { padding: 1.25rem; }
-  
-  .btn { height: 45px; }
-  .btn--md { height: 42px; }
-  .btn--sm { height: 38px; }
+
+  .newsletter__description {
+    display: none;
+  }
+
+  .login,
+  .register {
+    padding: 1.25rem;
+  }
+
+  .btn {
+    height: 45px;
+  }
+
+  .btn--md {
+    height: 42px;
+  }
+
+  .btn--sm {
+    height: 38px;
+  }
 
   /* Table Responsive adjustments */
-  .table thead tr th:nth-child(1), .table tbody tr td:nth-child(1) { width: 140px; }
-  .table thead tr th:nth-child(2), .table tbody tr td:nth-child(2) { width: 330px; }
+  .table thead tr th:nth-child(1),
+  .table tbody tr td:nth-child(1) {
+    width: 140px;
+  }
+
+  .table thead tr th:nth-child(2),
+  .table tbody tr td:nth-child(2) {
+    width: 330px;
+  }
+
   /* ...add other table widths as needed... */
 }
 
 /* For Tablets (768px) */
 @media screen and (max-width: 768px) {
-  .container { max-width: 570px; }
-  .products__container, .showcase__container, .footer__container,
-  .login-register__container, .details__container {
+  .container {
+    max-width: 570px;
+  }
+
+  .products__container,
+  .showcase__container,
+  .footer__container,
+  .login-register__container,
+  .details__container {
     grid-template-columns: 100%;
   }
-  .tab__header, .tab__body { padding: 0.75rem; }
-  .compare__table tr td { display: block; }
-  .home__img { max-width: 300px; }
+
+  .tab__header,
+  .tab__body {
+    padding: 0.75rem;
+  }
+
+  .compare__table tr td {
+    display: block;
+  }
+
+  .home__img {
+    max-width: 300px;
+  }
 }
 
 /* For Mobile (576px) */
 @media screen and (max-width: 576px) {
-  .category__item { padding-bottom: 1rem; }
-  .deals__item, .checkout__group:nth-child(2) { padding: 1.25rem; }
-  .pagination { column-gap: 0.5rem; margin-top: 2.5rem; }
-  .pagination__link { width: 30px; height: 30px; line-height: 30px; }
-  
-  .placed__order-table th, .order__table tr th { display: none; }
-  .placed__order-table tr td, .order__table tr td { display: block; }
-  
-  .form__group { grid-template-columns: 1fr; }
-  .cart__total { padding: 1.25rem; }
-  
-  .footer__bottom { flex-direction: column; align-items: center; }
-  .header__search { max-width: 300px; }
+  .category__item {
+    padding-bottom: 1rem;
+  }
+
+  .deals__item,
+  .checkout__group:nth-child(2) {
+    padding: 1.25rem;
+  }
+
+  .pagination {
+    column-gap: 0.5rem;
+    margin-top: 2.5rem;
+  }
+
+  .pagination__link {
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+  }
+
+  .placed__order-table th,
+  .order__table tr th {
+    display: none;
+  }
+
+  .placed__order-table tr td,
+  .order__table tr td {
+    display: block;
+  }
+
+  .form__group {
+    grid-template-columns: 1fr;
+  }
+
+  .cart__total {
+    padding: 1.25rem;
+  }
+
+  .footer__bottom {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .header__search {
+    max-width: 300px;
+  }
 }
 
 /* For Small Mobile (350px) */
 @media screen and (max-width: 350px) {
-  .cart__btn { bottom: 1.4rem; right: 1.25rem; }
-  .showcase__img { width: 70%; }
-  .showcase__content { width: calc(100% - 86px); }
-  .swiper-button-next, .swiper-button-prev { display: none; }
-  .home__img { display: none; }
-  .header__search { max-width: 270px; }
+  .cart__btn {
+    bottom: 1.4rem;
+    right: 1.25rem;
+  }
+
+  .showcase__img {
+    width: 70%;
+  }
+
+  .showcase__content {
+    width: calc(100% - 86px);
+  }
+
+  .swiper-button-next,
+  .swiper-button-prev {
+    display: none;
+  }
+
+  .home__img {
+    display: none;
+  }
+
+  .header__search {
+    max-width: 270px;
+  }
 }
 
 /* =========================================
@@ -773,55 +1033,56 @@ table {
 
 /* 1. Core Variables Override */
 body.dark-theme {
-    /* Backgrounds */
-    --body-color: #0f172a;       
-    --container-color: #1e293b;  
-    --nav-bg: #1e293b;           
-    --footer-bg: #1e293b; /* Matches Nav */
-    
-    /* Text */
-    --title-color: #f1f5f9;      
-    --text-color: #cbd5e1;       
-    --text-color-light: #94a3b8; 
-    
-    /* Borders & Accents */
-    --border-color: #334155;
-    --border-color-alt: #334155;
-    --first-color: #34d399;      
+  /* Backgrounds */
+  --body-color: #0f172a;
+  --container-color: #1e293b;
+  --nav-bg: #1e293b;
+  --footer-bg: #1e293b;
+  /* Matches Nav */
+
+  /* Text */
+  --title-color: #f1f5f9;
+  --text-color: #cbd5e1;
+  --text-color-light: #94a3b8;
+
+  /* Borders & Accents */
+  --border-color: #334155;
+  --border-color-alt: #334155;
+  --first-color: #34d399;
 }
 
 /* 2. Global Component Fixes */
 
 /* Header & Nav */
 body.dark-theme .header {
-    background-color: var(--nav-bg);
-    border-bottom: 1px solid var(--border-color);
+  background-color: var(--nav-bg);
+  border-bottom: 1px solid var(--border-color);
 }
 
 body.dark-theme .header__top {
-    background-color: #020617; 
-    color: #e2e8f0;
+  background-color: #020617;
+  color: #e2e8f0;
 }
 
 body.dark-theme .nav__link {
-    color: var(--title-color);
+  color: var(--title-color);
 }
 
 body.dark-theme .nav__link:hover,
 body.dark-theme .active-link {
-    color: var(--first-color);
+  color: var(--first-color);
 }
 
 /* Fix Icons (Cart, Wishlist, Search) to be white */
 body.dark-theme .header__action-btn img,
 body.dark-theme .search__btn img {
-    filter: brightness(0) invert(1);
+  filter: brightness(0) invert(1);
 }
 
 /* Logo Fix (Inverts black logos to white) */
 body.dark-theme .nav__logo-img,
 body.dark-theme .footer__logo-img {
-    filter: brightness(0) invert(1);
+  filter: brightness(0) invert(1);
 }
 
 /* Footer Text Visibility */
@@ -829,24 +1090,977 @@ body.dark-theme .footer__title,
 body.dark-theme .footer__link,
 body.dark-theme .footer__description,
 body.dark-theme .footer__subtitle,
-body.dark-theme .copyright, 
+body.dark-theme .copyright,
 body.dark-theme .designer,
 body.dark-theme .footer__contact {
-    color: var(--text-color);
+  color: var(--text-color);
 }
 
 /* Inputs & Forms (Global) */
-body.dark-theme input, 
-body.dark-theme textarea, 
+body.dark-theme input,
+body.dark-theme textarea,
 body.dark-theme select,
 body.dark-theme .form__input {
-    background-color: var(--body-color);
-    border-color: var(--border-color);
-    color: var(--title-color);
+  background-color: var(--body-color);
+  border-color: var(--border-color);
+  color: var(--title-color);
 }
 
 /* Auth Cards (Login/Register) */
 body.dark-theme .auth-card {
-    background-color: var(--container-color);
-    border-color: var(--border-color);
+  background-color: var(--container-color);
+  border-color: var(--border-color);
+}
+
+/* =========================================
+   ABOUT PAGE DARK THEME OVERRIDES
+   ========================================= */
+
+/* 1. Hero Section */
+body.dark-theme .about-hero {
+  /* Assuming the hero has a background image, we add a dark overlay */
+  background-color: var(--body-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .about-hero h1,
+body.dark-theme .about-hero .hero-subtitle {
+  color: #f1f5f9;
+  /* Keep text white/bright for contrast against hero bg */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* 2. General Section Text & Backgrounds */
+body.dark-theme .about-section {
+  background-color: var(--body-color);
+}
+
+body.dark-theme .about-section h2,
+body.dark-theme .section-title,
+body.dark-theme .store-header h3,
+body.dark-theme .feature-item h4,
+body.dark-theme .value-card h3 {
+  color: var(--title-color);
+}
+
+body.dark-theme .about-section p,
+body.dark-theme .store-details p,
+body.dark-theme .feature-item p {
+  color: var(--text-color);
+}
+
+/* 3. Image Placeholder (Story Section) */
+body.dark-theme .image-placeholder {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .image-placeholder i {
+  color: var(--first-color);
+}
+
+/* 4. Value Cards (Mission & Values) */
+body.dark-theme .value-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+  /* Flatten depth in dark mode */
+}
+
+body.dark-theme .value-icon {
+  background-color: rgba(52, 211, 153, 0.1);
+  /* --first-color with low opacity */
+  color: var(--first-color);
+}
+
+/* 5. Map & Store Locations */
+/* Google Maps Dark Mode Trick: Inverts colors to look "Dark" */
+body.dark-theme .map-container iframe {
+  filter: invert(90%) hue-rotate(180deg) contrast(90%);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .store-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme .store-card:hover {
+  border-color: var(--first-color);
+}
+
+body.dark-theme .store-header i {
+  color: var(--first-color);
+}
+
+body.dark-theme .store-badge {
+  background-color: var(--first-color);
+  color: var(--body-color);
+  /* Dark text on green badge for readability */
+  font-weight: 600;
+}
+
+body.dark-theme .store-details i {
+  color: var(--text-color-light);
+}
+
+/* 6. Features Grid (Why Choose Us) */
+body.dark-theme .feature-item {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme .feature-item i {
+  color: var(--first-color);
+  background-color: transparent;
+  /* Remove bg if defined in light mode */
+}
+
+/* 7. CTA Section */
+body.dark-theme .cta-section {
+  background-color: var(--container-color);
+  /* Slightly lighter than body */
+  border-top: 1px solid var(--border-color);
+}
+
+body.dark-theme .cta-content h2 {
+  color: var(--title-color);
+}
+
+/* CTA Buttons */
+body.dark-theme .cta-btn.primary-btn {
+  background-color: var(--first-color);
+  color: var(--body-color);
+  border: 1px solid var(--first-color);
+}
+
+body.dark-theme .cta-btn.primary-btn:hover {
+  background-color: transparent;
+  color: var(--first-color);
+}
+
+body.dark-theme .cta-btn.secondary-btn {
+  background-color: transparent;
+  color: var(--title-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .cta-btn.secondary-btn:hover {
+  border-color: var(--first-color);
+  color: var(--first-color);
+}
+
+/* =========================================
+   HERO SECTION DARK THEME
+   ========================================= */
+
+body.dark-theme .about-hero {
+  /* 1. Darken the background. 
+       If you use a background-image, this adds a dark tint over it. 
+       Replace 'url(...)' with your actual image path if defined here. */
+  background: linear-gradient(rgba(43, 59, 95, 0.8), rgba(52, 101, 113, 0.8)), url('../images/about-bg.jpg');
+
+  /* Fallback if no image is used */
+  background-color: var(--container-color);
+
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .about-hero h1 {
+  color: var(--title-color);
+  /* Adds a subtle shadow to make text pop against the background */
+  text-shadow: 0 4px 8px rgba(0, 0, 0, 0.6);
+}
+
+body.dark-theme .about-hero .hero-subtitle {
+  /* Uses your mint green accent color */
+  color: var(--first-color);
+  font-weight: 500;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* =========================================
+   FEEDBACK PAGE DARK THEME
+   ========================================= */
+
+/* 1. Page Header */
+body.dark-theme .feedback-page {
+  background-color: var(--body-color);
+}
+
+body.dark-theme .page-header h1 {
+  color: var(--title-color);
+}
+
+body.dark-theme .page-header p {
+  color: var(--text-color);
+}
+
+/* 2. Main Containers (Form & Sidebar) */
+body.dark-theme .feedback-form-section,
+body.dark-theme .info-card,
+body.dark-theme .feedback-history {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme .form-header h2,
+body.dark-theme .info-card h3,
+body.dark-theme .feedback-history h3 {
+  color: var(--title-color);
+}
+
+body.dark-theme .form-header,
+body.dark-theme .info-card {
+  background: linear-gradient(rgba(43, 59, 95, 0.8), rgba(52, 101, 113, 0.8));
+}
+
+body.dark-theme .form-header p {
+  color: var(--text-color);
+}
+
+/* 3. Form Inputs */
+body.dark-theme .form-group label {
+  color: var(--title-color);
+}
+
+body.dark-theme .form-control {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+body.dark-theme .form-control:focus {
+  border-color: var(--first-color);
+  background-color: var(--input-bg);
+}
+
+body.dark-theme .form-control::placeholder {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .char-count {
+  color: var(--text-color-light);
+}
+
+/* 4. Rating Section */
+body.dark-theme .rating-display {
+  color: var(--text-color);
+}
+
+body.dark-theme .rating-display.active {
+  color: var(--first-color);
+  font-weight: 600;
+}
+
+/* 5. Sidebar Info List */
+body.dark-theme .info-card ul li {
+  color: var(--text-color);
+}
+
+body.dark-theme .info-card ul li::before {
+  color: var(--first-color);
+  /* Bullet points/Icons */
+}
+
+/* 6. Feedback History Items */
+body.dark-theme .history-item {
+  background-color: var(--body-color);
+  /* Slightly darker than the container */
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .history-item:hover {
+  border-color: var(--first-color);
+  background-color: rgba(52, 211, 153, 0.05);
+  /* Very faint green tint */
+}
+
+body.dark-theme .history-subject {
+  color: var(--title-color);
+}
+
+body.dark-theme .history-date {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .history-category {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .history-message {
+  color: var(--text-color);
+  border-top: 1px dashed var(--border-color);
+}
+
+/* 7. Admin Response Block */
+body.dark-theme .admin-response {
+  background-color: rgba(255, 255, 255, 0.03);
+  /* Subtle contrast */
+  border-left: 3px solid var(--first-color);
+}
+
+body.dark-theme .admin-response-header {
+  color: var(--first-color);
+  font-weight: 600;
+}
+
+body.dark-theme .admin-response-text {
+  color: var(--text-color);
+}
+
+/* 8. Status Badges Override */
+/* Ensures text is readable on dark backgrounds */
+body.dark-theme .status-pending {
+  background-color: rgba(234, 179, 8, 0.15);
+  color: #fde047;
+  /* Bright Yellow */
+  border: 1px solid rgba(234, 179, 8, 0.2);
+}
+
+body.dark-theme .status-resolved {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+  /* Bright Green */
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+
+body.dark-theme .status-rejected {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  /* Bright Red */
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* 9. No History Message */
+body.dark-theme .no-history {
+  color: var(--text-color-light);
+  border: 1px dashed var(--border-color);
+}
+
+/* =========================================
+   ACCOUNT PAGE DARK THEME OVERRIDES
+   ========================================= */
+
+/* 1. Main Containers & Tabs Content */
+body.dark-theme .accounts {
+  background-color: var(--body-color);
+}
+
+body.dark-theme .account__tabs {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+/* THE MISSING PART FIXED HERE */
+body.dark-theme .tabs__content {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .tab__content {
+  background-color: transparent;
+}
+
+/* 2. Tab Navigation Buttons */
+body.dark-theme .account__tab {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid transparent;
+}
+
+body.dark-theme .account__tab:hover {
+  background-color: var(--body-color);
+  color: var(--first-color);
+}
+
+body.dark-theme .account__tab.active-tab {
+  background-color: rgba(52, 211, 153, 0.1);
+  /* --first-color low opacity */
+  border-color: var(--first-color);
+  color: var(--first-color);
+}
+
+body.dark-theme .tab__header {
+  color: var(--title-color);
+}
+
+body.dark-theme .tab__description {
+  color: var(--text-color);
+}
+
+/* 3. Dashboard Profile Card (Inside Dashboard Tab) */
+body.dark-theme .dashboard-profile-card {
+  background-color: var(--body-color);
+  /* Contrast against tabs__content */
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .account-summary-avatar {
+  background-color: var(--card-bg);
+  border: 2px solid var(--border-color);
+}
+
+body.dark-theme .account-summary-name {
+  color: var(--title-color);
+}
+
+body.dark-theme .account-summary-email,
+body.dark-theme .account-summary-meta,
+body.dark-theme .dashboard-meta {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .dashboard-meta__points {
+  background-color: rgba(52, 211, 153, 0.15);
+  color: var(--first-color);
+}
+
+/* 4. Stat Cards (Dashboard Grid) */
+body.dark-theme .account-stat-card {
+  background-color: var(--body-color);
+  /* Contrast against tabs__content */
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme .stat-label {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .stat-value {
+  color: var(--title-color);
+}
+
+body.dark-theme .stat-icon {
+  background-color: var(--card-bg);
+  /* Darker circle behind icon */
+  filter: brightness(0.9);
+}
+
+/* 5. Dashboard Panels (Profile Completeness) */
+body.dark-theme .dashboard-panel {
+  background-color: var(--body-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .dashboard-panel__title,
+body.dark-theme .dashboard-panel__subtitle {
+  color: var(--title-color);
+}
+
+body.dark-theme .profile-progress-bar {
+  background-color: var(--card-bg);
+}
+
+body.dark-theme .profile-progress-fill {
+  background-color: var(--first-color);
+}
+
+body.dark-theme .profile-progress-percent {
+  color: var(--title-color);
+}
+
+body.dark-theme .profile-progress-hint {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .profile-check-item {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .profile-check-item span strong {
+  color: var(--title-color);
+}
+
+body.dark-theme .profile-check-item span small {
+  color: var(--text-color-light);
+}
+
+/* Status Badges */
+body.dark-theme .profile-check-badge--missing {
+  background-color: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+body.dark-theme .profile-check-badge--done {
+  background-color: rgba(34, 197, 94, 0.15);
+  color: #86efac;
+}
+
+/* 6. Forms & Inputs (Profile/Password) */
+body.dark-theme .profile-edit-card {
+  background-color: var(--body-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .profile-section__title {
+  color: var(--title-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .form__label {
+  color: var(--title-color);
+}
+
+body.dark-theme .form__input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+body.dark-theme .form__input:focus {
+  border-color: var(--first-color);
+  box-shadow: 0 0 0 4px rgba(52, 211, 153, 0.1);
+}
+
+body.dark-theme .form__input::placeholder {
+  color: var(--text-color-light);
+}
+
+/* Select Dropdown Options */
+body.dark-theme select.form__input option {
+  background-color: var(--card-bg);
+  color: var(--title-color);
+}
+
+/* 7. Profile Photo Uploader */
+body.dark-theme .photo-dropzone {
+  background-color: var(--card-bg);
+  border: 2px dashed var(--border-color);
+  color: var(--text-color);
+}
+
+body.dark-theme .photo-dropzone:hover {
+  border-color: var(--first-color);
+  background-color: rgba(52, 211, 153, 0.05);
+}
+
+body.dark-theme .photo-dropzone__browse {
+  color: var(--first-color);
+}
+
+body.dark-theme .profile-photo-current {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .photo-edit-controls {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .photo-edit-controls__title {
+  color: var(--text-color-light);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .photo-edit-btn {
+  background-color: var(--body-color);
+  color: var(--title-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .photo-edit-btn:hover {
+  border-color: var(--first-color);
+  color: var(--first-color);
+}
+
+body.dark-theme .photo-or {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .photo-or::before,
+body.dark-theme .photo-or::after {
+  background-color: var(--border-color);
+}
+
+body.dark-theme .profile-photo-hint {
+  color: var(--text-color-light);
+}
+
+/* 8. Address Card */
+body.dark-theme .address-card {
+  background-color: var(--body-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .address-card__header {
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .address-card__title {
+  color: var(--title-color);
+}
+
+body.dark-theme .address-card__title i {
+  color: var(--first-color);
+}
+
+body.dark-theme .address-badge--default {
+  background-color: var(--first-color);
+  color: var(--body-color);
+}
+
+body.dark-theme .address-display {
+  color: var(--text-color);
+}
+
+body.dark-theme .address-info__item {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .address-info__item strong {
+  color: var(--title-color);
+}
+
+body.dark-theme .address-hint {
+  background-color: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  color: var(--first-color);
+}
+
+body.dark-theme .address-empty {
+  border: 2px dashed var(--border-color);
+  background-color: var(--body-color);
+}
+
+body.dark-theme .address-empty__icon {
+  background-color: var(--card-bg);
+  color: var(--text-color-light);
+}
+
+body.dark-theme .address-empty__title {
+  color: var(--title-color);
+}
+
+/* 9. Password Change & Strength */
+body.dark-theme .password-change-card {
+  background-color: var(--body-color);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .password-change-info {
+  background-color: rgba(59, 130, 246, 0.1);
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  color: #93c5fd;
+}
+
+body.dark-theme .password-change-info h4 {
+  color: #bfdbfe;
+}
+
+body.dark-theme .password-label span {
+  color: var(--title-color);
+}
+
+body.dark-theme .password-input-wrapper {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+}
+
+body.dark-theme .password-input-wrapper:focus-within {
+  border-color: var(--first-color);
+}
+
+body.dark-theme .password-input {
+  background-color: transparent !important;
+  border: none !important;
+  color: var(--title-color);
+}
+
+body.dark-theme .password-toggle {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .password-toggle:hover {
+  color: var(--first-color);
+}
+
+/* Strength Meter & Requirements */
+body.dark-theme .password-strength-bar {
+  background-color: var(--border-color);
+}
+
+body.dark-theme .password-strength-text {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .password-req-item {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .password-req-item[data-met="true"] {
+  color: var(--first-color);
+}
+
+body.dark-theme .password-match {
+  color: var(--first-color);
+}
+
+/* 1. Profile Checklist Container */
+body.dark-theme .profile-checklist {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  /* Remove any white background if set on the list itself */
+}
+
+/* 2. Profile Photo Row (Layout Container) */
+body.dark-theme .profile-edit-photo-row {
+  background-color: transparent;
+  border-color: var(--border-color);
+}
+
+/* 3. Address Card Header */
+body.dark-theme .address-card__header {
+  background-color: var(--body-color);
+  /* Slightly darker header for contrast */
+  border-bottom: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+/* 4. Address Info Section */
+body.dark-theme .address-info {
+  background-color: transparent;
+  border-top: 1px dashed var(--border-color);
+  /* Separator line */
+  color: var(--text-color);
+}
+
+/* Ensure icons inside address-info are visible */
+body.dark-theme .address-info i {
+  color: var(--text-color-light);
+  background-color: var(--body-color);
+  /* If icons have circle backgrounds */
+}
+
+/* 5. Password Requirements Box */
+body.dark-theme .password-requirements {
+  background-color: var(--body-color);
+  /* Darker box inside the white card */
+  border: 1px solid var(--border-color);
+  color: var(--text-color-light);
+}
+
+/* Specific items inside the requirements box */
+body.dark-theme .password-req-item {
+  color: var(--text-color-light);
+}
+
+body.dark-theme .password-req-item .req-icon {
+  background-color: var(--card-bg);
+  /* Dark background for small X or Check icons */
+  color: var(--text-color-light);
+}
+
+/* When requirement is met (Green) */
+body.dark-theme .password-req-item[data-met="true"] {
+  color: var(--first-color);
+}
+
+body.dark-theme .password-req-item[data-met="true"] .req-icon {
+  background-color: rgba(52, 211, 153, 0.1);
+  color: var(--first-color);
+}
+
+/* =========================================
+   ORDERS PAGE DARK THEME
+   ========================================= */
+
+/* 1. Page Header & Container */
+body.dark-theme .user-container {
+  background-color: var(--body-color);
+}
+
+body.dark-theme h1 {
+  color: var(--title-color);
+}
+
+/* 2. Filter Bar (Search Area) */
+body.dark-theme .filter-bar {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme .toggle-advanced {
+  color: var(--first-color);
+  font-weight: 500;
+}
+
+body.dark-theme .toggle-advanced:hover {
+  text-decoration: underline;
+}
+
+body.dark-theme .basic-search label,
+body.dark-theme .filter-group label {
+  color: var(--title-color);
+}
+
+/* Inputs & Selects inside Filter */
+body.dark-theme input[type="text"],
+body.dark-theme input[type="date"],
+body.dark-theme input[type="number"],
+body.dark-theme select {
+  background-color: var(--input-bg);
+  border: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+body.dark-theme input:focus,
+body.dark-theme select:focus {
+  border-color: var(--first-color);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.1);
+}
+
+/* Calendar icon fix for date inputs in dark mode */
+body.dark-theme ::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.6;
+  cursor: pointer;
+}
+
+/* 3. Results Info & Table */
+body.dark-theme .results-info {
+  color: var(--text-color);
+}
+
+body.dark-theme .results-info strong {
+  color: var(--title-color);
+}
+
+body.dark-theme .table-container {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  box-shadow: none;
+}
+
+body.dark-theme table thead {
+  background-color: var(--body-color);
+}
+
+body.dark-theme table th {
+  color: var(--title-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme table td {
+  color: var(--text-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme table tr:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Thumbnails */
+body.dark-theme .thumb {
+  background-color: var(--body-color);
+  border: 1px solid var(--border-color);
+  padding: 2px;
+}
+
+/* 4. Status Badges */
+/* Using transparent backgrounds with bright text for better contrast */
+
+body.dark-theme .status {
+  border: 1px solid transparent;
+}
+
+/* Pending: Yellow */
+body.dark-theme .status.Pending {
+  background-color: rgba(234, 179, 8, 0.1);
+  color: #fde047;
+  border-color: rgba(234, 179, 8, 0.2);
+}
+
+/* Shipped: Blue */
+body.dark-theme .status.Shipped {
+  background-color: rgba(59, 130, 246, 0.1);
+  color: #93c5fd;
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+/* Delivered: Green */
+body.dark-theme .status.Delivered {
+  background-color: rgba(34, 197, 94, 0.1);
+  color: #86efac;
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+/* Cancelled: Red */
+body.dark-theme .status.Cancelled {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+/* 5. Pagination */
+body.dark-theme .pagination .btn {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+body.dark-theme .pagination .btn:hover:not(.disabled) {
+  background-color: var(--first-color);
+  color: #fff;
+  border-color: var(--first-color);
+}
+
+body.dark-theme .pagination .btn.disabled {
+  background-color: var(--body-color);
+  color: var(--text-color-light);
+  border-color: var(--border-color);
+  opacity: 0.5;
+}
+
+body.dark-theme .pagination .page-info {
+  color: var(--text-color-light);
+}
+
+/* 6. Buttons in Filter/Table */
+body.dark-theme .btn-secondary {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--title-color);
+}
+
+body.dark-theme .btn-secondary:hover {
+  border-color: var(--title-color);
+  background-color: var(--body-color);
+}
+
+/* 1. Page Header & Container */
+/* Force body to be dark to ensure no white gaps appear anywhere */
+body.dark-theme {
+  background-color: var(--body-color);
+}
+
+body.dark-theme .user-container {
+  background-color: var(--body-color);
+
+  /* REMOVING MARGINS as requested */
+  margin: 0;
+  width: 100%;
+  max-width: 100%;
+
+  /* Optional: Add padding so content doesn't touch the screen edges */
+  padding: 2rem;
+
+  /* Remove border/shadow if the container is now full width */
+  border: none;
+  box-shadow: none;
+}
+
+body.dark-theme h1 {
+  color: var(--title-color);
+  /* Adjust header spacing if needed since margins are gone */
+  margin-left: 0;
 }

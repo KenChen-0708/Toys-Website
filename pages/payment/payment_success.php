@@ -252,7 +252,7 @@ try {
     </style>
 </head>
 
-<body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
     <div class="success-container">
         <div class="success-icon"></div>
 

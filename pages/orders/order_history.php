@@ -230,7 +230,7 @@ try {
     </style>
 </head>
 
-<body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
     <div class="container">
         <div class="header">
             <h1>Order History</h1>

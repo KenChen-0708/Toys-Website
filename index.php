@@ -1,26 +1,25 @@
-<?php 
-  session_start();
-  $title = "Home";
+<?php
+session_start();
+$title = "Home";
 ?>
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!--=============== FLATICON ===============-->
-    <link
-      rel="stylesheet"
-      href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="/assets/css/styles.css" />
-    <link rel="stylesheet" href="/assets/css/index.css" />
+  <!--=============== FLATICON ===============-->
+  <link
+    rel="stylesheet"
+    href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
 
-    <title><?= htmlspecialchars($title) ?></title>
-  </head>
-<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
+  <!--=============== CSS ===============-->
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/index.css" />
+
+  <title><?= htmlspecialchars($title) ?></title>
+</head>
 <?php include 'partials/header.php'; ?>
 
 <!--=============== MAIN ===============-->
@@ -98,9 +97,7 @@
   <!--=============== PRODUCTS ===============-->
   <section class="products container section">
     <div class="tab__btns">
-      <span class="tab__btn active-tab" data-target="#featured"
-        >Featured</span
-      >
+      <span class="tab__btn active-tab" data-target="#featured">Featured</span>
       <span class="tab__btn" data-target="#popular">Popular</span>
       <span class="tab__btn" data-target="#new-added">New Added</span>
     </div>
@@ -114,13 +111,11 @@
                 <img
                   src="assets/img/product-1-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-1-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -129,8 +124,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -158,8 +152,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -170,13 +163,11 @@
                 <img
                   src="assets/img/product-2-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-2-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -185,8 +176,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -214,8 +204,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -226,13 +215,11 @@
                 <img
                   src="assets/img/product-3-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-3-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -241,8 +228,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -270,8 +256,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -282,13 +267,11 @@
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-4-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -297,8 +280,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -326,8 +308,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -338,13 +319,11 @@
                 <img
                   src="assets/img/product-5-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-5-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -353,8 +332,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -382,8 +360,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -394,13 +371,11 @@
                 <img
                   src="assets/img/product-6-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-6-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -409,8 +384,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -438,8 +412,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -450,13 +423,11 @@
                 <img
                   src="assets/img/product-7-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-7-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -465,8 +436,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -494,8 +464,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -506,13 +475,11 @@
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-8-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -521,8 +488,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -549,8 +515,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -565,13 +530,11 @@
                 <img
                   src="assets/img/product-9-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-9-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -580,8 +543,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -609,8 +571,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -621,13 +582,11 @@
                 <img
                   src="assets/img/product-2-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-2-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -636,8 +595,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -665,8 +623,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -677,13 +634,11 @@
                 <img
                   src="assets/img/product-10-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-10-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -692,8 +647,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -721,8 +675,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -733,13 +686,11 @@
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-4-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -748,8 +699,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -777,8 +727,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -789,13 +738,11 @@
                 <img
                   src="assets/img/product-5-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-5-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -804,8 +751,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -833,8 +779,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -845,13 +790,11 @@
                 <img
                   src="assets/img/product-11-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-11-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -860,8 +803,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -889,8 +831,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -901,13 +842,11 @@
                 <img
                   src="assets/img/product-7-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-7-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -916,8 +855,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -945,8 +883,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -957,13 +894,11 @@
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-8-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -972,8 +907,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1000,8 +934,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1016,13 +949,11 @@
                 <img
                   src="assets/img/product-1-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-1-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1031,8 +962,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1060,8 +990,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1072,13 +1001,11 @@
                 <img
                   src="assets/img/product-12-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-12-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1087,8 +1014,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1116,8 +1042,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1128,13 +1053,11 @@
                 <img
                   src="assets/img/product-13-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-13-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1143,8 +1066,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1172,8 +1094,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1184,13 +1105,11 @@
                 <img
                   src="assets/img/product-4-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-4-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1199,8 +1118,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1228,8 +1146,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1240,13 +1157,11 @@
                 <img
                   src="assets/img/product-10-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-10-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1255,8 +1170,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1284,8 +1198,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1296,13 +1209,11 @@
                 <img
                   src="assets/img/product-6-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-6-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1311,8 +1222,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1340,8 +1250,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1352,13 +1261,11 @@
                 <img
                   src="assets/img/product-9-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-9-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1367,8 +1274,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1396,8 +1302,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1408,13 +1313,11 @@
                 <img
                   src="assets/img/product-8-1.jpg"
                   alt=""
-                  class="product__img default"
-                />
+                  class="product__img default" />
                 <img
                   src="assets/img/product-8-2.jpg"
                   alt=""
-                  class="product__img hover"
-                />
+                  class="product__img hover" />
               </a>
               <div class="product__actions">
                 <a href="#" class="action__btn" aria-label="Quick View">
@@ -1423,8 +1326,7 @@
                 <a
                   href="#"
                   class="action__btn"
-                  aria-label="Add to Wishlist"
-                >
+                  aria-label="Add to Wishlist">
                   <i class="fi fi-rs-heart"></i>
                 </a>
                 <a href="#" class="action__btn" aria-label="Compare">
@@ -1451,8 +1353,7 @@
               <a
                 href="#"
                 class="action__btn cart__btn"
-                aria-label="Add To Cart"
-              >
+                aria-label="Add To Cart">
                 <i class="fi fi-rs-product_listping-bag-add"></i>
               </a>
             </div>
@@ -1548,8 +1449,7 @@
             <img
               src="./assets/img/showcase-img-1.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1568,8 +1468,7 @@
             <img
               src="./assets/img/showcase-img-2.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1588,8 +1487,7 @@
             <img
               src="./assets/img/showcase-img-3.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1611,8 +1509,7 @@
             <img
               src="./assets/img/showcase-img-4.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1629,8 +1526,7 @@
             <img
               src="./assets/img/showcase-img-5.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1647,8 +1543,7 @@
             <img
               src="./assets/img/showcase-img-6.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1670,8 +1565,7 @@
             <img
               src="./assets/img/showcase-img-7.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1690,8 +1584,7 @@
             <img
               src="./assets/img/showcase-img-8.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1708,8 +1601,7 @@
             <img
               src="./assets/img/showcase-img-9.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1731,8 +1623,7 @@
             <img
               src="./assets/img/showcase-img-7.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1749,8 +1640,7 @@
             <img
               src="./assets/img/showcase-img-8.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1767,8 +1657,7 @@
             <img
               src="./assets/img/showcase-img-9.jpg"
               alt=""
-              class="showcase__img"
-            />
+              class="showcase__img" />
           </a>
           <div class="showcase__content">
             <a href="pages/product/product_details.php">
@@ -1784,62 +1673,85 @@
     </div>
   </section>
 
-<script>
-  (function(){
-    const viewport = document.getElementById('catViewport');
-    const track    = document.getElementById('catTrack');
-    const prevBtn  = document.querySelector('.cat-btn--prev');
-    const nextBtn  = document.querySelector('.cat-btn--next');
+  <script>
+    (function() {
+      const viewport = document.getElementById('catViewport');
+      const track = document.getElementById('catTrack');
+      const prevBtn = document.querySelector('.cat-btn--prev');
+      const nextBtn = document.querySelector('.cat-btn--next');
 
-    // Compute how much to scroll: one "page" width of the viewport
-    function scrollAmount(){ return viewport.clientWidth; }
-
-    function updateButtons(){
-      // allow tiny epsilon to avoid off-by-a-few px
-      const maxScroll = track.scrollWidth - viewport.clientWidth - 2;
-      prevBtn.disabled = viewport.scrollLeft <= 2;
-      nextBtn.disabled = viewport.scrollLeft >= maxScroll;
-    }
-
-    prevBtn.addEventListener('click', () => {
-      viewport.scrollBy({ left: -scrollAmount(), behavior: 'smooth' });
-      // Wait a bit then update
-      setTimeout(updateButtons, 300);
-    });
-
-    nextBtn.addEventListener('click', () => {
-      viewport.scrollBy({ left:  scrollAmount(), behavior: 'smooth' });
-      setTimeout(updateButtons, 300);
-    });
-
-    // Keep buttons in sync on user scroll / resize
-    viewport.addEventListener('scroll', updateButtons, { passive: true });
-    window.addEventListener('resize', updateButtons);
-
-    // Optional: mouse wheel horizontal scroll
-    viewport.addEventListener('wheel', (e) => {
-      if(Math.abs(e.deltaY) > Math.abs(e.deltaX)){
-        e.preventDefault();
-        viewport.scrollBy({ left: e.deltaY, behavior: 'auto' });
+      // Compute how much to scroll: one "page" width of the viewport
+      function scrollAmount() {
+        return viewport.clientWidth;
       }
-    }, { passive: false });
 
-    // Optional: basic drag-to-scroll
-    let isDown=false, startX=0, startLeft=0;
-    viewport.addEventListener('pointerdown', e => {
-      isDown = true; startX = e.clientX; startLeft = viewport.scrollLeft;
-      viewport.setPointerCapture(e.pointerId);
-    });
-    viewport.addEventListener('pointermove', e => {
-      if(!isDown) return;
-      viewport.scrollLeft = startLeft - (e.clientX - startX);
-    });
-    viewport.addEventListener('pointerup',   () => { isDown=false; });
-    viewport.addEventListener('pointercancel',()=> { isDown=false; });
+      function updateButtons() {
+        // allow tiny epsilon to avoid off-by-a-few px
+        const maxScroll = track.scrollWidth - viewport.clientWidth - 2;
+        prevBtn.disabled = viewport.scrollLeft <= 2;
+        nextBtn.disabled = viewport.scrollLeft >= maxScroll;
+      }
 
-    updateButtons();
-  })();
-</script>
+      prevBtn.addEventListener('click', () => {
+        viewport.scrollBy({
+          left: -scrollAmount(),
+          behavior: 'smooth'
+        });
+        // Wait a bit then update
+        setTimeout(updateButtons, 300);
+      });
+
+      nextBtn.addEventListener('click', () => {
+        viewport.scrollBy({
+          left: scrollAmount(),
+          behavior: 'smooth'
+        });
+        setTimeout(updateButtons, 300);
+      });
+
+      // Keep buttons in sync on user scroll / resize
+      viewport.addEventListener('scroll', updateButtons, {
+        passive: true
+      });
+      window.addEventListener('resize', updateButtons);
+
+      // Optional: mouse wheel horizontal scroll
+      viewport.addEventListener('wheel', (e) => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          viewport.scrollBy({
+            left: e.deltaY,
+            behavior: 'auto'
+          });
+        }
+      }, {
+        passive: false
+      });
+
+      // Optional: basic drag-to-scroll
+      let isDown = false,
+        startX = 0,
+        startLeft = 0;
+      viewport.addEventListener('pointerdown', e => {
+        isDown = true;
+        startX = e.clientX;
+        startLeft = viewport.scrollLeft;
+        viewport.setPointerCapture(e.pointerId);
+      });
+      viewport.addEventListener('pointermove', e => {
+        if (!isDown) return;
+        viewport.scrollLeft = startLeft - (e.clientX - startX);
+      });
+      viewport.addEventListener('pointerup', () => {
+        isDown = false;
+      });
+      viewport.addEventListener('pointercancel', () => {
+        isDown = false;
+      });
+
+      updateButtons();
+    })();
+  </script>
 
 
-<?php include 'partials/footer.php'; ?>
+  <?php include 'partials/footer.php'; ?>
