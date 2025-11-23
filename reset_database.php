@@ -1,4 +1,5 @@
 <?php
+
 /**
  * RESET DATABASE SCRIPT
  * ---------------------
@@ -78,7 +79,8 @@ CREATE TABLE Member (
     phone_number VARCHAR(20),
     address TEXT,
     profile_photo_path VARCHAR(255),
-    register_date DATETIME NOT NULL
+    register_date DATETIME NOT NULL,
+    is_blocked TINYINT(1) NOT NULL DEFAULT 0 COMMENT '0 = active, 1 = blocked'
 );
 
 CREATE TABLE Shipping_Address (
@@ -511,6 +513,5 @@ try {
     $pdo->exec($sql);
     echo "----- Database reset successfully! -----";
 } catch (PDOException $e) {
-    echo "----- Error running SQL:" . nl2br($e->getMessage(). " -----");
+    echo "----- Error running SQL:" . nl2br($e->getMessage() . " -----");
 }
-?>

@@ -59,29 +59,36 @@ if ($requireCaptcha) {
 }
 
 if (!$errors) {
-    $stmt = $pdo->prepare("SELECT member_id, username, email, password FROM Member WHERE BINARY username = ?");
+    $stmt = $pdo->prepare("SELECT member_id, username, email, password, is_blocked FROM Member WHERE BINARY username = ?");
     $stmt->execute([$username]);
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
-        $_SESSION['member'] = [
-            'id' => $user['member_id'],
-            'username' => $user['username'],
-            'email' => $user['email'],
-        ];
+        // Check if account is blocked
+        if (isset($user['is_blocked']) && $user['is_blocked'] == 1) {
+            $errors[] = "Your account has been blocked. Please contact support for assistance.";
+        } else {
+            $_SESSION['member'] = [
+                'id' => $user['member_id'],
+                'username' => $user['username'],
+                'email' => $user['email'],
+            ];
 
-        unset($_SESSION['failed_login_count']);
-        unset($_SESSION['old']);
+            unset($_SESSION['failed_login_count']);
+            unset($_SESSION['old']);
 
-        header('Location: /index.php');
-        exit;
+            header('Location: /index.php');
+            exit;
+        }
+    } else {
+        $errors[] = "Invalid username or password.";
     }
-
-    $errors[] = "Invalid username or password.";
 }
 
 // Login failed → increment fail count
-$_SESSION['failed_login_count'] = $failedBefore + 1;
+if ($errors) {
+    $_SESSION['failed_login_count'] = $failedBefore + 1;
+}
 
 $_SESSION['errors'] = $errors;
 header('Location: ./login.php');
