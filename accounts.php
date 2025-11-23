@@ -110,7 +110,7 @@ sort($allCities);
 
 if (!$member) {
   // If somehow missing, force logout for safety
-  header('Location: /auth/logout.php');
+  header('Location: /pages/auth/logout.php');
   exit;
 }
 
@@ -414,7 +414,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
               <!-- Profile Photo Section (Separate Form) -->
               <div class="profile-edit-card">
-                <form class="profile-photo-form" method="POST" action="/auth/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
+                <form class="profile-photo-form" method="POST" action="/pages/auth/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                   <div class="profile-section">
                     <h4 class="profile-section__title">Profile Photo</h4>
@@ -515,7 +515,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
               <!-- Profile Information Section (Separate Form) -->
               <div class="profile-edit-card" style="margin-top: 2rem;">
-                <form class="profile-edit-form" method="POST" action="/auth/profile_update_post.php" novalidate>
+                <form class="profile-edit-form" method="POST" action="/pages/auth/profile_update_post.php" novalidate>
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                   <!-- Personal Information Section -->
@@ -762,7 +762,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                   </div>
                 </div>
 
-                <form class="password-change-form" method="POST" action="/auth/password_update_post.php" novalidate id="passwordChangeForm">
+                <form class="password-change-form" method="POST" action="/pages/auth/password_update_post.php" novalidate id="passwordChangeForm">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                   <div class="password-field-group">

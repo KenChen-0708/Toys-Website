@@ -6,7 +6,7 @@ is_logged_in();
 
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: login.php');
+    header('Location: /pages/auth/login.php');
     exit;
 }
 
@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $category = trim($_POST['category'] ?? '');
     $rating = intval($_POST['rating'] ?? 0);
     $message = trim($_POST['message'] ?? '');
-    
+
     // Validation
     if (empty($subject)) {
         $error_message = 'Please provide a subject for your feedback.';
@@ -39,9 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         try {
             $sql = "INSERT INTO Feedback (member_id, subject, category, rating, message, status, created_at) 
                     VALUES (?, ?, ?, ?, ?, 'pending', NOW())";
-            
+
             $stmt = $pdo->prepare($sql);
-            
+
             if ($stmt->execute([$member_id, $subject, $category, $rating, $message])) {
                 $success_message = 'Thank you for your feedback! We appreciate your input and will review it shortly.';
                 // Clear form data
@@ -70,6 +70,7 @@ $title = "Feedback";
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -79,6 +80,7 @@ $title = "Feedback";
     <link rel="stylesheet" href="assets/css/feedback.css">
 
 </head>
+
 <body>
     <?php include 'partials/header.php'; ?>
     <div class="feedback-page">
@@ -116,15 +118,14 @@ $title = "Feedback";
                             <label for="subject">
                                 Subject <span class="required">*</span>
                             </label>
-                            <input 
-                                type="text" 
-                                id="subject" 
-                                name="subject" 
+                            <input
+                                type="text"
+                                id="subject"
+                                name="subject"
                                 class="form-control"
                                 placeholder="Brief summary of your feedback"
                                 value="<?php echo isset($_POST['subject']) ? htmlspecialchars($_POST['subject']) : ''; ?>"
-                                required
-                            />
+                                required />
                         </div>
 
                         <div class="form-group">
@@ -162,7 +163,7 @@ $title = "Feedback";
                                     <label for="star1">⭐</label>
                                 </div>
                                 <div class="rating-display" id="ratingDisplay">
-                                    <?php 
+                                    <?php
                                     if (isset($_POST['rating'])) {
                                         echo htmlspecialchars($_POST['rating']) . ' Stars';
                                     } else {
@@ -177,15 +178,14 @@ $title = "Feedback";
                             <label for="message">
                                 Your Feedback <span class="required">*</span>
                             </label>
-                            <textarea 
-                                id="message" 
-                                name="message" 
+                            <textarea
+                                id="message"
+                                name="message"
                                 class="form-control"
                                 placeholder="Please share your detailed feedback here..."
                                 required
                                 maxlength="1000"
-                                oninput="updateCharCount()"
-                            ><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
+                                oninput="updateCharCount()"><?php echo isset($_POST['message']) ? htmlspecialchars($_POST['message']) : ''; ?></textarea>
                             <div class="char-count">
                                 <span id="charCount">0</span> / 1000 characters
                             </div>
@@ -291,6 +291,7 @@ $title = "Feedback";
         });
     </script>
 </body>
+
 </html>
 
 <?php include 'partials/footer.php'; ?>

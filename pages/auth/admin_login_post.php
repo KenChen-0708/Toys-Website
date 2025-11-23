@@ -1,15 +1,15 @@
 <?php
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { 
-    header('Location: ./admin_login.php'); 
-    exit; 
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    header('Location: ./admin_login.php');
+    exit;
 }
 
-if (!verify_csrf($_POST['csrf_token'] ?? '')) { 
-    http_response_code(403); 
-    die('Invalid CSRF token'); 
+if (!verify_csrf($_POST['csrf_token'] ?? '')) {
+    http_response_code(403);
+    die('Invalid CSRF token');
 }
 
 // ---- reCAPTCHA CONFIG ----
@@ -34,7 +34,7 @@ $errors = [];
  */
 if (!empty($_POST['remember'])) {
     // Set / update cookie for 30 days
-    setcookie('remember_admin', $username, time() + 60*60*24*30, '/', '', false, true);
+    setcookie('remember_admin', $username, time() + 60 * 60 * 24 * 30, '/', '', false, true);
 } else {
     // Remove cookie if exists
     if (isset($_COOKIE['remember_admin'])) {
@@ -115,7 +115,7 @@ if (!$errors) {
         ];
 
         unset($_SESSION['admin_old']);
-        header('Location: ../admin/admin_dashboard.php');
+        header('Location: /admin/admin_dashboard.php');
         exit;
     } else {
         // Generic message to avoid user enumeration

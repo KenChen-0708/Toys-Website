@@ -1,7 +1,9 @@
 <?php
-require_once '../helper/auth.php';
+require_once '../../helper/auth.php';
 
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 
 $_SESSION = [];
 if (ini_get("session.use_cookies")) {

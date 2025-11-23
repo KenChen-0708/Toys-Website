@@ -1,16 +1,16 @@
 <?php
 session_start();
 
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 
 // PHPMailer (manual include)
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-require_once __DIR__ . '/../phpmailer/src/Exception.php';
-require_once __DIR__ . '/../phpmailer/src/PHPMailer.php';
-require_once __DIR__ . '/../phpmailer/src/SMTP.php';
+require_once __DIR__ . '/../../phpmailer/src/Exception.php';
+require_once __DIR__ . '/../../phpmailer/src/PHPMailer.php';
+require_once __DIR__ . '/../../phpmailer/src/SMTP.php';
 
 // CSRF check
 if (!isset($_POST['csrf_token']) || !hash_equals(csrf_token(), $_POST['csrf_token'])) {
@@ -71,9 +71,9 @@ $stmt->execute([$user['email'], $tokenHash, $expiresAt]);
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host   = $_SERVER['HTTP_HOST']; // includes port automatically
 
-$baseUrl = $scheme . '://' . $host . '/auth';
+$baseUrl = $scheme . '://' . $host . '/pages/auth';
 $resetLink = $baseUrl . '/reset_password.php?token=' . urlencode($rawToken) .
-             '&email=' . urlencode($user['email']);
+    '&email=' . urlencode($user['email']);
 
 // Send email
 $mail = new PHPMailer(true);
