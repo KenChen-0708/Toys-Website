@@ -2,6 +2,31 @@
 
 (function ($) {
 	$(function () {
+		// Check for stored success message and display it
+		const storedMessage = sessionStorage.getItem('member_action_message');
+		const storedType = sessionStorage.getItem('member_action_type');
+
+		if (storedMessage && storedType) {
+			// Create and display alert
+			const alertDiv = $('<div>')
+				.addClass('alert alert-' + storedType)
+				.text(storedMessage)
+				.css('margin-bottom', '20px');
+
+			$('.main-content .header').after(alertDiv);
+
+			// Clear from sessionStorage
+			sessionStorage.removeItem('member_action_message');
+			sessionStorage.removeItem('member_action_type');
+
+			// Auto-hide after 5 seconds
+			setTimeout(function () {
+				alertDiv.fadeOut(function () {
+					$(this).remove();
+				});
+			}, 5000);
+		}
+
 		// Search debounce → reload with q param
 		let searchTimer = null;
 		$('#mm-search').on('input', function () {
@@ -75,6 +100,9 @@
 				}),
 				success: function (response) {
 					if (response.success) {
+						// Store message in sessionStorage to display after reload
+						sessionStorage.setItem('member_action_message', response.message);
+						sessionStorage.setItem('member_action_type', 'success');
 						window.location.reload();
 					} else {
 						alert('Error: ' + response.message);

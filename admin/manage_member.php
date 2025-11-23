@@ -1045,6 +1045,10 @@ alice,alice@example.com,AlicePass1!,,"34 Rose Ave, City"
     </form>
 
     <script>
+        window.onbeforeunload = function() {
+            window.scrollTo(0, 0);
+        };
+
         function openCreateModal() {
             document.getElementById('createModal').style.display = 'block';
         }
