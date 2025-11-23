@@ -74,6 +74,18 @@ if (!$errors) {
                 'email' => $user['email'],
             ];
 
+            try {
+                $stmtSettings = $pdo->prepare("SELECT theme_preference FROM Member_Settings WHERE member_id = ?");
+                $stmtSettings->execute([$user['member_id']]);
+                $settings = $stmtSettings->fetch(PDO::FETCH_ASSOC);
+
+                // Save to session (Default to 'light' if not found)
+                $_SESSION['member']['theme'] = $settings['theme_preference'] ?? 'light';
+
+            } catch (Exception $e) {
+                $_SESSION['member']['theme'] = 'light';
+            }
+
             unset($_SESSION['failed_login_count']);
             unset($_SESSION['old']);
 

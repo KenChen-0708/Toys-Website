@@ -287,6 +287,17 @@ SELECT
 FROM `Feedback`
 GROUP BY category;
 
+CREATE TABLE Member_Settings (
+    setting_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_id INT NOT NULL,
+    theme_preference ENUM('light', 'dark') NOT NULL DEFAULT 'light',
+    email_notifications TINYINT(1) DEFAULT 1,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (member_id) REFERENCES Member(member_id) 
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    UNIQUE KEY unique_member_setting (member_id)
+);
 
 -- INSERT DATA
 INSERT INTO Product (name, price, description, category, stock, status, main_image_path) VALUES
@@ -505,6 +516,10 @@ VALUES
 ('SPRINGSALE', 15.00, 'percent', 50.00, 30.00, 300, 2, '2026-03-01 00:00:00', '2026-03-31 23:59:59', 'active'),
 ('VIPCUSTOMER', 100.00, 'fixed', 500.00, NULL, 20, 1, '2025-11-01 00:00:00', '2026-01-01 23:59:59', 'active'),
 ('FLASHDEAL', 50.00, 'percent', 100.00, 50.00, 100, 1, '2025-11-16 12:00:00', '2025-11-16 18:00:00', 'expired');
+
+-- Optional: Insert default settings for existing members (safely)
+INSERT IGNORE INTO Member_Settings (member_id, theme_preference)
+SELECT member_id, 'light' FROM Member;
 
 SQL;
 
