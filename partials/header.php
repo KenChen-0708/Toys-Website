@@ -80,6 +80,7 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
             </div>
             <a href="/accounts.php">My Account</a>
             <a href="/orders.php">My Orders</a>
+            <a href="/setting.php">Setting</a>
             <form action="/pages/auth/logout.php" method="post">
               <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
               <button type="submit" class="logout-btn">Log Out</button>

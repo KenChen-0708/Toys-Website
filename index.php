@@ -1,4 +1,5 @@
 <?php 
+  session_start();
   $title = "Home";
 ?>
 <!DOCTYPE html>
@@ -19,7 +20,7 @@
 
     <title><?= htmlspecialchars($title) ?></title>
   </head>
-  <body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
 <?php include 'partials/header.php'; ?>
 
 <!--=============== MAIN ===============-->

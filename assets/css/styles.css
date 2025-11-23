@@ -471,22 +471,6 @@ table {
   display: none;
 }
 
-/*=============== BREADCRUMBS & PRICES ===============*/
-.breadcrumb {
-  background-color: var(--container-color);
-  padding-block: 1.5rem;
-}
-
-.breadcrumb__list {
-  display: flex;
-  column-gap: 0.75rem;
-}
-
-.breadcrumb__link {
-  color: var(--text-color);
-  font-size: var(--small-font-size);
-}
-
 .new__price {
   color: var(--first-color);
   font-weight: var(--weight-600);
@@ -781,4 +765,88 @@ table {
   .swiper-button-next, .swiper-button-prev { display: none; }
   .home__img { display: none; }
   .header__search { max-width: 270px; }
+}
+
+/* =========================================
+   DARK THEME GLOBALS
+   ========================================= */
+
+/* 1. Core Variables Override */
+body.dark-theme {
+    /* Backgrounds */
+    --body-color: #0f172a;       
+    --container-color: #1e293b;  
+    --nav-bg: #1e293b;           
+    --footer-bg: #1e293b; /* Matches Nav */
+    
+    /* Text */
+    --title-color: #f1f5f9;      
+    --text-color: #cbd5e1;       
+    --text-color-light: #94a3b8; 
+    
+    /* Borders & Accents */
+    --border-color: #334155;
+    --border-color-alt: #334155;
+    --first-color: #34d399;      
+}
+
+/* 2. Global Component Fixes */
+
+/* Header & Nav */
+body.dark-theme .header {
+    background-color: var(--nav-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+body.dark-theme .header__top {
+    background-color: #020617; 
+    color: #e2e8f0;
+}
+
+body.dark-theme .nav__link {
+    color: var(--title-color);
+}
+
+body.dark-theme .nav__link:hover,
+body.dark-theme .active-link {
+    color: var(--first-color);
+}
+
+/* Fix Icons (Cart, Wishlist, Search) to be white */
+body.dark-theme .header__action-btn img,
+body.dark-theme .search__btn img {
+    filter: brightness(0) invert(1);
+}
+
+/* Logo Fix (Inverts black logos to white) */
+body.dark-theme .nav__logo-img,
+body.dark-theme .footer__logo-img {
+    filter: brightness(0) invert(1);
+}
+
+/* Footer Text Visibility */
+body.dark-theme .footer__title,
+body.dark-theme .footer__link,
+body.dark-theme .footer__description,
+body.dark-theme .footer__subtitle,
+body.dark-theme .copyright, 
+body.dark-theme .designer,
+body.dark-theme .footer__contact {
+    color: var(--text-color);
+}
+
+/* Inputs & Forms (Global) */
+body.dark-theme input, 
+body.dark-theme textarea, 
+body.dark-theme select,
+body.dark-theme .form__input {
+    background-color: var(--body-color);
+    border-color: var(--border-color);
+    color: var(--title-color);
+}
+
+/* Auth Cards (Login/Register) */
+body.dark-theme .auth-card {
+    background-color: var(--container-color);
+    border-color: var(--border-color);
 }
