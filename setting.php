@@ -66,7 +66,7 @@ try {
     <title>Settings - Evara</title>
 
     <link rel="stylesheet" href="assets/css/styles.css">
-
+    <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
     <style>
         /* =========================================
            1. CORE VARIABLES & DARK MODE OVERRIDES

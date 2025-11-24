@@ -208,7 +208,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
   <!--=============== CSS ===============-->
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <link rel="stylesheet" href="/assets/css/account.css" />
-
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
   <title><?= htmlspecialchars($title) ?></title>
 </head>
 
