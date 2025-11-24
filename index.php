@@ -17,6 +17,7 @@ $title = "Home";
   <!--=============== CSS ===============-->
   <link rel="stylesheet" href="/assets/css/styles.css" />
   <link rel="stylesheet" href="/assets/css/index.css" />
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
 
   <title><?= htmlspecialchars($title) ?></title>
 </head>

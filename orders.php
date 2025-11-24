@@ -154,7 +154,7 @@ try {
     <title>My Orders</title>
     <link rel="stylesheet" href="assets/css/orders.css">
     <link rel="stylesheet" href="assets/css/styles.css">
-
+    <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
 </head>
 
 <?php

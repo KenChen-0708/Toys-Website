@@ -76,7 +76,7 @@ $title = "Feedback";
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Submit Feedback - Evara</title>
     <link rel="stylesheet" href="assets/css/styles.css">
-
+    <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
     <link rel="stylesheet" href="assets/css/feedback.css">
 
 </head>

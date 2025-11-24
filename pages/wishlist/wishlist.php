@@ -192,6 +192,7 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Wishlist - Online Store</title>
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     * {
