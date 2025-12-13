@@ -5,7 +5,7 @@ require '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: ../../auth/login.php');
+    header('Location: /pages/auth/login.php');
     exit();
 }
 
@@ -23,11 +23,11 @@ if (!$session_id || !$order_id) {
 try {
     // Verify the Stripe session
     $session = \Stripe\Checkout\Session::retrieve($session_id);
-    
+
     if ($session->payment_status === 'paid') {
         // Start transaction
         $pdo->beginTransaction();
-        
+
         // Get order details first
         $stmt = $pdo->prepare("
             SELECT o.*, 
@@ -37,16 +37,16 @@ try {
         ");
         $stmt->execute([$order_id, $member_id]);
         $order = $stmt->fetch();
-        
+
         if (!$order) {
             throw new Exception("Order not found");
         }
-        
+
         // Check if payment record already exists (prevent duplicate)
         $stmt = $pdo->prepare("SELECT payment_id FROM Payment WHERE order_id = ?");
         $stmt->execute([$order_id]);
         $existing_payment = $stmt->fetch();
-        
+
         if (!$existing_payment) {
             // Determine payment method from Stripe
             $payment_method = 'Credit Card'; // Default
@@ -66,7 +66,7 @@ try {
                         $payment_method = 'Credit Card';
                 }
             }
-            
+
             // Insert payment record
             $stmt = $pdo->prepare("
                 INSERT INTO Payment (order_id, payment_method, payment_date, amount, status)
@@ -74,7 +74,7 @@ try {
             ");
             $stmt->execute([$order_id, $payment_method, $order['total_amount']]);
         }
-        
+
         // Update order status to 'Shipped'
         $stmt = $pdo->prepare("
             UPDATE `Order` 
@@ -82,10 +82,9 @@ try {
             WHERE order_id = ? AND member_id = ?
         ");
         $stmt->execute([$order_id, $member_id]);
-        
+
         // Commit transaction
         $pdo->commit();
-        
     } else {
         header('Location: payment_cancel.php?order_id=' . $order_id);
         exit();
@@ -100,6 +99,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -110,7 +110,7 @@ try {
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             min-height: 100vh;
@@ -119,7 +119,7 @@ try {
             justify-content: center;
             padding: 20px;
         }
-        
+
         .success-container {
             background: white;
             border-radius: 20px;
@@ -127,9 +127,9 @@ try {
             max-width: 600px;
             width: 100%;
             text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
         }
-        
+
         .success-icon {
             width: 100px;
             height: 100px;
@@ -141,38 +141,39 @@ try {
             margin: 0 auto 30px;
             animation: scaleIn 0.5s ease;
         }
-        
+
         .success-icon::after {
             content: '✓';
             color: white;
             font-size: 60px;
             font-weight: bold;
         }
-        
+
         @keyframes scaleIn {
             from {
                 transform: scale(0);
                 opacity: 0;
             }
+
             to {
                 transform: scale(1);
                 opacity: 1;
             }
         }
-        
+
         h1 {
             font-size: 32px;
             color: #333;
             margin-bottom: 15px;
         }
-        
+
         .message {
             font-size: 18px;
             color: #666;
             margin-bottom: 30px;
             line-height: 1.6;
         }
-        
+
         .order-details {
             background: #f8f9fa;
             border-radius: 12px;
@@ -180,33 +181,33 @@ try {
             margin: 30px 0;
             text-align: left;
         }
-        
+
         .order-row {
             display: flex;
             justify-content: space-between;
             padding: 12px 0;
             border-bottom: 1px solid #e0e0e0;
         }
-        
+
         .order-row:last-child {
             border-bottom: none;
         }
-        
+
         .order-label {
             color: #666;
             font-weight: 500;
         }
-        
+
         .order-value {
             color: #333;
             font-weight: 600;
         }
-        
+
         .order-value.amount {
             color: #4CAF50;
             font-size: 20px;
         }
-        
+
         .btn {
             display: inline-block;
             padding: 15px 40px;
@@ -217,27 +218,27 @@ try {
             font-size: 16px;
             transition: all 0.3s;
         }
-        
+
         .btn-primary {
             background: #4CAF50;
             color: white;
         }
-        
+
         .btn-primary:hover {
             background: #45a049;
             transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
         }
-        
+
         .btn-secondary {
             background: #f0f0f0;
             color: #333;
         }
-        
+
         .btn-secondary:hover {
             background: #e0e0e0;
         }
-        
+
         .shipping-address {
             background: white;
             border: 2px solid #e0e0e0;
@@ -250,15 +251,16 @@ try {
         }
     </style>
 </head>
-<body>
+
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
     <div class="success-container">
         <div class="success-icon"></div>
-        
+
         <h1>Payment Successful!</h1>
         <p class="message">
             Thank you for your purchase. Your order has been confirmed and will be shipped soon.
         </p>
-        
+
         <div class="order-details">
             <div class="order-row">
                 <span class="order-label">Order Number</span>
@@ -283,14 +285,14 @@ try {
             $payment = $stmt->fetch();
             ?>
             <?php if ($payment): ?>
-            <div class="order-row">
-                <span class="order-label">Payment Method</span>
-                <span class="order-value"><?php echo htmlspecialchars($payment['payment_method']); ?></span>
-            </div>
-            <div class="order-row">
-                <span class="order-label">Payment Status</span>
-                <span class="order-value" style="color: #4CAF50;"><?php echo $payment['status']; ?></span>
-            </div>
+                <div class="order-row">
+                    <span class="order-label">Payment Method</span>
+                    <span class="order-value"><?php echo htmlspecialchars($payment['payment_method']); ?></span>
+                </div>
+                <div class="order-row">
+                    <span class="order-label">Payment Status</span>
+                    <span class="order-value" style="color: #4CAF50;"><?php echo $payment['status']; ?></span>
+                </div>
             <?php endif; ?>
             <div class="order-row">
                 <span class="order-label">Order Status</span>
@@ -304,20 +306,20 @@ try {
                         <?php if ($order['shipping_address_line2']): ?>
                             <?php echo htmlspecialchars($order['shipping_address_line2']); ?><br>
                         <?php endif; ?>
-                        <?php echo htmlspecialchars($order['shipping_city']); ?>, 
-                        <?php echo htmlspecialchars($order['shipping_state']); ?> 
+                        <?php echo htmlspecialchars($order['shipping_city']); ?>,
+                        <?php echo htmlspecialchars($order['shipping_state']); ?>
                         <?php echo htmlspecialchars($order['shipping_postal_code']); ?><br>
                         <?php echo htmlspecialchars($order['shipping_country']); ?>
                     </div>
                 </div>
             </div>
         </div>
-        
+
         <div>
             <a href=\"../orders/order_history.php\" class="btn btn-primary">View Order History</a>
             <a href=\"../../index.php\" class="btn btn-secondary">Continue Shopping</a>
         </div>
     </div>
 </body>
-</html>
 
+</html>

@@ -4,8 +4,8 @@ require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: ../../auth/login.php');
-    exit();
+  header('Location: /pages/auth/login.php');
+  exit();
 }
 
 $member_id = $_SESSION['member']['id'];
@@ -13,7 +13,7 @@ $member_id = $_SESSION['member']['id'];
 // Clear buy_now session when user visits cart page
 // This ensures cart checkout always shows cart items, not buy_now items
 if (isset($_SESSION['buy_now_item'])) {
-    unset($_SESSION['buy_now_item']);
+  unset($_SESSION['buy_now_item']);
 }
 
 // Handle AJAX requests
@@ -126,6 +126,7 @@ foreach ($cart_items as $item) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shopping Cart - Online Store</title>
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     * {
@@ -248,9 +249,14 @@ foreach ($cart_items as $item) {
 
 
     @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
+      from {
+        opacity: 0;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
 
     .alert-success {
       background-color: #1a1a1a;
@@ -585,7 +591,7 @@ foreach ($cart_items as $item) {
   </style>
 </head>
 
-<body>
+<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
   <div class="container">
     <div class="cart-header">
       <h1>Shopping Cart</h1>

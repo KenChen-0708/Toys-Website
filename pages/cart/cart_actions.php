@@ -9,7 +9,7 @@ if (!isset($_SESSION['member'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Please log in to add items to cart',
-        'redirect' => '../../auth/login.php',
+        'redirect' => '/pages/auth/login.php',
         'debug' => 'No session found'
     ]);
     exit();
@@ -19,7 +19,7 @@ if (!isset($_SESSION['member']['id'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Session error - please log in again',
-        'redirect' => 'auth/login.php',
+        'redirect' => '/pages/auth/login.php',
         'debug' => 'Session exists but no ID: ' . json_encode($_SESSION['member'])
     ]);
     exit();
@@ -95,7 +95,7 @@ try {
             if ($cart_item) {
                 // Update quantity
                 $new_quantity = $cart_item['quantity'] + $quantity;
-                
+
                 if ($new_quantity > $product['stock']) {
                     echo json_encode(['success' => false, 'message' => 'Cannot add more items. Stock limit reached']);
                     exit();
@@ -179,4 +179,3 @@ try {
         ]
     ]);
 }
-?>

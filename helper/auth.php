@@ -3,24 +3,44 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
-function csrf_token() {
+function csrf_token()
+{
   if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
   }
   return $_SESSION['csrf_token'];
 }
-function verify_csrf($token) {
+function verify_csrf($token)
+{
   return isset($_SESSION['csrf_token']) && hash_equals($_SESSION['csrf_token'], $token ?? '');
 }
 
-function is_logged_in() { return !empty($_SESSION['member']); }
-function require_guest() { if (is_logged_in()) { header('Location: ../index.php'); exit; } }
-function require_auth() { if (!is_logged_in()) { header('Location: ./login.php'); exit; } }
+function is_logged_in()
+{
+  return !empty($_SESSION['member']);
+}
+function require_guest()
+{
+  if (is_logged_in()) {
+    header('Location: /index.php');
+    exit;
+  }
+}
+function require_auth()
+{
+  if (!is_logged_in()) {
+    header('Location: /pages/auth/login.php');
+    exit;
+  }
+}
 
-function require_admin() {
-  if (session_status() === PHP_SESSION_NONE) { session_start(); }
+function require_admin()
+{
+  if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+  }
   if (empty($_SESSION['admin'])) {
-    header('Location: ../auth/admin_login.php');
+    header('Location: /pages/auth/admin_login.php');
     exit;
   }
 }
@@ -28,8 +48,11 @@ function require_admin() {
 /**
  * Get current admin role from session
  */
-function get_admin_role() {
-  if (session_status() === PHP_SESSION_NONE) { session_start(); }
+function get_admin_role()
+{
+  if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+  }
   return $_SESSION['admin']['role'] ?? 'admin';
 }
 
@@ -41,7 +64,8 @@ function get_admin_role() {
  * @param string $action - Action name
  * @return bool
  */
-function check_custom_permission_with_pdo($pdo, $adminId, $resource, $action) {
+function check_custom_permission_with_pdo($pdo, $adminId, $resource, $action)
+{
   try {
     if ($pdo instanceof PDO) {
       $stmt = $pdo->prepare("SELECT 1 FROM Admin_Permission WHERE admin_id = ? AND resource = ? AND action = ?");
@@ -60,28 +84,31 @@ function check_custom_permission_with_pdo($pdo, $adminId, $resource, $action) {
  * @param string $action - The action to check (e.g., 'view', 'create', 'update', 'delete')
  * @return bool
  */
-function has_permission($resource, $action = 'view', $pdo = null) {
+function has_permission($resource, $action = 'view', $pdo = null)
+{
   // Get PDO from global if not provided
   if ($pdo === null && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
     $pdo = $GLOBALS['pdo'];
   }
-  
+
   $role = get_admin_role();
-  
+
   // Super Admin has all permissions
   if ($role === 'super admin') {
     return true;
   }
-  
+
   // Dashboard view permission is always granted (to prevent redirect loops)
   if ($resource === 'dashboard' && $action === 'view') {
     return true;
   }
-  
+
   // Check if permission is explicitly denied for this admin
-  if (session_status() === PHP_SESSION_NONE) { session_start(); }
+  if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+  }
   $adminId = $_SESSION['admin']['id'] ?? 0;
-  
+
   if ($adminId > 0 && $pdo instanceof PDO) {
     try {
       // First check if permission is explicitly denied
@@ -90,7 +117,7 @@ function has_permission($resource, $action = 'view', $pdo = null) {
       if ($stmt->fetch()) {
         return false; // Permission is explicitly denied
       }
-      
+
       // Check for explicit admin permissions (set by Super Admin)
       if (check_custom_permission_with_pdo($pdo, $adminId, $resource, $action)) {
         return true; // Admin has explicit permission
@@ -99,7 +126,7 @@ function has_permission($resource, $action = 'view', $pdo = null) {
       // If tables don't exist yet, continue to check role permissions
     }
   }
-  
+
   // Check role-based permissions from database (base permissions)
   if ($pdo instanceof PDO) {
     try {
@@ -112,7 +139,7 @@ function has_permission($resource, $action = 'view', $pdo = null) {
       // If table doesn't exist yet, return false
     }
   }
-  
+
   return false;
 }
 
@@ -121,14 +148,15 @@ function has_permission($resource, $action = 'view', $pdo = null) {
  * @param string $resource - The resource to check
  * @param string $action - The action to check
  */
-function require_permission($resource, $action = 'view', $pdo = null) {
+function require_permission($resource, $action = 'view', $pdo = null)
+{
   require_admin(); // First ensure admin is logged in
-  
+
   // Try to get PDO from global scope if not provided
   if ($pdo === null && isset($GLOBALS['pdo']) && $GLOBALS['pdo'] instanceof PDO) {
     $pdo = $GLOBALS['pdo'];
   }
-  
+
   if (!has_permission($resource, $action, $pdo)) {
     header('Location: ../admin/admin_dashboard.php?error=access_denied');
     exit;
@@ -140,14 +168,15 @@ function require_permission($resource, $action = 'view', $pdo = null) {
  * @param string $page - The page name (e.g., 'manage_member.php', 'manage_admin.php')
  * @return bool
  */
-function can_access_page($page) {
+function can_access_page($page)
+{
   $role = get_admin_role();
-  
+
   // Super Admin can access everything
   if ($role === 'super admin') {
     return true;
   }
-  
+
   // Map pages to resources
   $page_permissions = [
     'admin_dashboard.php' => ['resource' => 'dashboard', 'action' => 'view'],
@@ -159,11 +188,11 @@ function can_access_page($page) {
     'feedback_management.php' => ['resource' => 'feedback', 'action' => 'view'],
     'analytics.php' => ['resource' => 'analytics', 'action' => 'view'],
   ];
-  
+
   if (isset($page_permissions[$page])) {
     return has_permission($page_permissions[$page]['resource'], $page_permissions[$page]['action']);
   }
-  
+
   // Default: deny access if page not in list
   return false;
 }

@@ -33,7 +33,7 @@ if (!$errors) {
     if ($uploadDirFs === false) {
         $uploadDirFs = __DIR__ . '/../assets/img';
     }
-    $profileDirFs = $uploadDirFs . '/profiles';
+    $profileDirFs = $uploadDirFs . '/profile_photo';
 
     if (!is_dir($profileDirFs)) {
         mkdir($profileDirFs, 0755, true);
@@ -56,7 +56,7 @@ if (!$errors) {
                     if (file_put_contents($targetFs, $raw) === false) {
                         $errors[] = 'Failed to save captured photo.';
                     } else {
-                        $newPhotoPath = '/assets/img/profiles/' . $fileName;
+                        $newPhotoPath = '/assets/img/profile_photo/' . $fileName;
                     }
                 }
             }
@@ -92,7 +92,7 @@ if (!$errors) {
                 if (!move_uploaded_file($file['tmp_name'], $targetFs)) {
                     $errors[] = 'Failed to save uploaded photo.';
                 } else {
-                    $newPhotoPath = '/assets/img/profiles/' . $fileName;
+                    $newPhotoPath = '/assets/img/profile_photo/' . $fileName;
                 }
             }
         }
@@ -103,7 +103,7 @@ if (!$errors) {
 // Delete old photo if a new one was saved
 if (!$errors && $newPhotoPath !== ($current['profile_photo_path'] ?? null) && !empty($current['profile_photo_path'])) {
     $oldPath = $current['profile_photo_path'];
-    if (strpos($oldPath, '/assets/img/profiles/') === 0) {
+    if (strpos($oldPath, '/assets/img/profile_photo/') === 0) {
         $oldFs = realpath(__DIR__ . '/..' . $oldPath);
         if ($oldFs && is_file($oldFs)) {
             @unlink($oldFs);

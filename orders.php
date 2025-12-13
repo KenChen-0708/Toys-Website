@@ -154,220 +154,219 @@ try {
     <title>My Orders</title>
     <link rel="stylesheet" href="assets/css/orders.css">
     <link rel="stylesheet" href="assets/css/styles.css">
-
+    <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
 </head>
 
-<body>
-    <?php
-    $title = "Home";
-    include 'partials/header.php';
+<?php
+$title = "Home";
+include 'partials/header.php';
 
-    ?>
-    <div class="user-container">
+?>
+<div class="user-container">
 
-        <h1>My Orders</h1>
+    <h1>My Orders</h1>
 
-        <!-- Filter/Search -->
-        <div class="filter-bar">
-            <div class="filter-header">
-                <button type="button" class="toggle-advanced" onclick="toggleAdvanced()">
-                    <span id="toggle-text">Show Advanced Search</span>
-                    <span id="toggle-icon">▼</span>
-                </button>
+    <!-- Filter/Search -->
+    <div class="filter-bar">
+        <div class="filter-header">
+            <button type="button" class="toggle-advanced" onclick="toggleAdvanced()">
+                <span id="toggle-text">Show Advanced Search</span>
+                <span id="toggle-icon">▼</span>
+            </button>
+        </div>
+
+        <form method="GET" id="searchForm">
+            <!-- Basic Search -->
+            <div class="basic-search">
+                <input type="text" name="search" placeholder="Search order id, product or address..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" class="search-input">
+
+                <label>Sort</label>
+                <select name="sort">
+                    <option value="desc" <?php if ($sort === 'DESC') echo ' selected'; ?>>Newest</option>
+                    <option value="asc" <?php if ($sort === 'ASC') echo ' selected'; ?>>Oldest</option>
+                </select>
+
+                <div class="button-group">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a href="orders.php" class="btn btn-secondary">Clear</a>
+                </div>
             </div>
 
-            <form method="GET" id="searchForm">
-                <!-- Basic Search -->
-                <div class="basic-search">
-                    <input type="text" name="search" placeholder="Search order id, product or address..." value="<?php echo htmlspecialchars($search, ENT_QUOTES, 'UTF-8'); ?>" class="search-input">
+            <!-- Advanced Search (Hidden by default) -->
+            <div class="advanced-search" id="advancedSearch" style="display: none;">
+                <div class="advanced-row">
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select name="status">
+                            <option value="">All Statuses</option>
+                            <option value="Pending" <?php if ($filter_status == 'Pending') echo ' selected'; ?>>Pending</option>
+                            <option value="Shipped" <?php if ($filter_status == 'Shipped') echo ' selected'; ?>>Shipped</option>
+                            <option value="Delivered" <?php if ($filter_status == 'Delivered') echo ' selected'; ?>>Delivered</option>
+                            <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo ' selected'; ?>>Cancelled</option>
+                        </select>
+                    </div>
 
-                    <label>Sort</label>
-                    <select name="sort">
-                        <option value="desc" <?php if ($sort === 'DESC') echo ' selected'; ?>>Newest</option>
-                        <option value="asc" <?php if ($sort === 'ASC') echo ' selected'; ?>>Oldest</option>
-                    </select>
+                    <div class="filter-group">
+                        <label>Date From</label>
+                        <input type="date" name="date_from" value="<?php echo htmlspecialchars($filter_date_from); ?>">
+                    </div>
 
-                    <div class="button-group">
-                        <button type="submit" class="btn btn-primary">Search</button>
-                        <a href="orders.php" class="btn btn-secondary">Clear</a>
+                    <div class="filter-group">
+                        <label>Date To</label>
+                        <input type="date" name="date_to" value="<?php echo htmlspecialchars($filter_date_to); ?>">
                     </div>
                 </div>
 
-                <!-- Advanced Search (Hidden by default) -->
-                <div class="advanced-search" id="advancedSearch" style="display: none;">
-                    <div class="advanced-row">
-                        <div class="filter-group">
-                            <label>Status</label>
-                            <select name="status">
-                                <option value="">All Statuses</option>
-                                <option value="Pending" <?php if ($filter_status == 'Pending') echo ' selected'; ?>>Pending</option>
-                                <option value="Shipped" <?php if ($filter_status == 'Shipped') echo ' selected'; ?>>Shipped</option>
-                                <option value="Delivered" <?php if ($filter_status == 'Delivered') echo ' selected'; ?>>Delivered</option>
-                                <option value="Cancelled" <?php if ($filter_status == 'Cancelled') echo ' selected'; ?>>Cancelled</option>
-                            </select>
-                        </div>
-
-                        <div class="filter-group">
-                            <label>Date From</label>
-                            <input type="date" name="date_from" value="<?php echo htmlspecialchars($filter_date_from); ?>">
-                        </div>
-
-                        <div class="filter-group">
-                            <label>Date To</label>
-                            <input type="date" name="date_to" value="<?php echo htmlspecialchars($filter_date_to); ?>">
-                        </div>
+                <div class="advanced-row">
+                    <div class="filter-group">
+                        <label>Min Amount (RM)</label>
+                        <input type="number" name="amount_min" step="0.01" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_min); ?>">
                     </div>
 
-                    <div class="advanced-row">
-                        <div class="filter-group">
-                            <label>Min Amount (RM)</label>
-                            <input type="number" name="amount_min" step="0.01" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_min); ?>">
-                        </div>
-
-                        <div class="filter-group">
-                            <label>Max Amount (RM)</label>
-                            <input type="number" name="amount_max" step="0.01" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_max); ?>">
-                        </div>
+                    <div class="filter-group">
+                        <label>Max Amount (RM)</label>
+                        <input type="number" name="amount_max" step="0.01" placeholder="0.00" value="<?php echo htmlspecialchars($filter_amount_max); ?>">
                     </div>
                 </div>
-            </form>
-        </div>
-
-        <!-- Results Info -->
-        <?php if ($total_results > 0): ?>
-            <div class="results-info">
-                <span>Showing <strong><?php echo ($offset + 1); ?>-<?php echo min($offset + $per_page, $total_results); ?></strong> of <strong><?php echo $total_results; ?></strong> orders</span>
             </div>
-        <?php endif; ?>
-
-        <!-- Orders Table -->
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Order ID</th>
-                        <th>Date</th>
-                        <th>Total (RM)</th>
-                        <th>Thumb</th>
-                        <th>Status</th>
-                        <th>Shipping Address</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if ($orders && count($orders) > 0): ?>
-                        <?php foreach ($orders as $row): ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($row['order_id']); ?></td>
-                                <td><?php echo htmlspecialchars($row['order_date']); ?></td>
-                                <td><?php echo number_format($row['total_amount'], 2); ?></td>
-                                <td>
-                                    <?php if (!empty($row['thumb'])): ?>
-                                        <img src="<?php echo htmlspecialchars($row['thumb']); ?>" alt="Order thumbnail" class="thumb">
-                                    <?php else: ?>
-                                        <img src="../assets/img/default.jpg" alt="Default thumbnail" class="thumb">
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="status <?php echo htmlspecialchars($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></span>
-                                </td>
-                                <td>
-                                    <?php
-                                    $address_line1 = htmlspecialchars($row['shipping_address_line1'] ?? '');
-                                    $address_line2 = htmlspecialchars($row['shipping_address_line2'] ?? '');
-                                    $city = htmlspecialchars($row['shipping_city'] ?? '');
-                                    $state = htmlspecialchars($row['shipping_state'] ?? '');
-                                    $postal_code = htmlspecialchars($row['shipping_postal_code'] ?? '');
-                                    $country = htmlspecialchars($row['shipping_country'] ?? '');
-
-                                    // Build address string, skipping empty parts
-                                    $address_parts = array_filter([
-                                        $address_line1,
-                                        $address_line2,
-                                        $city,
-                                        $state,
-                                        $postal_code,
-                                        $country
-                                    ]);
-                                    echo implode(', ', $address_parts);
-                                    ?>
-                                </td>
-                                <td>
-                                    <a class="btn btn-primary" href="order_details.php?order_id=<?php echo urlencode($row['order_id']); ?>">View</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="7" style="text-align:center; padding:40px;">No orders found.</td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-
+        </form>
     </div>
 
-    <!-- Pagination -->
-    <?php if ($total_pages > 1): ?>
-        <div class="pagination">
-            <?php
-            $query_params = [
-                'search' => $search,
-                'sort' => strtolower($sort),
-                'status' => $filter_status,
-                'date_from' => $filter_date_from,
-                'date_to' => $filter_date_to,
-                'amount_min' => $filter_amount_min,
-                'amount_max' => $filter_amount_max
-            ];
-
-            function build_query($params, $page)
-            {
-                $params['page'] = $page;
-                return '?' . http_build_query(array_filter($params, function ($val) {
-                    return $val !== null && $val !== '';
-                }));
-            }
-            ?>
-
-            <a href="orders.php<?php echo build_query($query_params, 1); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">First</a>
-            <a href="orders.php<?php echo build_query($query_params, max(1, $page - 1)); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">Previous</a>
-            <span class="page-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
-            <a href="orders.php<?php echo build_query($query_params, min($total_pages, $page + 1)); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Next</a>
-            <a href="orders.php<?php echo build_query($query_params, $total_pages); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Last</a>
+    <!-- Results Info -->
+    <?php if ($total_results > 0): ?>
+        <div class="results-info">
+            <span>Showing <strong><?php echo ($offset + 1); ?>-<?php echo min($offset + $per_page, $total_results); ?></strong> of <strong><?php echo $total_results; ?></strong> orders</span>
         </div>
     <?php endif; ?>
 
-    <script>
-        function toggleAdvanced() {
-            const advancedDiv = document.getElementById('advancedSearch');
-            const toggleText = document.getElementById('toggle-text');
-            const toggleIcon = document.getElementById('toggle-icon');
+    <!-- Orders Table -->
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>Date</th>
+                    <th>Total (RM)</th>
+                    <th>Thumb</th>
+                    <th>Status</th>
+                    <th>Shipping Address</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($orders && count($orders) > 0): ?>
+                    <?php foreach ($orders as $row): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($row['order_id']); ?></td>
+                            <td><?php echo htmlspecialchars($row['order_date']); ?></td>
+                            <td><?php echo number_format($row['total_amount'], 2); ?></td>
+                            <td>
+                                <?php if (!empty($row['thumb'])): ?>
+                                    <img src="<?php echo htmlspecialchars($row['thumb']); ?>" alt="Order thumbnail" class="thumb">
+                                <?php else: ?>
+                                    <img src="../assets/img/default.jpg" alt="Default thumbnail" class="thumb">
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span class="status <?php echo htmlspecialchars($row['status']); ?>"><?php echo htmlspecialchars($row['status']); ?></span>
+                            </td>
+                            <td>
+                                <?php
+                                $address_line1 = htmlspecialchars($row['shipping_address_line1'] ?? '');
+                                $address_line2 = htmlspecialchars($row['shipping_address_line2'] ?? '');
+                                $city = htmlspecialchars($row['shipping_city'] ?? '');
+                                $state = htmlspecialchars($row['shipping_state'] ?? '');
+                                $postal_code = htmlspecialchars($row['shipping_postal_code'] ?? '');
+                                $country = htmlspecialchars($row['shipping_country'] ?? '');
 
-            if (advancedDiv.style.display === 'none') {
-                advancedDiv.style.display = 'block';
-                toggleText.textContent = 'Hide Advanced Search';
-                toggleIcon.textContent = '▲';
-            } else {
-                advancedDiv.style.display = 'none';
-                toggleText.textContent = 'Show Advanced Search';
-                toggleIcon.textContent = '▼';
-            }
+                                // Build address string, skipping empty parts
+                                $address_parts = array_filter([
+                                    $address_line1,
+                                    $address_line2,
+                                    $city,
+                                    $state,
+                                    $postal_code,
+                                    $country
+                                ]);
+                                echo implode(', ', $address_parts);
+                                ?>
+                            </td>
+                            <td>
+                                <a class="btn btn-primary" href="order_details.php?order_id=<?php echo urlencode($row['order_id']); ?>">View</a>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:40px;">No orders found.</td>
+                    </tr>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<!-- Pagination -->
+<?php if ($total_pages > 1): ?>
+    <div class="pagination">
+        <?php
+        $query_params = [
+            'search' => $search,
+            'sort' => strtolower($sort),
+            'status' => $filter_status,
+            'date_from' => $filter_date_from,
+            'date_to' => $filter_date_to,
+            'amount_min' => $filter_amount_min,
+            'amount_max' => $filter_amount_max
+        ];
+
+        function build_query($params, $page)
+        {
+            $params['page'] = $page;
+            return '?' . http_build_query(array_filter($params, function ($val) {
+                return $val !== null && $val !== '';
+            }));
         }
+        ?>
 
-        // Auto-show advanced search if any advanced filters are active
-        window.addEventListener('DOMContentLoaded', function() {
-            const hasAdvancedFilters = <?php
-                                        echo ($filter_status || $filter_date_from || $filter_date_to ||
-                                            $filter_amount_min !== null || $filter_amount_max !== null) ? 'true' : 'false';
-                                        ?>;
+        <a href="orders.php<?php echo build_query($query_params, 1); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">First</a>
+        <a href="orders.php<?php echo build_query($query_params, max(1, $page - 1)); ?>" class="btn <?php if ($page == 1) echo 'disabled'; ?>">Previous</a>
+        <span class="page-info">Page <?php echo $page; ?> of <?php echo $total_pages; ?></span>
+        <a href="orders.php<?php echo build_query($query_params, min($total_pages, $page + 1)); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Next</a>
+        <a href="orders.php<?php echo build_query($query_params, $total_pages); ?>" class="btn <?php if ($page == $total_pages) echo 'disabled'; ?>">Last</a>
+    </div>
+<?php endif; ?>
 
-            if (hasAdvancedFilters) {
-                toggleAdvanced();
-            }
-        });
-    </script>
+<script>
+    function toggleAdvanced() {
+        const advancedDiv = document.getElementById('advancedSearch');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleIcon = document.getElementById('toggle-icon');
+
+        if (advancedDiv.style.display === 'none') {
+            advancedDiv.style.display = 'block';
+            toggleText.textContent = 'Hide Advanced Search';
+            toggleIcon.textContent = '▲';
+        } else {
+            advancedDiv.style.display = 'none';
+            toggleText.textContent = 'Show Advanced Search';
+            toggleIcon.textContent = '▼';
+        }
+    }
+
+    // Auto-show advanced search if any advanced filters are active
+    window.addEventListener('DOMContentLoaded', function() {
+        const hasAdvancedFilters = <?php
+                                    echo ($filter_status || $filter_date_from || $filter_date_to ||
+                                        $filter_amount_min !== null || $filter_amount_max !== null) ? 'true' : 'false';
+                                    ?>;
+
+        if (hasAdvancedFilters) {
+            toggleAdvanced();
+        }
+    });
+</script>
 </body>
 
 </html>

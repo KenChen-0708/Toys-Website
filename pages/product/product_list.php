@@ -1,10 +1,11 @@
-<?php 
+<?php
 session_start();
 $title = "Products";
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
 
-function user_initials($name) {
+function user_initials($name)
+{
   $parts = preg_split('/\s+/', trim((string)$name));
   $first = mb_substr($parts[0] ?? '', 0, 1);
   $second = mb_substr($parts[1] ?? '', 0, 1);
@@ -17,6 +18,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -25,6 +27,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
   <link rel="stylesheet" href="../../assets/css/product_list.css" />
   <title><?= htmlspecialchars($title) ?></title>
 </head>
+
 <body>
   <!-- ========== HEADER ========== -->
   <header class="header">
@@ -48,15 +51,15 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
                 </div>
                 <a href="/accounts.php">My Account</a>
                 <a href="/orders.php">My Orders</a>
-                <form action="/auth/logout.php" method="post">
+                <form action="/pages/auth/logout.php" method="post">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                   <button type="submit" class="logout-btn">Log Out</button>
                 </form>
               </div>
             </div>
           <?php else: ?>
-            <a href="/auth/login.php" class="header__top-action">Log In</a>
-            <a href="/auth/register.php" class="header__top-action">Register</a>
+            <a href="/pages/auth/login.php" class="header__top-action">Log In</a>
+            <a href="/pages/auth/register.php" class="header__top-action">Register</a>
           <?php endif; ?>
         </div>
       </div>
@@ -105,13 +108,13 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
             <span class="product-count" id="productCount">0</span> products available
           </p>
         </div>
-        
+
         <div class="header-actions">
           <button class="mobile-filter-btn" id="mobileFilterBtn">
             <i class="fi fi-rs-settings-sliders"></i>
             <span>Filters</span>
           </button>
-          
+
           <div class="sort-wrapper">
             <label for="sortSelect" class="sort-label">Sort by</label>
             <select id="sortSelect" class="sort-select">
@@ -194,4 +197,5 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <script src="../../assets/js/product_list.js"></script>
 </body>
+
 </html>

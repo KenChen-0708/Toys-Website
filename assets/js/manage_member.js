@@ -2,6 +2,31 @@
 
 (function ($) {
 	$(function () {
+		// Check for stored success message and display it
+		const storedMessage = sessionStorage.getItem('member_action_message');
+		const storedType = sessionStorage.getItem('member_action_type');
+
+		if (storedMessage && storedType) {
+			// Create and display alert
+			const alertDiv = $('<div>')
+				.addClass('alert alert-' + storedType)
+				.text(storedMessage)
+				.css('margin-bottom', '20px');
+
+			$('.main-content .header').after(alertDiv);
+
+			// Clear from sessionStorage
+			sessionStorage.removeItem('member_action_message');
+			sessionStorage.removeItem('member_action_type');
+
+			// Auto-hide after 5 seconds
+			setTimeout(function () {
+				alertDiv.fadeOut(function () {
+					$(this).remove();
+				});
+			}, 5000);
+		}
+
 		// Search debounce → reload with q param
 		let searchTimer = null;
 		$('#mm-search').on('input', function () {
@@ -52,6 +77,50 @@
 			const msg = $(this).attr('data-confirm') || 'Are you sure?';
 			return window.confirm(msg);
 		});
+
+		// Block/Unblock member functionality
+		window.toggleBlockMember = function (memberId, currentStatus, memberName) {
+			const action = currentStatus == 1 ? 'unblock' : 'block';
+			const actionText = action === 'block' ? 'block' : 'unblock';
+			const confirmMsg = `Are you sure you want to ${actionText} the member "${memberName}"?`;
+
+			if (!confirm(confirmMsg)) {
+				return;
+			}
+
+			// Send AJAX request
+			$.ajax({
+				url: 'block_member.php',
+				method: 'POST',
+				contentType: 'application/json',
+				dataType: 'json',
+				data: JSON.stringify({
+					member_id: memberId,
+					action: action
+				}),
+				success: function (response) {
+					if (response.success) {
+						// Store message in sessionStorage to display after reload
+						sessionStorage.setItem('member_action_message', response.message);
+						sessionStorage.setItem('member_action_type', 'success');
+						window.location.reload();
+					} else {
+						alert('Error: ' + response.message);
+					}
+				},
+				error: function (xhr) {
+					let errorMsg = 'An error occurred while trying to ' + actionText + ' the member.';
+					try {
+						const response = JSON.parse(xhr.responseText);
+						if (response.message) {
+							errorMsg = response.message;
+						}
+					} catch (e) {
+						// Use default error message
+					}
+					alert(errorMsg);
+				}
+			});
+		};
 	});
 })(jQuery);
-

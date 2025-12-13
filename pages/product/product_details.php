@@ -31,7 +31,7 @@ if ($product_id > 0) {
 }
 
 if (!$product) {
-  header("Location: pages/product/product_list.php");
+  header("Location: /pages/product/product_list.php");
   exit();
 }
 
@@ -48,7 +48,7 @@ try {
   $stmt->execute([$product_id]);
   $reviews = $stmt->fetchAll();
   $review_count = count($reviews);
-  
+
   if ($review_count > 0) {
     $total_rating = array_sum(array_column($reviews, 'rating'));
     $average_rating = round($total_rating / $review_count, 1);
@@ -62,6 +62,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -1033,6 +1034,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
     }
   </style>
 </head>
+
 <body>
   <!-- Header -->
   <header class="header">
@@ -1056,15 +1058,15 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 </div>
                 <a href="/accounts.php">My Account</a>
                 <a href="/orders.php">My Orders</a>
-                <form action="/auth/logout.php" method="post">
+                <form action="/pages/auth/logout.php" method="post">
                   <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                   <button type="submit">Log Out</button>
                 </form>
               </div>
             </div>
           <?php else: ?>
-            <a href="/auth/login.php" class="header__top-action">Log In</a>
-            <a href="/auth/register.php" class="header__top-action">Register</a>
+            <a href="/pages/auth/login.php" class="header__top-action">Log In</a>
+            <a href="/pages/auth/register.php" class="header__top-action">Register</a>
           <?php endif; ?>
         </div>
       </div>
@@ -1133,9 +1135,9 @@ $title = htmlspecialchars($product['name']) . " — Details";
       <!-- Product Info -->
       <div class="product-info">
         <span class="product-badge"><?= htmlspecialchars($product['category']) ?></span>
-        
+
         <h1 class="product-title"><?= htmlspecialchars($product['name']) ?></h1>
-        
+
         <div class="product-rating-row">
           <div class="rating-stars">
             <?php for ($i = 1; $i <= 5; $i++): ?>
@@ -1241,7 +1243,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
     <!-- Reviews Section -->
     <div class="reviews-section">
       <h2 class="section-title">Customer Reviews</h2>
-      
+
       <?php if ($review_count > 0): ?>
         <div class="reviews-summary">
           <div class="rating-overview">
@@ -1307,61 +1309,61 @@ $title = htmlspecialchars($product['name']) . " — Details";
     // Only display section if there are related products
     if (!empty($related_products)):
     ?>
-    <div class="related-section">
-      <h2 class="related-title">Related Products</h2>
-      <div class="products-grid">
-        <?php
-        foreach ($related_products as $related):
-          $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
-        ?>
-          <article class="product-card">
-            <div class="product-image-wrapper">
-              <a href="product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
-                <img src="../../<?= htmlspecialchars($related['main_image_path']) ?>"
-                  alt="<?= htmlspecialchars($related['name']) ?>"
-                  class="product-image primary" />
-                <img src="../../<?= htmlspecialchars($hover_image) ?>"
-                  alt="<?= htmlspecialchars($related['name']) ?>"
-                  class="product-image secondary" />
-              </a>
-
-              <div class="product-actions">
-                <button class="action-btn wishlist-btn" data-product-id="<?= $related['product_id'] ?>">
-                  <i class="fi fi-rs-heart"></i>
-                </button>
-                <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
-                  <i class="fi fi-rs-eye"></i>
+      <div class="related-section">
+        <h2 class="related-title">Related Products</h2>
+        <div class="products-grid">
+          <?php
+          foreach ($related_products as $related):
+            $hover_image = $related['first_sub_image'] ?? $related['main_image_path'];
+          ?>
+            <article class="product-card">
+              <div class="product-image-wrapper">
+                <a href="product_details.php?id=<?= $related['product_id'] ?>" class="product-link">
+                  <img src="../../<?= htmlspecialchars($related['main_image_path']) ?>"
+                    alt="<?= htmlspecialchars($related['name']) ?>"
+                    class="product-image primary" />
+                  <img src="../../<?= htmlspecialchars($hover_image) ?>"
+                    alt="<?= htmlspecialchars($related['name']) ?>"
+                    class="product-image secondary" />
                 </a>
-              </div>
-            </div>
 
-            <div class="product-card-info">
-              <span class="product-category"><?= htmlspecialchars($related['category']) ?></span>
-              <h3 class="product-name">
-                <a href="product_details.php?id=<?= $related['product_id'] ?>">
-                  <?= htmlspecialchars($related['name']) ?>
-                </a>
-              </h3>
-
-              <div class="product-rating-small">
-                <i class="fi fi-ss-star"></i>
-                <i class="fi fi-ss-star"></i>
-                <i class="fi fi-ss-star"></i>
-                <i class="fi fi-ss-star"></i>
-                <i class="fi fi-rs-star"></i>
+                <div class="product-actions">
+                  <button class="action-btn wishlist-btn" data-product-id="<?= $related['product_id'] ?>">
+                    <i class="fi fi-rs-heart"></i>
+                  </button>
+                  <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
+                    <i class="fi fi-rs-eye"></i>
+                  </a>
+                </div>
               </div>
 
-              <div class="product-footer">
-                <span class="product-price">RM <?= number_format($related['price'], 2) ?></span>
-                <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>">
-                  <i class="fi fi-rs-shopping-cart-add"></i>
-                </button>
+              <div class="product-card-info">
+                <span class="product-category"><?= htmlspecialchars($related['category']) ?></span>
+                <h3 class="product-name">
+                  <a href="product_details.php?id=<?= $related['product_id'] ?>">
+                    <?= htmlspecialchars($related['name']) ?>
+                  </a>
+                </h3>
+
+                <div class="product-rating-small">
+                  <i class="fi fi-ss-star"></i>
+                  <i class="fi fi-ss-star"></i>
+                  <i class="fi fi-ss-star"></i>
+                  <i class="fi fi-ss-star"></i>
+                  <i class="fi fi-rs-star"></i>
+                </div>
+
+                <div class="product-footer">
+                  <span class="product-price">RM <?= number_format($related['price'], 2) ?></span>
+                  <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>">
+                    <i class="fi fi-rs-shopping-cart-add"></i>
+                  </button>
+                </div>
               </div>
-            </div>
-          </article>
-        <?php endforeach; ?>
+            </article>
+          <?php endforeach; ?>
+        </div>
       </div>
-    </div>
     <?php endif; ?>
   </main>
 
@@ -1500,7 +1502,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       // Buy Now functionality - Go directly to checkout without affecting cart
       $('#buyNowBtn').on('click', function(e) {
         e.preventDefault();
-        
+
         const $btn = $(this);
         if ($btn.is(':disabled')) return;
 
@@ -1680,10 +1682,16 @@ $title = htmlspecialchars($product['name']) . " — Details";
         `);
 
         $('body').append($toast);
-        setTimeout(() => $toast.css({ opacity: 1, transform: 'translateX(0)' }), 10);
+        setTimeout(() => $toast.css({
+          opacity: 1,
+          transform: 'translateX(0)'
+        }), 10);
 
         setTimeout(() => {
-          $toast.css({ opacity: 0, transform: 'translateX(100px)' });
+          $toast.css({
+            opacity: 0,
+            transform: 'translateX(100px)'
+          });
           setTimeout(() => $toast.remove(), 300);
         }, 3000);
       }
@@ -1702,4 +1710,5 @@ $title = htmlspecialchars($product['name']) . " — Details";
     });
   </script>
 </body>
+
 </html>

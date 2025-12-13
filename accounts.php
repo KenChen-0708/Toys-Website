@@ -1,129 +1,130 @@
 <?php
-  $title = 'Ecommerce Website — Account';
-  require_once __DIR__ . '/helper/pdo_connection.php';
-  require_once __DIR__ . '/helper/auth.php';
-  require_auth();
+$title = 'Ecommerce Website — Account';
+require_once __DIR__ . '/helper/pdo_connection.php';
+require_once __DIR__ . '/helper/auth.php';
+require_auth();
 
-  // Ensure user_initials function is available
-  if (!function_exists('user_initials')) {
-    function user_initials($username) {
-      $parts = preg_split('/\s+/', trim((string)$username));
-      $first = mb_substr($parts[0] ?? '', 0, 1);
-      $second = mb_substr($parts[1] ?? '', 0, 1);
-      return mb_strtoupper($first . $second ?: $first);
+// Ensure user_initials function is available
+if (!function_exists('user_initials')) {
+  function user_initials($username)
+  {
+    $parts = preg_split('/\s+/', trim((string)$username));
+    $first = mb_substr($parts[0] ?? '', 0, 1);
+    $second = mb_substr($parts[1] ?? '', 0, 1);
+    return mb_strtoupper($first . $second ?: $first);
+  }
+}
+
+$memberId = $_SESSION['member']['id'];
+
+// Fetch fresh member data from DB
+$stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, address, profile_photo_path, register_date FROM Member WHERE member_id = ?");
+$stmt->execute([$memberId]);
+$member = $stmt->fetch(PDO::FETCH_ASSOC);
+
+// Parse address into components if it exists
+$addressParts = [
+  'street' => '',
+  'city' => '',
+  'state' => '',
+  'postcode' => '',
+  'country' => 'Malaysia'
+];
+
+if (!empty($member['address'])) {
+  // Try to parse existing address (format: "Street, City, State Postcode, Country")
+  $addr = $member['address'];
+  // Simple parsing - split by commas and newlines
+  $lines = preg_split('/[,\n]/', $addr);
+  $lines = array_map('trim', $lines);
+  $lines = array_filter($lines);
+
+  if (count($lines) >= 1) $addressParts['street'] = $lines[0];
+  if (count($lines) >= 2) $addressParts['city'] = $lines[1];
+  if (count($lines) >= 3) {
+    // Check if this line has postcode (numbers)
+    if (preg_match('/^(.+?)\s+(\d{5})$/', $lines[2], $matches)) {
+      $addressParts['state'] = $matches[1];
+      $addressParts['postcode'] = $matches[2];
+    } else {
+      $addressParts['state'] = $lines[2];
     }
   }
-
-  $memberId = $_SESSION['member']['id'];
-
-  // Fetch fresh member data from DB
-  $stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, address, profile_photo_path, register_date FROM Member WHERE member_id = ?");
-  $stmt->execute([$memberId]);
-  $member = $stmt->fetch(PDO::FETCH_ASSOC);
-  
-  // Parse address into components if it exists
-  $addressParts = [
-    'street' => '',
-    'city' => '',
-    'state' => '',
-    'postcode' => '',
-    'country' => 'Malaysia'
-  ];
-  
-  if (!empty($member['address'])) {
-    // Try to parse existing address (format: "Street, City, State Postcode, Country")
-    $addr = $member['address'];
-    // Simple parsing - split by commas and newlines
-    $lines = preg_split('/[,\n]/', $addr);
-    $lines = array_map('trim', $lines);
-    $lines = array_filter($lines);
-    
-    if (count($lines) >= 1) $addressParts['street'] = $lines[0];
-    if (count($lines) >= 2) $addressParts['city'] = $lines[1];
-    if (count($lines) >= 3) {
-      // Check if this line has postcode (numbers)
-      if (preg_match('/^(.+?)\s+(\d{5})$/', $lines[2], $matches)) {
-        $addressParts['state'] = $matches[1];
-        $addressParts['postcode'] = $matches[2];
-      } else {
-        $addressParts['state'] = $lines[2];
-      }
+  if (count($lines) >= 4) {
+    if (preg_match('/\d{5}/', $lines[3])) {
+      $addressParts['postcode'] = $lines[3];
+    } else {
+      $addressParts['country'] = $lines[3];
     }
-    if (count($lines) >= 4) {
-      if (preg_match('/\d{5}/', $lines[3])) {
-        $addressParts['postcode'] = $lines[3];
-      } else {
-        $addressParts['country'] = $lines[3];
-      }
-    }
-    if (count($lines) >= 5) $addressParts['country'] = end($lines);
   }
-  
-  // Malaysian states list
-  $malaysianStates = [
-    'Johor',
-    'Kedah',
-    'Kelantan',
-    'Kuala Lumpur',
-    'Labuan',
-    'Malacca',
-    'Negeri Sembilan',
-    'Pahang',
-    'Penang',
-    'Perak',
-    'Perlis',
-    'Putrajaya',
-    'Sabah',
-    'Sarawak',
-    'Selangor',
-    'Terengganu'
-  ];
-  
-  // Cities by state mapping
-  $citiesByState = [
-    'Johor' => ['Johor Bahru', 'Iskandar Puteri', 'Batu Pahat', 'Kluang', 'Muar', 'Pasir Gudang', 'Segamat', 'Kulai'],
-    'Kedah' => ['Alor Setar', 'Sungai Petani', 'Kulim', 'Langkawi', 'Jitra', 'Kuala Kedah'],
-    'Kelantan' => ['Kota Bharu', 'Pasir Mas', 'Tumpat', 'Tanah Merah', 'Gua Musang'],
-    'Kuala Lumpur' => ['Kuala Lumpur', 'Ampang', 'Cheras', 'Kepong', 'Setapak'],
-    'Labuan' => ['Victoria'],
-    'Malacca' => ['Malacca City', 'Alor Gajah', 'Jasin', 'Masjid Tanah'],
-    'Negeri Sembilan' => ['Seremban', 'Port Dickson', 'Nilai', 'Kuala Pilah', 'Rembau'],
-    'Pahang' => ['Kuantan', 'Temerloh', 'Bentong', 'Raub', 'Mentakab', 'Cameron Highlands'],
-    'Penang' => ['George Town', 'Butterworth', 'Bukit Mertajam', 'Bayan Lepas', 'Seberang Perai'],
-    'Perak' => ['Ipoh', 'Taiping', 'Teluk Intan', 'Sitiawan', 'Kampar', 'Batu Gajah'],
-    'Perlis' => ['Kangar', 'Arau', 'Padang Besar'],
-    'Putrajaya' => ['Putrajaya'],
-    'Sabah' => ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu', 'Keningau', 'Semporna'],
-    'Sarawak' => ['Kuching', 'Miri', 'Sibu', 'Bintulu', 'Limbang', 'Sarikei'],
-    'Selangor' => ['Shah Alam', 'Petaling Jaya', 'Subang Jaya', 'Klang', 'Kajang', 'Selayang', 'Rawang', 'Puchong'],
-    'Terengganu' => ['Kuala Terengganu', 'Kemaman', 'Dungun', 'Besut', 'Marang']
-  ];
-  
-  // Get all cities for initial display or fallback
-  $allCities = [];
-  foreach ($citiesByState as $cities) {
-    $allCities = array_merge($allCities, $cities);
-  }
-  $allCities = array_unique($allCities);
-  sort($allCities);
+  if (count($lines) >= 5) $addressParts['country'] = end($lines);
+}
 
-  if (!$member) {
-    // If somehow missing, force logout for safety
-    header('Location: /auth/logout.php');
-    exit;
-  }
+// Malaysian states list
+$malaysianStates = [
+  'Johor',
+  'Kedah',
+  'Kelantan',
+  'Kuala Lumpur',
+  'Labuan',
+  'Malacca',
+  'Negeri Sembilan',
+  'Pahang',
+  'Penang',
+  'Perak',
+  'Perlis',
+  'Putrajaya',
+  'Sabah',
+  'Sarawak',
+  'Selangor',
+  'Terengganu'
+];
 
-  // Simple dashboard stats for this member
-  $stats = [
-    'total_orders'   => 0,
-    'total_spent'    => 0,
-    'active_orders'  => 0,
-    'wishlist_items' => 0,
-    'last_order_at'  => null,
-  ];
+// Cities by state mapping
+$citiesByState = [
+  'Johor' => ['Johor Bahru', 'Iskandar Puteri', 'Batu Pahat', 'Kluang', 'Muar', 'Pasir Gudang', 'Segamat', 'Kulai'],
+  'Kedah' => ['Alor Setar', 'Sungai Petani', 'Kulim', 'Langkawi', 'Jitra', 'Kuala Kedah'],
+  'Kelantan' => ['Kota Bharu', 'Pasir Mas', 'Tumpat', 'Tanah Merah', 'Gua Musang'],
+  'Kuala Lumpur' => ['Kuala Lumpur', 'Ampang', 'Cheras', 'Kepong', 'Setapak'],
+  'Labuan' => ['Victoria'],
+  'Malacca' => ['Malacca City', 'Alor Gajah', 'Jasin', 'Masjid Tanah'],
+  'Negeri Sembilan' => ['Seremban', 'Port Dickson', 'Nilai', 'Kuala Pilah', 'Rembau'],
+  'Pahang' => ['Kuantan', 'Temerloh', 'Bentong', 'Raub', 'Mentakab', 'Cameron Highlands'],
+  'Penang' => ['George Town', 'Butterworth', 'Bukit Mertajam', 'Bayan Lepas', 'Seberang Perai'],
+  'Perak' => ['Ipoh', 'Taiping', 'Teluk Intan', 'Sitiawan', 'Kampar', 'Batu Gajah'],
+  'Perlis' => ['Kangar', 'Arau', 'Padang Besar'],
+  'Putrajaya' => ['Putrajaya'],
+  'Sabah' => ['Kota Kinabalu', 'Sandakan', 'Tawau', 'Lahad Datu', 'Keningau', 'Semporna'],
+  'Sarawak' => ['Kuching', 'Miri', 'Sibu', 'Bintulu', 'Limbang', 'Sarikei'],
+  'Selangor' => ['Shah Alam', 'Petaling Jaya', 'Subang Jaya', 'Klang', 'Kajang', 'Selayang', 'Rawang', 'Puchong'],
+  'Terengganu' => ['Kuala Terengganu', 'Kemaman', 'Dungun', 'Besut', 'Marang']
+];
 
-  // Order stats
-  $orderStmt = $pdo->prepare("
+// Get all cities for initial display or fallback
+$allCities = [];
+foreach ($citiesByState as $cities) {
+  $allCities = array_merge($allCities, $cities);
+}
+$allCities = array_unique($allCities);
+sort($allCities);
+
+if (!$member) {
+  // If somehow missing, force logout for safety
+  header('Location: /pages/auth/logout.php');
+  exit;
+}
+
+// Simple dashboard stats for this member
+$stats = [
+  'total_orders'   => 0,
+  'total_spent'    => 0,
+  'active_orders'  => 0,
+  'wishlist_items' => 0,
+  'last_order_at'  => null,
+];
+
+// Order stats
+$orderStmt = $pdo->prepare("
       SELECT 
         COUNT(*)                                                  AS total_orders,
         COALESCE(SUM(CASE WHEN status <> 'Cancelled' THEN total_amount END), 0) AS total_spent,
@@ -132,85 +133,85 @@
       FROM `Order`
       WHERE member_id = ?
   ");
-  $orderStmt->execute([$memberId]);
-  $orderRow = $orderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+$orderStmt->execute([$memberId]);
+$orderRow = $orderStmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
-  $stats['total_orders']  = (int)($orderRow['total_orders'] ?? 0);
-  $stats['total_spent']   = (float)($orderRow['total_spent'] ?? 0);
-  $stats['active_orders'] = (int)($orderRow['active_orders'] ?? 0);
-  $stats['last_order_at'] = $orderRow['last_order_at'] ?? null;
+$stats['total_orders']  = (int)($orderRow['total_orders'] ?? 0);
+$stats['total_spent']   = (float)($orderRow['total_spent'] ?? 0);
+$stats['active_orders'] = (int)($orderRow['active_orders'] ?? 0);
+$stats['last_order_at'] = $orderRow['last_order_at'] ?? null;
 
-  // Wishlist count
-  $wishStmt = $pdo->prepare("
+// Wishlist count
+$wishStmt = $pdo->prepare("
       SELECT COUNT(*) 
       FROM Wishlist_Item wi
       INNER JOIN Wishlist w ON wi.wishlist_id = w.wishlist_id
       WHERE w.member_id = ?
   ");
-  $wishStmt->execute([$memberId]);
-  $stats['wishlist_items'] = (int)$wishStmt->fetchColumn();
+$wishStmt->execute([$memberId]);
+$stats['wishlist_items'] = (int)$wishStmt->fetchColumn();
 
-  // Simple reward points: 1 point per RM10 spent (rounded down)
-  $rewardPoints = (int)floor(($stats['total_spent'] ?? 0) / 10);
+// Simple reward points: 1 point per RM10 spent (rounded down)
+$rewardPoints = (int)floor(($stats['total_spent'] ?? 0) / 10);
 
-  // Recent orders list
-  $recentStmt = $pdo->prepare("
+// Recent orders list
+$recentStmt = $pdo->prepare("
       SELECT order_id, order_date, status, total_amount
       FROM `Order`
       WHERE member_id = ?
       ORDER BY order_date DESC
       LIMIT 5
   ");
-  $recentStmt->execute([$memberId]);
-  $recentOrders = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
+$recentStmt->execute([$memberId]);
+$recentOrders = $recentStmt->fetchAll(PDO::FETCH_ASSOC);
 
-  // Profile completeness (simple progress based on key fields)
-  $profileFieldsTotal = 4; // email, phone, address, profile photo
-  $profileFieldsDone  = 0;
+// Profile completeness (simple progress based on key fields)
+$profileFieldsTotal = 4; // email, phone, address, profile photo
+$profileFieldsDone  = 0;
 
-  if (!empty($member['email'])) {
-    $profileFieldsDone++;
-  }
-  if (!empty($member['phone_number'])) {
-    $profileFieldsDone++;
-  }
-  if (!empty($member['address'])) {
-    $profileFieldsDone++;
-  }
-  if (!empty($member['profile_photo_path'])) {
-    $profileFieldsDone++;
-  }
+if (!empty($member['email'])) {
+  $profileFieldsDone++;
+}
+if (!empty($member['phone_number'])) {
+  $profileFieldsDone++;
+}
+if (!empty($member['address'])) {
+  $profileFieldsDone++;
+}
+if (!empty($member['profile_photo_path'])) {
+  $profileFieldsDone++;
+}
 
-  $profileProgress = (int)round(($profileFieldsDone / $profileFieldsTotal) * 100);
+$profileProgress = (int)round(($profileFieldsDone / $profileFieldsTotal) * 100);
 
-  // Flash messages
-  $profileErrors   = $_SESSION['profile_errors']   ?? [];
-  $profileSuccess  = $_SESSION['profile_success']  ?? '';
-  $passwordErrors  = $_SESSION['password_errors']  ?? [];
-  $passwordSuccess = $_SESSION['password_success'] ?? '';
-  $profilePhotoUpdated = $_SESSION['profile_photo_updated'] ?? false;
+// Flash messages
+$profileErrors   = $_SESSION['profile_errors']   ?? [];
+$profileSuccess  = $_SESSION['profile_success']  ?? '';
+$passwordErrors  = $_SESSION['password_errors']  ?? [];
+$passwordSuccess = $_SESSION['password_success'] ?? '';
+$profilePhotoUpdated = $_SESSION['profile_photo_updated'] ?? false;
 
-  unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['password_errors'], $_SESSION['password_success'], $_SESSION['profile_photo_updated']);
+unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['password_errors'], $_SESSION['password_success'], $_SESSION['profile_photo_updated']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!--=============== FLATICON ===============-->
-    <link
-      rel="stylesheet"
-      href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css"
-    />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!--=============== CSS ===============-->
-    <link rel="stylesheet" href="/assets/css/styles.css" />
-    <link rel="stylesheet" href="/assets/css/account.css" />
+  <!--=============== FLATICON ===============-->
+  <link
+    rel="stylesheet"
+    href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
 
-    <title><?= htmlspecialchars($title) ?></title>
-  </head>
-  <body>
+  <!--=============== CSS ===============-->
+  <link rel="stylesheet" href="/assets/css/styles.css" />
+  <link rel="stylesheet" href="/assets/css/account.css" />
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
+  <title><?= htmlspecialchars($title) ?></title>
+</head>
+
 <?php include_once __DIR__ . '/partials/header.php'; ?>
 
 <main class="main">
@@ -239,16 +240,16 @@
         <div class="tab__content active-tab" id="dashboard" content>
           <div class="dashboard-profile-card">
             <div class="account-summary-avatar">
-              <?php 
-                $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
-                if ($hasPhoto): 
+              <?php
+              $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+              if ($hasPhoto):
               ?>
                 <img src="<?= htmlspecialchars($member['profile_photo_path']) ?><?= $profilePhotoUpdated ? '?v=' . time() : '' ?>" alt="Profile photo" id="dashboardProfileImg">
               <?php else: ?>
                 <span id="dashboardProfileIcon" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
-                  <?php 
-                    $initials = user_initials($member['username'] ?? '');
-                    echo htmlspecialchars($initials ?: 'U');
+                  <?php
+                  $initials = user_initials($member['username'] ?? '');
+                  echo htmlspecialchars($initials ?: 'U');
                   ?>
                 </span>
               <?php endif; ?>
@@ -412,24 +413,24 @@
 
             <!-- Profile Photo Section (Separate Form) -->
             <div class="profile-edit-card">
-              <form class="profile-photo-form" method="POST" action="/auth/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
+              <form class="profile-photo-form" method="POST" action="/pages/auth/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                 <div class="profile-section">
                   <h4 class="profile-section__title">Profile Photo</h4>
                   <div class="profile-edit-photo-row">
                     <div class="profile-photo-wrapper">
                       <div class="profile-photo-current" id="profilePhotoCurrent">
-                        <?php 
-                          $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
-                          if ($hasPhoto): 
+                        <?php
+                        $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+                        if ($hasPhoto):
                         ?>
                           <img src="<?= htmlspecialchars($member['profile_photo_path']) ?>" alt="Profile photo" id="currentProfileImg">
                         <?php else: ?>
                           <div class="profile-edit-avatar" id="defaultProfileAvatar">
                             <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
-                              <?php 
-                                $initials = user_initials($member['username'] ?? '');
-                                echo htmlspecialchars($initials ?: 'U');
+                              <?php
+                              $initials = user_initials($member['username'] ?? '');
+                              echo htmlspecialchars($initials ?: 'U');
                               ?>
                             </span>
                           </div>
@@ -459,8 +460,7 @@
                             name="profile_photo"
                             id="profilePhotoInput"
                             accept="image/*"
-                            style="display:none"
-                          />
+                            style="display:none" />
                         </div>
 
                         <div id="photoEditControls" class="photo-edit-controls" style="display:none;">
@@ -514,7 +514,7 @@
 
             <!-- Profile Information Section (Separate Form) -->
             <div class="profile-edit-card" style="margin-top: 2rem;">
-              <form class="profile-edit-form" method="POST" action="/auth/profile_update_post.php" novalidate>
+              <form class="profile-edit-form" method="POST" action="/pages/auth/profile_update_post.php" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                 <!-- Personal Information Section -->
@@ -530,8 +530,7 @@
                         required
                         minlength="3"
                         value="<?= htmlspecialchars($member['username']) ?>"
-                        placeholder="Enter your username"
-                      />
+                        placeholder="Enter your username" />
                     </label>
 
                     <label class="form__label">
@@ -542,8 +541,7 @@
                         class="form__input"
                         required
                         value="<?= htmlspecialchars($member['email']) ?>"
-                        placeholder="Enter your email address"
-                      />
+                        placeholder="Enter your email address" />
                     </label>
                   </div>
                 </div>
@@ -562,8 +560,7 @@
                         placeholder="e.g., 012-3456789 or 0123456789"
                         pattern="^0\d{1,2}-?\d{6,8}$"
                         maxlength="12"
-                        title="Malaysian phone format: 0XX-XXXXXXX or 0XXXXXXXXX (10-11 digits)"
-                      />
+                        title="Malaysian phone format: 0XX-XXXXXXX or 0XXXXXXXXX (10-11 digits)" />
                     </label>
 
                     <label class="form__label form__label--full">
@@ -576,8 +573,7 @@
                         placeholder="e.g., No. 123, Jalan Bukit Bintang, Taman Desa"
                         minlength="5"
                         maxlength="200"
-                        title="Enter your complete street address including house/building number and street name"
-                      />
+                        title="Enter your complete street address including house/building number and street name" />
                     </label>
 
                     <label class="form__label">
@@ -585,8 +581,7 @@
                       <select
                         name="address_state"
                         class="form__input"
-                        id="address_state"
-                      >
+                        id="address_state">
                         <option value="">Select State</option>
                         <?php foreach ($malaysianStates as $state): ?>
                           <option value="<?= htmlspecialchars($state) ?>" <?= $addressParts['state'] === $state ? 'selected' : '' ?>>
@@ -601,18 +596,17 @@
                       <select
                         name="address_city"
                         class="form__input"
-                        id="address_city"
-                      >
+                        id="address_city">
                         <option value="">Select City</option>
-                        <?php 
-                          // Show cities based on selected state, or all cities if no state selected
-                          $citiesToShow = [];
-                          if (!empty($addressParts['state']) && isset($citiesByState[$addressParts['state']])) {
-                            $citiesToShow = $citiesByState[$addressParts['state']];
-                          } else {
-                            $citiesToShow = $allCities;
-                          }
-                          foreach ($citiesToShow as $city): 
+                        <?php
+                        // Show cities based on selected state, or all cities if no state selected
+                        $citiesToShow = [];
+                        if (!empty($addressParts['state']) && isset($citiesByState[$addressParts['state']])) {
+                          $citiesToShow = $citiesByState[$addressParts['state']];
+                        } else {
+                          $citiesToShow = $allCities;
+                        }
+                        foreach ($citiesToShow as $city):
                         ?>
                           <option value="<?= htmlspecialchars($city) ?>" <?= $addressParts['city'] === $city ? 'selected' : '' ?>>
                             <?= htmlspecialchars($city) ?>
@@ -630,8 +624,7 @@
                         value="<?= htmlspecialchars($addressParts['postcode']) ?>"
                         placeholder="e.g., 50000"
                         pattern="[0-9]{5}"
-                        maxlength="5"
-                      />
+                        maxlength="5" />
                     </label>
 
                     <label class="form__label">
@@ -641,8 +634,7 @@
                         name="address_country"
                         class="form__input"
                         value="<?= htmlspecialchars($addressParts['country']) ?>"
-                        placeholder="e.g., Malaysia"
-                      />
+                        placeholder="e.g., Malaysia" />
                     </label>
                   </div>
                 </div>
@@ -663,17 +655,17 @@
           <div class="tab__body">
             <?php if (!empty($member['address'])): ?>
               <?php
-                // Count how many orders used this address
-                $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ? AND shipping_address = ?");
-                $orderCountStmt->execute([$memberId, $member['address']]);
-                $orderCount = (int)$orderCountStmt->fetchColumn();
-                
-                // Parse address for better display
-                $addrLines = preg_split('/[,\n]/', $member['address']);
-                $addrLines = array_map('trim', $addrLines);
-                $addrLines = array_filter($addrLines);
+              // Count how many orders used this address
+              $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
+              $orderCountStmt->execute([$memberId]);
+              $orderCount = (int)$orderCountStmt->fetchColumn();
+
+              // Parse address for better display
+              $addrLines = preg_split('/[,\n]/', $member['address']);
+              $addrLines = array_map('trim', $addrLines);
+              $addrLines = array_filter($addrLines);
               ?>
-              
+
               <div class="address-card">
                 <div class="address-card__header">
                   <div class="address-card__title">
@@ -690,14 +682,14 @@
                     </a>
                   </div>
                 </div>
-                
+
                 <div class="address-card__body">
                   <div class="address-display">
                     <?php foreach ($addrLines as $line): ?>
                       <div class="address-line"><?= htmlspecialchars($line) ?></div>
                     <?php endforeach; ?>
                   </div>
-                  
+
                   <div class="address-info">
                     <div class="address-info__item">
                       <i class="fi fi-rs-shopping-bag"></i>
@@ -710,18 +702,18 @@
                       </div>
                     <?php endif; ?>
                   </div>
-                  
+
                   <div class="address-actions">
-                    <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($member['address']) ?>" 
-                       target="_blank" 
-                       class="btn btn--sm btn--outline"
-                       title="View on Google Maps">
+                    <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($member['address']) ?>"
+                      target="_blank"
+                      class="btn btn--sm btn--outline"
+                      title="View on Google Maps">
                       <i class="fi fi-rs-map-marker"></i> View on Map
                     </a>
                   </div>
                 </div>
               </div>
-              
+
               <div class="address-hint">
                 <p>
                   <i class="fi fi-rs-info"></i>
@@ -769,7 +761,7 @@
                 </div>
               </div>
 
-              <form class="password-change-form" method="POST" action="/auth/password_update_post.php" novalidate id="passwordChangeForm">
+              <form class="password-change-form" method="POST" action="/pages/auth/password_update_post.php" novalidate id="passwordChangeForm">
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                 <div class="password-field-group">
@@ -783,8 +775,7 @@
                         placeholder="Enter your current password"
                         class="form__input password-input"
                         required
-                        autocomplete="current-password"
-                      />
+                        autocomplete="current-password" />
                       <button type="button" class="password-toggle" data-target="current_password" title="Show/Hide password">
                         <i class="fi fi-rs-eye"></i>
                       </button>
@@ -804,8 +795,7 @@
                         class="form__input password-input"
                         required
                         autocomplete="new-password"
-                        minlength="8"
-                      />
+                        minlength="8" />
                       <button type="button" class="password-toggle" data-target="new_password" title="Show/Hide password">
                         <i class="fi fi-rs-eye"></i>
                       </button>
@@ -852,8 +842,7 @@
                         placeholder="Re-enter your new password"
                         class="form__input password-input"
                         required
-                        autocomplete="new-password"
-                      />
+                        autocomplete="new-password" />
                       <button type="button" class="password-toggle" data-target="new_password_confirm" title="Show/Hide password">
                         <i class="fi fi-rs-eye"></i>
                       </button>
@@ -880,10 +869,10 @@
       </div>
     </div>
   </section>
-</main> 
+</main>
 <?php include_once __DIR__ . '/partials/footer.php'; ?>
 <script>
-// Cities by state mapping for JavaScript
-const citiesByState = <?= json_encode($citiesByState, JSON_UNESCAPED_UNICODE) ?>;
+  // Cities by state mapping for JavaScript
+  const citiesByState = <?= json_encode($citiesByState, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="/assets/js/account.js"></script>

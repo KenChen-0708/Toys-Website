@@ -9,7 +9,7 @@ if (!isset($_SESSION['member'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Please log in to manage wishlist',
-        'redirect' => 'auth/login.php',
+        'redirect' => '/pages/auth/login.php',
         'debug' => 'No session found'
     ]);
     exit();
@@ -19,7 +19,7 @@ if (!isset($_SESSION['member']['id'])) {
     echo json_encode([
         'success' => false,
         'message' => 'Session error - please log in again',
-        'redirect' => 'auth/login.php',
+        'redirect' => '/pages/auth/login.php',
         'debug' => 'Session exists but no ID: ' . json_encode($_SESSION['member'])
     ]);
     exit();
@@ -148,4 +148,3 @@ try {
         ]
     ]);
 }
-?>
