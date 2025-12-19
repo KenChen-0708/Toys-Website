@@ -1,6 +1,6 @@
 <?php
-require_once '../helper/pdo_connection.php';
-require_once '../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 require_auth();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -154,3 +154,4 @@ $_SESSION['profile_success'] = 'Profile updated successfully.';
 
 header('Location: /accounts.php#update-profile');
 exit;
+
