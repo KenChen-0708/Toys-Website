@@ -3,14 +3,7 @@ session_start();
 
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
-
-// PHPMailer (manual include)
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require_once __DIR__ . '/../../phpmailer/src/Exception.php';
-require_once __DIR__ . '/../../phpmailer/src/PHPMailer.php';
-require_once __DIR__ . '/../../phpmailer/src/SMTP.php';
+require_once '../../helper/mailer.php';
 
 // CSRF check
 if (!isset($_POST['csrf_token']) || !hash_equals(csrf_token(), $_POST['csrf_token'])) {
@@ -45,6 +38,7 @@ try {
     die("SQL error: " . $e->getMessage()); // dev debug
 }
 
+// If user not found, still show generic success (no user enumeration)
 if (!$user) {
     $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, a reset link has been sent.';
     header('Location: ./forgot_password.php');
@@ -71,49 +65,45 @@ $stmt->execute([$user['email'], $tokenHash, $expiresAt]);
 $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host   = $_SERVER['HTTP_HOST']; // includes port automatically
 
-$baseUrl = $scheme . '://' . $host . '/pages/auth';
+$baseUrl   = $scheme . '://' . $host . '/pages/auth';
 $resetLink = $baseUrl . '/reset_password.php?token=' . urlencode($rawToken) .
     '&email=' . urlencode($user['email']);
 
-// Send email
-$mail = new PHPMailer(true);
+// Build email content
+$usernameEsc = htmlspecialchars($user['username']);
+$resetLinkEsc = htmlspecialchars($resetLink);
 
-try {
-    $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com';
-    $mail->SMTPAuth   = true;
-    $mail->Username   = 'kaijian1003@gmail.com';
-    $mail->Password   = 'joxs kmae bila jdnh'; // app password
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
+$htmlBody = '
+  <p>Hi ' . $usernameEsc . ',</p>
+  <p>You requested a password reset for your account. Click the button below to create a new password:</p>
+  <p>
+    <a href="' . $resetLinkEsc . '" 
+       style="display:inline-block;padding:10px 18px;background:#111827;color:#ffffff;text-decoration:none;border-radius:999px;">
+      Reset Password
+    </a>
+  </p>
+  <p>Or copy and paste this link into your browser:</p>
+  <p><a href="' . $resetLinkEsc . '">' . $resetLinkEsc . '</a></p>
+  <p><small>This link will expire in 1 hour. If you did not request this, you can safely ignore this email.</small></p>
+';
 
-    $mail->setFrom('kaijian1003@gmail.com', 'Online Shore');
-    $mail->addAddress($user['email'], $user['username']);
+$altBody = "Hi {$user['username']},\n\n"
+    . "You requested a password reset for your account.\n\n"
+    . "To reset your password, open this link:\n{$resetLink}\n\n"
+    . "This link will expire in 1 hour. If you did not request this, you can ignore this email.";
 
-    $mail->isHTML(true);
-    $mail->Subject = 'Reset your password';
-    $mail->Body    = '
-      <p>Hi ' . htmlspecialchars($user['username']) . ',</p>
-      <p>You requested a password reset for your account. Click the button below to create a new password:</p>
-      <p>
-        <a href="' . htmlspecialchars($resetLink) . '" 
-           style="display:inline-block;padding:10px 18px;background:#111827;color:#ffffff;text-decoration:none;border-radius:999px;">
-          Reset Password
-        </a>
-      </p>
-      <p>Or copy and paste this link into your browser:</p>
-      <p><a href="' . htmlspecialchars($resetLink) . '">' . htmlspecialchars($resetLink) . '</a></p>
-      <p><small>This link will expire in 1 hour. If you did not request this, you can safely ignore this email.</small></p>
-    ';
+// Send email via reusable function
+$sent = send_app_mail(
+    $user['email'],
+    $user['username'],
+    'Reset your password',
+    $htmlBody,
+    $altBody
+);
 
-    $mail->AltBody = "Hi {$user['username']},\n\n"
-        . "To reset your password, open this link:\n{$resetLink}\n\n"
-        . "This link will expire in 1 hour. If you did not request this, you can ignore this email.";
-
-    $mail->send();
-
+if ($sent) {
     $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, a reset link has been sent.';
-} catch (Exception $e) {
+} else {
     $_SESSION['errors'] = ['We could not send the reset email. Please try again later.'];
 }
 

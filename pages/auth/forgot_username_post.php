@@ -3,14 +3,7 @@ session_start();
 
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
-
-// PHPMailer (manual include)
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-
-require_once __DIR__ . '/../../phpmailer/src/Exception.php';
-require_once __DIR__ . '/../../phpmailer/src/PHPMailer.php';
-require_once __DIR__ . '/../../phpmailer/src/SMTP.php';
+require_once '../../helper/mailer.php';
 
 // CSRF check
 if (!isset($_POST['csrf_token']) || !hash_equals(csrf_token(), $_POST['csrf_token'])) {
@@ -52,39 +45,33 @@ if (!$user) {
     exit;
 }
 
-// Send username email
-$mail = new PHPMailer(true);
+// Build email content
+$usernameEsc = htmlspecialchars($user['username']);
 
-try {
-    $mail->isSMTP();
-    $mail->Host       = 'smtp.gmail.com';
-    $mail->SMTPAuth   = true;
-    $mail->Username   = 'kaijian1003@gmail.com';
-    $mail->Password   = 'joxs kmae bila jdnh'; // app password
-    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-    $mail->Port       = 587;
+$htmlBody = '
+  <p>Hi ' . $usernameEsc . ',</p>
+  <p>You requested a reminder of your username for your Toy World account.</p>
+  <p>Your username is: <strong>' . $usernameEsc . '</strong></p>
+  <p>If you did not request this, you can safely ignore this email.</p>
+';
 
-    $mail->setFrom('kaijian1003@gmail.com', 'Online Shore');
-    $mail->addAddress($user['email'], $user['username']);
+$altBody = "Hi {$user['username']},\n\n"
+    . "You requested a reminder of your Toy World username.\n\n"
+    . "Your username is: {$user['username']}\n\n"
+    . "If you did not request this, you can ignore this email.";
 
-    $mail->isHTML(true);
-    $mail->Subject = 'Your Online Shore username';
-    $mail->Body    = '
-      <p>Hi ' . htmlspecialchars($user['username']) . ',</p>
-      <p>You requested a reminder of your username for your Online Shore account.</p>
-      <p>Your username is: <strong>' . htmlspecialchars($user['username']) . '</strong></p>
-      <p>If you did not request this, you can safely ignore this email.</p>
-    ';
+// Send email via reusable function
+$sent = send_app_mail(
+    $user['email'],
+    $user['username'],
+    'Your Toy World username',
+    $htmlBody,
+    $altBody
+);
 
-    $mail->AltBody = "Hi {$user['username']},\n\n"
-        . "You requested a reminder of your Online Shore username.\n\n"
-        . "Your username is: {$user['username']}\n\n"
-        . "If you did not request this, you can ignore this email.";
-
-    $mail->send();
-
+if ($sent) {
     $_SESSION['success'] = 'If the email <strong>' . htmlspecialchars($email) . '</strong> is registered, the username has been emailed.';
-} catch (Exception $e) {
+} else {
     $_SESSION['errors'] = ['We could not send the username email. Please try again later.'];
 }
 
