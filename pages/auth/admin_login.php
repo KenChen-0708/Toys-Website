@@ -171,12 +171,11 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
               class="form__input"
               required
               autocomplete="current-password"
-              minlength="6"
               data-hint="adminPasswordHint" />
             <button type="button" id="toggleAdminPwd" aria-label="Show password">👁</button>
           </div>
           <p id="adminPasswordHint" class="field-hint">
-            Enter your admin password (minimum 6 characters).
+            Enter your admin password.
           </p>
         </div>
 
@@ -293,12 +292,9 @@ unset($_SESSION['admin_errors'], $_SESSION['admin_old']);
       }
 
       // Password – required + min length
-      clearError(passwordField, passwordHint, 'Enter your admin password (minimum 6 characters).');
+      clearError(passwordField, passwordHint, 'Enter your admin password.');
       if (!password) {
         setError(passwordField, passwordHint, 'Password is required.');
-        isValid = false;
-      } else if (password.length < 6) {
-        setError(passwordField, passwordHint, 'Password must be at least 6 characters.');
         isValid = false;
       }
 
