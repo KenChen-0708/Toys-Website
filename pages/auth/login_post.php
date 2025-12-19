@@ -37,23 +37,9 @@ if (!$username || strlen($password) < 6) {
 
 // reCAPTCHA server verification
 if ($requireCaptcha) {
-    $secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
     $response = $_POST['g-recaptcha-response'] ?? '';
 
-    $captchaOk = false;
-
-    if ($response) {
-        $verify = file_get_contents(
-            "https://www.google.com/recaptcha/api/siteverify?secret={$secret}&response={$response}&remoteip={$_SERVER['REMOTE_ADDR']}"
-        );
-        $verify = json_decode($verify, true);
-
-        if (!empty($verify['success'])) {
-            $captchaOk = true;
-        }
-    }
-
-    if (!$captchaOk) {
+    if (!verify_recaptcha($response)) {
         $errors[] = "Invalid username or password.";
     }
 }
@@ -81,7 +67,6 @@ if (!$errors) {
 
                 // Save to session (Default to 'light' if not found)
                 $_SESSION['member']['theme'] = $settings['theme_preference'] ?? 'light';
-
             } catch (Exception $e) {
                 $_SESSION['member']['theme'] = 'light';
             }
