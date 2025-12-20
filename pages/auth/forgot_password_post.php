@@ -12,6 +12,14 @@ if (!isset($_POST['csrf_token']) || !hash_equals(csrf_token(), $_POST['csrf_toke
     exit;
 }
 
+// reCAPTCHA verification
+$recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
+if (!verify_recaptcha($recaptcha_response)) {
+    $_SESSION['errors'] = ['Please complete the CAPTCHA verification.'];
+    header('Location: ./forgot_password.php');
+    exit;
+}
+
 $email = trim($_POST['email'] ?? '');
 $errors = [];
 

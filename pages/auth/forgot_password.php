@@ -19,6 +19,9 @@ require_guest();
   <!--=============== CSS ===============-->
   <link rel="stylesheet" href="/assets/css/styles.css" />
 
+  <!-- reCAPTCHA -->
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+
   <title><?= htmlspecialchars($title) ?></title>
 </head>
 
@@ -55,6 +58,11 @@ unset($_SESSION['errors'], $_SESSION['success']);
   .form__input.input--error {
     border-color: #b91c1c;
     box-shadow: 0 0 0 1px rgba(185, 28, 28, 0.15);
+  }
+
+  .captcha-row {
+    margin-top: 1rem;
+    margin-bottom: 1rem;
   }
 </style>
 
@@ -101,6 +109,11 @@ unset($_SESSION['errors'], $_SESSION['success']);
           <p id="emailHint" class="field-hint">
             Enter the email associated with your account.
           </p>
+        </div>
+
+        <div class="form__row captcha-row">
+          <div class="g-recaptcha" data-sitekey="6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj"></div>
+          <p id="captchaHint" class="field-hint">Please complete the CAPTCHA.</p>
         </div>
 
         <button type="submit" class="btn">Send reset link</button>
@@ -155,6 +168,12 @@ unset($_SESSION['errors'], $_SESSION['success']);
       let isValid = true;
       clearError(emailField, emailHint);
 
+      // Clear CAPTCHA error
+      const captchaHint = document.getElementById('captchaHint');
+      if (captchaHint) {
+        captchaHint.classList.remove('field-hint--visible', 'hint--error');
+      }
+
       const value = emailField.value.trim();
 
       if (!value) {
@@ -163,6 +182,16 @@ unset($_SESSION['errors'], $_SESSION['success']);
       } else if (!emailField.checkValidity()) {
         // Uses native email pattern
         setError(emailField, emailHint, 'Please enter a valid email address.');
+        isValid = false;
+      }
+
+      // CAPTCHA check
+      const response = grecaptcha.getResponse();
+      if (!response) {
+        if (captchaHint) {
+          captchaHint.textContent = 'Please complete the CAPTCHA verification.';
+          captchaHint.classList.add('field-hint--visible', 'hint--error');
+        }
         isValid = false;
       }
 

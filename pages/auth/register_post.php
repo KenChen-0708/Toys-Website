@@ -12,29 +12,9 @@ if (!verify_csrf($_POST['csrf_token'] ?? '')) {
 }
 
 // reCAPTCHA verification
-$recaptcha_secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
 $recaptcha_response = $_POST['g-recaptcha-response'] ?? '';
 
-$verify_url = 'https://www.google.com/recaptcha/api/siteverify';
-$verify_data = [
-    'secret' => $recaptcha_secret,
-    'response' => $recaptcha_response,
-    'remoteip' => $_SERVER['REMOTE_ADDR']
-];
-
-$options = [
-    'http' => [
-        'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-        'method' => 'POST',
-        'content' => http_build_query($verify_data)
-    ]
-];
-
-$context = stream_context_create($options);
-$verify_response = file_get_contents($verify_url, false, $context);
-$response_data = json_decode($verify_response);
-
-if (!$response_data->success) {
+if (!verify_recaptcha($recaptcha_response)) {
     $_SESSION['errors'] = ['Please complete the CAPTCHA verification.'];
     header('Location: ./register.php');
     exit;
