@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/../helper/pdo_connection.php';
-require_once __DIR__ . '/../helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 require_auth();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -29,9 +29,9 @@ $newPhotoPath = $current['profile_photo_path'] ?? null;
 
 // Handle webcam capture (base64) or normal file upload (one of them)
 if (!$errors) {
-    $uploadDirFs = realpath(__DIR__ . '/../assets/img');
+    $uploadDirFs = realpath('../../assets/img');
     if ($uploadDirFs === false) {
-        $uploadDirFs = __DIR__ . '/../assets/img';
+        $uploadDirFs = '../../assets/img';
     }
     $profileDirFs = $uploadDirFs . '/profile_photo';
 
@@ -104,7 +104,7 @@ if (!$errors) {
 if (!$errors && $newPhotoPath !== ($current['profile_photo_path'] ?? null) && !empty($current['profile_photo_path'])) {
     $oldPath = $current['profile_photo_path'];
     if (strpos($oldPath, '/assets/img/profile_photo/') === 0) {
-        $oldFs = realpath(__DIR__ . '/..' . $oldPath);
+        $oldFs = realpath('../..' . $oldPath);
         if ($oldFs && is_file($oldFs)) {
             @unlink($oldFs);
         }
