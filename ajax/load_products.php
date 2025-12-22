@@ -1,7 +1,6 @@
 <?php
 /**
  * AJAX endpoint for loading products
- * File: ajax/load_products.php
  */
 
 header('Content-Type: application/json');
