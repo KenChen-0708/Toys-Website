@@ -149,8 +149,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     $postal_code = trim($_POST['postal_code'] ?? '');
     $country = trim($_POST['country'] ?? '');
 
-    if (empty($address_line1) || empty($city) || empty($country)) {
-        $error_message = "Please fill in all required fields (Address Line 1, City, and Country).";
+    // Enhanced validation
+    $validation_errors = [];
+    
+    if (empty($address_line1)) {
+        $validation_errors[] = "Address Line 1 is required";
+    } elseif (strlen($address_line1) < 5) {
+        $validation_errors[] = "Address Line 1 must be at least 5 characters";
+    } elseif (strlen($address_line1) > 100) {
+        $validation_errors[] = "Address Line 1 must not exceed 100 characters";
+    }
+    
+    if (empty($city)) {
+        $validation_errors[] = "City is required";
+    } elseif (strlen($city) < 2) {
+        $validation_errors[] = "City must be at least 2 characters";
+    } elseif (strlen($city) > 50) {
+        $validation_errors[] = "City must not exceed 50 characters";
+    }
+    
+    if (empty($country)) {
+        $validation_errors[] = "Country is required";
+    } elseif (strlen($country) < 2) {
+        $validation_errors[] = "Country must be at least 2 characters";
+    } elseif (strlen($country) > 50) {
+        $validation_errors[] = "Country must not exceed 50 characters";
+    }
+    
+    if (!empty($address_line2) && strlen($address_line2) > 100) {
+        $validation_errors[] = "Address Line 2 must not exceed 100 characters";
+    }
+    
+    if (!empty($state) && strlen($state) > 50) {
+        $validation_errors[] = "State must not exceed 50 characters";
+    }
+    
+    if (!empty($postal_code)) {
+        if (!preg_match('/^[0-9]{5}$/', $postal_code)) {
+            $validation_errors[] = "Postal code must be exactly 5 digits";
+        }
+    }
+
+    if (!empty($validation_errors)) {
+        $error_message = implode('. ', $validation_errors) . '.';
     } else {
         try {
             $stmt = $pdo->prepare("
@@ -785,38 +826,58 @@ $final_total = $cart_total - $voucher_discount;
                             <div class="form-grid">
                                 <div class="form-group full-width">
                                     <label>Address Line 1 <span class="required">*</span></label>
-                                    <input type="text" name="address_line1" placeholder="Street address, P.O. box">
+                                    <input type="text" name="address_line1" placeholder="Street address, P.O. box" 
+                                           maxlength="100" 
+                                           title="Address Line 1 must be between 5-100 characters">
                                 </div>
 
                                 <div class="form-group full-width">
                                     <label>Address Line 2</label>
-                                    <input type="text" name="address_line2" placeholder="Apartment, suite, unit, etc.">
+                                    <input type="text" name="address_line2" placeholder="Apartment, suite, unit, etc." 
+                                           maxlength="100" 
+                                           title="Address Line 2 must not exceed 100 characters">
                                 </div>
 
                                 <div class="form-group">
                                     <label>City <span class="required">*</span></label>
-                                    <input type="text" name="city" placeholder="City">
+                                    <input type="text" name="city" placeholder="City" 
+                                           maxlength="50" 
+                                           pattern="[A-Za-z\s\-']+" 
+                                           title="City must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group">
                                     <label>State</label>
-                                    <input type="text" name="state" placeholder="State/Province">
+                                    <input type="text" name="state" placeholder="State/Province" 
+                                           maxlength="50" 
+                                           pattern="[A-Za-z\s\-']+" 
+                                           title="State must not exceed 50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group">
                                     <label>Postal Code</label>
-                                    <input type="text" name="postal_code" placeholder="Postal code">
+                                    <input type="text" name="postal_code" placeholder="Postal code" 
+                                           pattern="[0-9]{5}" maxlength="5" 
+                                           title="Please enter a 5-digit postal code">
                                 </div>
 
                                 <div class="form-group">
                                     <label>Country <span class="required">*</span></label>
-                                    <input type="text" name="country" placeholder="Country" value="Malaysia">
+                                    <input type="text" name="country" placeholder="Country" value="Malaysia" 
+                                           minlength="2" maxlength="50" 
+                                           pattern="[A-Za-z\s\-']+" 
+                                           title="Country must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group full-width">
-                                    <button type="submit" name="add_address" class="btn btn-secondary" id="saveAddressBtn">
-                                        Save Address
-                                    </button>
+                                    <div style="display: flex; gap: 10px;">
+                                        <button type="submit" name="add_address" class="btn btn-secondary" id="saveAddressBtn">
+                                            Save Address
+                                        </button>
+                                        <button type="button" class="btn" id="clearAddressBtn" style="background: #f0f0f0; color: #666;">
+                                            Clear Form
+                                        </button>
+                                    </div>
                                     <p style="font-size: 12px; color: #666; margin-top: 8px;">
                                         <em>Address will be saved and available for selection immediately.</em>
                                     </p>
@@ -906,7 +967,11 @@ $final_total = $cart_total - $voucher_discount;
         function toggleAddressForm(e) {
             e.preventDefault();
             const form = document.getElementById('addressForm');
+            
             form.classList.toggle('active');
+            
+            // Don't automatically add required attributes - only validate when saving
+            // This prevents blocking the checkout process if user just types but doesn't save
         }
 
         // Highlight selected address
@@ -933,17 +998,263 @@ $final_total = $cart_total - $voucher_discount;
         // Add progressive enhancement - if JavaScript fails, form still works
         document.body.classList.add('js-enabled');
 
-        // Prevent form submission conflicts
+        // Field validation function
+        function validateField(field) {
+            const value = field.value.trim();
+            const name = field.name;
+            let isValid = true;
+            let errorMessage = '';
+
+            // Remove existing error message
+            const existingError = field.parentNode.querySelector('.error-message');
+            if (existingError) {
+                existingError.remove();
+            }
+
+            // Validate based on field name
+            switch (name) {
+                case 'address_line1':
+                    if (value && (value.length < 5 || value.length > 100)) {
+                        isValid = false;
+                        errorMessage = 'Address Line 1 must be between 5-100 characters';
+                    }
+                    break;
+                    
+                case 'address_line2':
+                    if (value && value.length > 100) {
+                        isValid = false;
+                        errorMessage = 'Address Line 2 must not exceed 100 characters';
+                    }
+                    break;
+                    
+                case 'city':
+                    if (value && (value.length < 2 || value.length > 50)) {
+                        isValid = false;
+                        errorMessage = 'City must be between 2-50 characters';
+                    } else if (value && !/^[A-Za-z\s\-']+$/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'City can only contain letters, spaces, hyphens, and apostrophes';
+                    } else if (value && /\d/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'City cannot contain numbers';
+                    }
+                    break;
+                    
+                case 'state':
+                    if (value && value.length > 50) {
+                        isValid = false;
+                        errorMessage = 'State must not exceed 50 characters';
+                    } else if (value && !/^[A-Za-z\s\-']+$/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'State can only contain letters, spaces, hyphens, and apostrophes';
+                    } else if (value && /\d/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'State cannot contain numbers';
+                    }
+                    break;
+                    
+                case 'postal_code':
+                    if (value && !/^[0-9]{5}$/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'Postal code must be exactly 5 digits';
+                    }
+                    break;
+                    
+                case 'country':
+                    if (value && (value.length < 2 || value.length > 50)) {
+                        isValid = false;
+                        errorMessage = 'Country must be between 2-50 characters';
+                    } else if (value && !/^[A-Za-z\s\-']+$/.test(value)) {
+                        isValid = false;
+                        errorMessage = 'Country can only contain letters, spaces, hyphens, and apostrophes';
+                    }
+                    break;
+            }
+
+            // Show error if validation failed
+            if (!isValid) {
+                field.style.borderColor = '#ef4444';
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'error-message';
+                errorDiv.style.color = '#ef4444';
+                errorDiv.style.fontSize = '12px';
+                errorDiv.style.marginTop = '4px';
+                errorDiv.textContent = errorMessage;
+                field.parentNode.appendChild(errorDiv);
+            } else {
+                field.style.borderColor = '#10b981';
+            }
+
+            return isValid;
+        }
+
+        // Show error message below a specific field
+        function showFieldError(field, message) {
+            field.style.borderColor = '#ef4444';
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.style.color = '#ef4444';
+            errorDiv.style.fontSize = '12px';
+            errorDiv.style.marginTop = '4px';
+            errorDiv.textContent = message;
+            field.parentNode.appendChild(errorDiv);
+        }
+
+        // Show multiple field errors (for save validation)
+        function showFieldErrors(errors) {
+            // Clear all existing errors first
+            document.querySelectorAll('.error-message').forEach(error => error.remove());
+            
+            // Map error messages to fields and show them
+            errors.forEach(error => {
+                if (error.includes('Address Line 1')) {
+                    const field = document.querySelector('input[name="address_line1"]');
+                    if (field) showFieldError(field, error);
+                } else if (error.includes('Address Line 2')) {
+                    const field = document.querySelector('input[name="address_line2"]');
+                    if (field) showFieldError(field, error);
+                } else if (error.includes('City')) {
+                    const field = document.querySelector('input[name="city"]');
+                    if (field) showFieldError(field, error);
+                } else if (error.includes('State')) {
+                    const field = document.querySelector('input[name="state"]');
+                    if (field) showFieldError(field, error);
+                } else if (error.includes('Postal code')) {
+                    const field = document.querySelector('input[name="postal_code"]');
+                    if (field) showFieldError(field, error);
+                } else if (error.includes('Country')) {
+                    const field = document.querySelector('input[name="country"]');
+                    if (field) showFieldError(field, error);
+                }
+            });
+        }
+
+        // Prevent form submission conflicts and add validation
         document.addEventListener('submit', function(e) {
+            console.log('Form submission detected:', e.target);
+            
             // Only prevent default for AJAX-handled forms when JS is working
             if (e.target.querySelector('button[name="add_address"]') || e.target.querySelector('button[name="apply_voucher"]')) {
+                console.log('AJAX form detected, allowing default behavior');
                 // These are handled by AJAX, don't prevent
                 return;
+            }
+            
+            // Validate main checkout form
+            if (e.target.querySelector('button[name="place_order"]')) {
+                console.log('Checkout form submission detected');
+                
+                // Clear ALL address form inputs to prevent any validation blocking
+                const addressForm = document.getElementById('addressForm');
+                if (addressForm) {
+                    const addressInputs = addressForm.querySelectorAll('input[type="text"]');
+                    addressInputs.forEach(input => {
+                        input.value = '';
+                        input.removeAttribute('required');
+                        input.style.borderColor = '';
+                        // Remove any error messages
+                        const errorMsg = input.parentNode.querySelector('.error-message');
+                        if (errorMsg) {
+                            errorMsg.remove();
+                        }
+                    });
+                    console.log('Cleared all address form inputs and errors');
+                }
+                
+                // Check if user selected an existing address
+                const selectedAddress = document.querySelector('input[name="shipping_address_id"]:checked');
+                if (!selectedAddress) {
+                    console.log('No address selected, preventing submission');
+                    e.preventDefault();
+                    alert('Please select a shipping address before proceeding to payment.');
+                    return false;
+                } else {
+                    console.log('Address selected, allowing submission');
+                }
             }
         });
 
         // AJAX for voucher application
         document.addEventListener('DOMContentLoaded', function() {
+            // Add real-time validation for address form
+            const addressForm = document.getElementById('addressForm');
+            if (addressForm) {
+                const inputs = addressForm.querySelectorAll('input[type="text"]');
+                inputs.forEach(input => {
+                    // Prevent numbers in city, state, and country fields
+                    if (['city', 'state', 'country'].includes(input.name)) {
+                        input.addEventListener('keypress', function(e) {
+                            // Allow letters, spaces, hyphens, apostrophes, and control keys
+                            const char = String.fromCharCode(e.which);
+                            if (!/[A-Za-z\s\-']/.test(char) && e.which !== 8 && e.which !== 0) {
+                                e.preventDefault();
+                            }
+                        });
+                        
+                        input.addEventListener('paste', function(e) {
+                            // Handle paste events
+                            setTimeout(() => {
+                                const value = this.value;
+                                this.value = value.replace(/[^A-Za-z\s\-']/g, '');
+                            }, 0);
+                        });
+                    }
+                    
+                    // Only allow numbers in postal code field
+                    if (input.name === 'postal_code') {
+                        input.addEventListener('keypress', function(e) {
+                            // Only allow numbers and control keys
+                            const char = String.fromCharCode(e.which);
+                            if (!/[0-9]/.test(char) && e.which !== 8 && e.which !== 0) {
+                                e.preventDefault();
+                            }
+                        });
+                        
+                        input.addEventListener('paste', function(e) {
+                            // Handle paste events - only keep numbers
+                            setTimeout(() => {
+                                const value = this.value;
+                                this.value = value.replace(/[^0-9]/g, '');
+                            }, 0);
+                        });
+                    }
+                    
+                    input.addEventListener('blur', function() {
+                        validateField(this);
+                    });
+                    
+                    input.addEventListener('input', function() {
+                        // Clear previous error styling when user starts typing
+                        this.style.borderColor = '';
+                        const errorMsg = this.parentNode.querySelector('.error-message');
+                        if (errorMsg) {
+                            errorMsg.remove();
+                        }
+                    });
+                });
+                
+                // Add clear form functionality
+                const clearBtn = document.getElementById('clearAddressBtn');
+                if (clearBtn) {
+                    clearBtn.addEventListener('click', function() {
+                        // Clear all form inputs
+                        inputs.forEach(input => {
+                            input.value = '';
+                            input.style.borderColor = '';
+                            const errorMsg = input.parentNode.querySelector('.error-message');
+                            if (errorMsg) {
+                                errorMsg.remove();
+                            }
+                        });
+                        // Reset country to default
+                        const countryInput = addressForm.querySelector('input[name="country"]');
+                        if (countryInput) {
+                            countryInput.value = 'Malaysia';
+                        }
+                    });
+                }
+            }
+            
             const voucherForm = document.querySelector('form[method="POST"]');
             const applyVoucherBtn = document.querySelector('button[name="apply_voucher"]');
 
@@ -1000,23 +1311,64 @@ $final_total = $cart_total - $voucher_discount;
                 addAddressBtn.addEventListener('click', function(e) {
                     e.preventDefault();
 
-                    // Client-side validation
+                    // Comprehensive client-side validation - only runs when saving
                     const addressLine1 = document.querySelector('input[name="address_line1"]').value.trim();
                     const city = document.querySelector('input[name="city"]').value.trim();
                     const country = document.querySelector('input[name="country"]').value.trim();
+                    const state = document.querySelector('input[name="state"]').value.trim();
+                    const postalCode = document.querySelector('input[name="postal_code"]').value.trim();
+                    const addressLine2 = document.querySelector('input[name="address_line2"]').value.trim();
 
-                    if (!addressLine1 || !city || !country) {
-                        showAlert('Please fill in all required fields (Address Line 1, City, and Country).', 'error');
+                    // Validate all fields using the same logic as the validateField function
+                    let validationErrors = [];
+                    
+                    if (!addressLine1) {
+                        validationErrors.push('Address Line 1 is required');
+                    } else if (addressLine1.length < 5 || addressLine1.length > 100) {
+                        validationErrors.push('Address Line 1 must be between 5-100 characters');
+                    }
+                    
+                    if (!city) {
+                        validationErrors.push('City is required');
+                    } else if (city.length < 2 || city.length > 50) {
+                        validationErrors.push('City must be between 2-50 characters');
+                    } else if (!/^[A-Za-z\s\-']+$/.test(city) || /\d/.test(city)) {
+                        validationErrors.push('City cannot contain numbers or special characters');
+                    }
+                    
+                    if (!country) {
+                        validationErrors.push('Country is required');
+                    } else if (country.length < 2 || country.length > 50) {
+                        validationErrors.push('Country must be between 2-50 characters');
+                    } else if (!/^[A-Za-z\s\-']+$/.test(country) || /\d/.test(country)) {
+                        validationErrors.push('Country cannot contain numbers or special characters');
+                    }
+                    
+                    if (state && (state.length > 50 || !/^[A-Za-z\s\-']+$/.test(state) || /\d/.test(state))) {
+                        validationErrors.push('State cannot contain numbers or special characters');
+                    }
+                    
+                    if (postalCode && !/^[0-9]{5}$/.test(postalCode)) {
+                        validationErrors.push('Postal code must be exactly 5 digits');
+                    }
+                    
+                    if (addressLine2 && addressLine2.length > 100) {
+                        validationErrors.push('Address Line 2 must not exceed 100 characters');
+                    }
+
+                    if (validationErrors.length > 0) {
+                        // Show errors below each field instead of alert box
+                        showFieldErrors(validationErrors);
                         return;
                     }
 
                     const formData = new FormData();
                     formData.append('add_address', '1');
                     formData.append('address_line1', addressLine1);
-                    formData.append('address_line2', document.querySelector('input[name="address_line2"]').value.trim());
+                    formData.append('address_line2', addressLine2);
                     formData.append('city', city);
-                    formData.append('state', document.querySelector('input[name="state"]').value.trim());
-                    formData.append('postal_code', document.querySelector('input[name="postal_code"]').value.trim());
+                    formData.append('state', state);
+                    formData.append('postal_code', postalCode);
                     formData.append('country', country);
 
                     // Show loading state

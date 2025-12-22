@@ -17,20 +17,31 @@ if (!$order_id) {
 }
 
 try {
-    // Get order details
+    // Get order details and validate it's still payable
     $stmt = $pdo->prepare("
-        SELECT * FROM `Order` 
-        WHERE order_id = ? AND member_id = ?
+        SELECT o.*, COUNT(oi.order_item_id) as item_count
+        FROM `Order` o
+        LEFT JOIN Order_Item oi ON o.order_id = oi.order_id
+        WHERE o.order_id = ? AND o.member_id = ? AND o.status = 'Pending'
+        GROUP BY o.order_id
     ");
     $stmt->execute([$order_id, $member_id]);
     $order = $stmt->fetch();
 
     if (!$order) {
-        header('Location: ../checkout/checkout.php');
+        // Order not found, completed, or not belonging to user
+        header('Location: ../cart/cart.php?error=order_not_found');
+        exit();
+    }
+    
+    if ($order['item_count'] == 0) {
+        // Order has no items
+        header('Location: ../cart/cart.php?error=invalid_order');
         exit();
     }
 } catch (PDOException $e) {
-    die("Error: " . $e->getMessage());
+    header('Location: ../cart/cart.php?error=database_error');
+    exit();
 }
 ?>
 
@@ -157,6 +168,27 @@ try {
             background: #e0e0e0;
         }
 
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 300px;
+                text-align: center;
+            }
+        }
+
         .info-list {
             text-align: left;
             margin: 20px 0;
@@ -191,9 +223,13 @@ try {
             <li>✓ You can complete payment later</li>
         </ul>
 
-        <div>
-            <a href=\"payment.php?order_id=<?php echo $order_id; ?>" class="btn btn-primary">Try Payment Again</a>
-            <a href=\"../../index.php\" class="btn btn-secondary">Back to Home</a>
+        <div class="action-buttons">
+            <a href="payment.php?order_id=<?php echo $order_id; ?>" class="btn btn-primary">
+                Try Payment Again
+            </a>
+            <a href="../../index.php" class="btn btn-secondary">
+                Back to Home
+            </a>
         </div>
     </div>
     

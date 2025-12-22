@@ -649,7 +649,7 @@ foreach ($cart_items as $item) {
           <h2>Your cart is empty</h2>
           <p>Add items to get started</p>
           <br>
-          <a href="../../index.php" class="btn btn-primary">Browse Products</a>
+          <a href="../product/product_list.php" class="btn btn-primary">Browse Products</a>
         </div>
       <?php else: ?>
         <div class="cart-table">
