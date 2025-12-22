@@ -22,17 +22,27 @@ if (isset($_POST['apply_voucher'])) {
     }
     
     try {
-        // Get cart total
-        $stmt = $pdo->prepare("
-            SELECT SUM(ci.quantity * p.price) as cart_total
-            FROM Cart c
-            INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
-            INNER JOIN Product p ON ci.product_id = p.product_id
-            WHERE c.member_id = ? AND p.status = 'Available'
-        ");
-        $stmt->execute([$member_id]);
-        $result = $stmt->fetch();
-        $cart_total = $result['cart_total'] ?? 0;
+        // Check if this is a "Buy Now" checkout or regular cart checkout
+        $is_buy_now = isset($_SESSION['buy_now_item']);
+        $cart_total = 0;
+        
+        if ($is_buy_now) {
+            // Use buy_now item from session
+            $buy_now_item = $_SESSION['buy_now_item'];
+            $cart_total = $buy_now_item['quantity'] * $buy_now_item['price'];
+        } else {
+            // Get cart total from database
+            $stmt = $pdo->prepare("
+                SELECT SUM(ci.quantity * p.price) as cart_total
+                FROM Cart c
+                INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
+                INNER JOIN Product p ON ci.product_id = p.product_id
+                WHERE c.member_id = ? AND p.status = 'Available'
+            ");
+            $stmt->execute([$member_id]);
+            $result = $stmt->fetch();
+            $cart_total = $result['cart_total'] ?? 0;
+        }
         
         // Validate voucher
         $stmt = $pdo->prepare("
@@ -104,11 +114,51 @@ if (isset($_POST['add_address'])) {
     $postal_code = trim($_POST['postal_code'] ?? '');
     $country = trim($_POST['country'] ?? '');
     
-    // Validate required fields
-    if (empty($address_line1) || empty($city) || empty($country)) {
+    // Enhanced validation
+    $validation_errors = [];
+    
+    if (empty($address_line1)) {
+        $validation_errors[] = "Address Line 1 is required";
+    } elseif (strlen($address_line1) < 5) {
+        $validation_errors[] = "Address Line 1 must be at least 5 characters";
+    } elseif (strlen($address_line1) > 100) {
+        $validation_errors[] = "Address Line 1 must not exceed 100 characters";
+    }
+    
+    if (empty($city)) {
+        $validation_errors[] = "City is required";
+    } elseif (strlen($city) < 2) {
+        $validation_errors[] = "City must be at least 2 characters";
+    } elseif (strlen($city) > 50) {
+        $validation_errors[] = "City must not exceed 50 characters";
+    }
+    
+    if (empty($country)) {
+        $validation_errors[] = "Country is required";
+    } elseif (strlen($country) < 2) {
+        $validation_errors[] = "Country must be at least 2 characters";
+    } elseif (strlen($country) > 50) {
+        $validation_errors[] = "Country must not exceed 50 characters";
+    }
+    
+    if (!empty($address_line2) && strlen($address_line2) > 100) {
+        $validation_errors[] = "Address Line 2 must not exceed 100 characters";
+    }
+    
+    if (!empty($state) && strlen($state) > 50) {
+        $validation_errors[] = "State must not exceed 50 characters";
+    }
+    
+    if (!empty($postal_code)) {
+        if (!preg_match('/^[0-9]{5}$/', $postal_code)) {
+            $validation_errors[] = "Postal code must be exactly 5 digits";
+        }
+    }
+
+    if (!empty($validation_errors)) {
         echo json_encode([
             'success' => false, 
-            'message' => 'Please fill in all required fields (Address Line 1, City, and Country).'
+            'message' => implode('. ', $validation_errors) . '.'
         ]);
         exit();
     }

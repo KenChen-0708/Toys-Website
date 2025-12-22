@@ -10,6 +10,27 @@ if (!isset($_SESSION['member'])) {
 
 $member_id = $_SESSION['member']['id'];
 
+// Handle error messages from redirects
+$error_message = '';
+if (isset($_GET['error'])) {
+    switch ($_GET['error']) {
+        case 'empty_cart':
+            $error_message = 'Your cart is empty. Please add items before proceeding to checkout.';
+            break;
+        case 'session_expired':
+            $error_message = 'Your session has expired. Please select products again.';
+            break;
+        case 'invalid_order':
+            $error_message = 'Invalid order. Please try again.';
+            break;
+        case 'order_not_found':
+            $error_message = 'Order not found or already processed.';
+            break;
+        default:
+            $error_message = 'An error occurred. Please try again.';
+    }
+}
+
 // Clear buy_now session when user visits cart page
 // This ensures cart checkout always shows cart items, not buy_now items
 if (isset($_SESSION['buy_now_item'])) {
@@ -599,6 +620,17 @@ foreach ($cart_items as $item) {
     </div>
 
     <div id="alert-container"></div>
+    <?php if (!empty($error_message)): ?>
+      <div class="alert alert-error" style="display: block; position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 1000;">
+        <?= htmlspecialchars($error_message) ?>
+      </div>
+      <script>
+        // Auto-hide error message after 5 seconds
+        setTimeout(function() {
+          document.querySelector('.alert-error').style.display = 'none';
+        }, 5000);
+      </script>
+    <?php endif; ?>
     <div class="loading" id="loading">Processing...</div>
 
     <!-- Batch Actions Bar -->
@@ -617,7 +649,7 @@ foreach ($cart_items as $item) {
           <h2>Your cart is empty</h2>
           <p>Add items to get started</p>
           <br>
-          <a href="../../index.php" class="btn btn-primary">Browse Products</a>
+          <a href="../product/product_list.php" class="btn btn-primary">Browse Products</a>
         </div>
       <?php else: ?>
         <div class="cart-table">

@@ -467,7 +467,7 @@ $(document).ready(function() {
     setTimeout(() => {
       $toast.removeClass('show');
       setTimeout(() => $toast.remove(), 300);
-    }, 3000);
+    }, 2500);
   }
 
   /**
