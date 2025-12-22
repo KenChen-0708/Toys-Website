@@ -68,6 +68,11 @@ try {
                 exit();
             }
 
+            if ($product['stock'] <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Product is out of stock']);
+                exit();
+            }
+
             if ($quantity > $product['stock']) {
                 echo json_encode(['success' => false, 'message' => 'Insufficient stock available']);
                 exit();
@@ -142,6 +147,11 @@ try {
 
             if ($product['status'] !== 'Available') {
                 echo json_encode(['success' => false, 'message' => 'Product is not available']);
+                exit();
+            }
+
+            if ($product['stock'] <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Product is out of stock']);
                 exit();
             }
 

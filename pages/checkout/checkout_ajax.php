@@ -22,17 +22,27 @@ if (isset($_POST['apply_voucher'])) {
     }
     
     try {
-        // Get cart total
-        $stmt = $pdo->prepare("
-            SELECT SUM(ci.quantity * p.price) as cart_total
-            FROM Cart c
-            INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
-            INNER JOIN Product p ON ci.product_id = p.product_id
-            WHERE c.member_id = ? AND p.status = 'Available'
-        ");
-        $stmt->execute([$member_id]);
-        $result = $stmt->fetch();
-        $cart_total = $result['cart_total'] ?? 0;
+        // Check if this is a "Buy Now" checkout or regular cart checkout
+        $is_buy_now = isset($_SESSION['buy_now_item']);
+        $cart_total = 0;
+        
+        if ($is_buy_now) {
+            // Use buy_now item from session
+            $buy_now_item = $_SESSION['buy_now_item'];
+            $cart_total = $buy_now_item['quantity'] * $buy_now_item['price'];
+        } else {
+            // Get cart total from database
+            $stmt = $pdo->prepare("
+                SELECT SUM(ci.quantity * p.price) as cart_total
+                FROM Cart c
+                INNER JOIN Cart_Item ci ON c.cart_id = ci.cart_id
+                INNER JOIN Product p ON ci.product_id = p.product_id
+                WHERE c.member_id = ? AND p.status = 'Available'
+            ");
+            $stmt->execute([$member_id]);
+            $result = $stmt->fetch();
+            $cart_total = $result['cart_total'] ?? 0;
+        }
         
         // Validate voucher
         $stmt = $pdo->prepare("

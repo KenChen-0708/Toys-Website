@@ -66,6 +66,19 @@ if ($is_buy_now) {
     }
 }
 
+// Validate that user has items to checkout
+if (empty($cart_items)) {
+    // No items to checkout - redirect to appropriate page
+    if ($is_buy_now) {
+        // Buy now session expired or invalid
+        header('Location: ../product/product_list.php?error=session_expired');
+    } else {
+        // Empty cart
+        header('Location: ../cart/cart.php?error=empty_cart');
+    }
+    exit();
+}
+
 // Fetch existing shipping addresses
 $shipping_addresses = [];
 try {
@@ -255,6 +268,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             $order_id = $pdo->lastInsertId();
 
             foreach ($cart_items as $item) {
+                // First, check current stock before creating order item
+                $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
+                $stmt->execute([$item['product_id']]);
+                $current_stock = $stmt->fetchColumn();
+                
+                if ($current_stock < $item['quantity']) {
+                    throw new Exception("Insufficient stock for product: " . $item['name'] . ". Available: " . $current_stock . ", Requested: " . $item['quantity']);
+                }
+                
                 $stmt = $pdo->prepare("
                     INSERT INTO Order_Item (order_id, product_id, quantity, price)
                     VALUES (?, ?, ?, ?)
@@ -266,12 +288,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                     $item['price']
                 ]);
 
+                // Update stock with additional safety check
                 $stmt = $pdo->prepare("
                     UPDATE Product 
                     SET stock = stock - ? 
-                    WHERE product_id = ?
+                    WHERE product_id = ? AND stock >= ?
                 ");
-                $stmt->execute([$item['quantity'], $item['product_id']]);
+                $affected_rows = $stmt->execute([$item['quantity'], $item['product_id'], $item['quantity']]);
+                
+                // Double-check that the update actually happened
+                if ($stmt->rowCount() === 0) {
+                    throw new Exception("Stock update failed for product: " . $item['name'] . ". Possible concurrent purchase.");
+                }
             }
 
             if ($voucher_id) {
@@ -1181,6 +1209,17 @@ $final_total = $cart_total - $voucher_discount;
             }
         }
     </style>
+    
+    <script>
+        // Prevent browser back button after accessing checkout
+        // This prevents users from going back after placing an order
+        if (window.history && window.history.pushState) {
+            window.history.pushState('forward', null, window.location.href);
+            window.addEventListener('popstate', function() {
+                window.history.pushState('forward', null, window.location.href);
+            });
+        }
+    </script>
 </body>
 
 </html>

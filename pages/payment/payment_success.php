@@ -320,6 +320,35 @@ try {
             <a href=\"../../index.php\" class="btn btn-secondary">Continue Shopping</a>
         </div>
     </div>
+    
+    <script>
+        // Prevent browser back button after successful payment
+        // This prevents users from going back to payment/checkout pages
+        if (window.history && window.history.pushState) {
+            // Replace current history entry
+            window.history.replaceState(null, null, window.location.href);
+            
+            // Push a new state
+            window.history.pushState(null, null, window.location.href);
+            
+            // Listen for back button
+            window.addEventListener('popstate', function(event) {
+                // Redirect to home or orders page instead of going back
+                window.location.href = '../../index.php';
+            });
+        }
+        
+        // Clear buy_now session if it exists (cleanup)
+        fetch('../cart/cart_actions.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'action=clear_buy_now_session'
+        }).catch(() => {
+            // Silently fail if cleanup doesn't work
+        });
+    </script>
 </body>
 
 </html>

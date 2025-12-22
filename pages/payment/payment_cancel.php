@@ -196,6 +196,19 @@ try {
             <a href=\"../../index.php\" class="btn btn-secondary">Back to Home</a>
         </div>
     </div>
+    
+    <script>
+        // Prevent browser back button after payment cancellation
+        if (window.history && window.history.pushState) {
+            window.history.replaceState(null, null, window.location.href);
+            window.history.pushState(null, null, window.location.href);
+            
+            window.addEventListener('popstate', function(event) {
+                // Redirect to cart instead of going back to payment
+                window.location.href = '../cart/cart.php';
+            });
+        }
+    </script>
 </body>
 
 </html>

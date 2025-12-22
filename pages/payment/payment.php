@@ -33,7 +33,9 @@ try {
     $order = $stmt->fetch();
 
     if (!$order) {
-        die("Order not found or already processed.");
+        // Order not found or already processed - redirect to cart
+        header('Location: ../cart/cart.php?error=order_not_found');
+        exit();
     }
 
     // 2️⃣ Retrieve order items with product images
@@ -47,7 +49,9 @@ try {
     $order_items = $stmt->fetchAll();
 
     if (!$order_items) {
-        die("No items found in this order.");
+        // No items in order - redirect back to cart
+        header('Location: ../cart/cart.php?error=invalid_order');
+        exit();
     }
 
     // Get total amount from order (already includes discounts)
@@ -57,26 +61,62 @@ try {
     $line_items = [];
     $domain = 'http://localhost:8000';
 
+    // Calculate the sum of individual item prices from order items
+    $items_subtotal = 0;
     foreach ($order_items as $item) {
-        $product_data = [
-            'name' => $item['name'],
-        ];
+        $items_subtotal += ($item['price'] * $item['quantity']);
+    }
 
-        // Add product image if available
-        if (!empty($item['main_image_path'])) {
-            // Convert relative path to absolute URL
-            $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
-            $product_data['images'] = [$image_url];
+    // Check if there's a discount applied (with small tolerance for floating point precision)
+    $discount_amount = $items_subtotal - $total_amount;
+    $has_discount = $discount_amount > 0.01; // Check if discount is significant
+
+    if ($has_discount) {
+        // If there's a discount, create a single line item with the final total
+        // This ensures Stripe receives the exact discounted amount
+        
+        // Create a descriptive name for the order
+        $order_description = '';
+        if (count($order_items) == 1) {
+            $order_description = $order_items[0]['name'] . ' (Voucher Applied)';
+        } else {
+            $order_description = 'Order #' . $order_id . ' (' . count($order_items) . ' items, Voucher Applied)';
         }
-
+        
         $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
-                'product_data' => $product_data,
-                'unit_amount' => intval($item['price'] * 100), // Convert to cents
+                'product_data' => [
+                    'name' => $order_description,
+                    'description' => 'Subtotal: RM' . number_format($items_subtotal, 2) . ', Discount: RM' . number_format($discount_amount, 2),
+                ],
+                'unit_amount' => intval($total_amount * 100), // Convert to cents
             ],
-            'quantity' => $item['quantity'],
+            'quantity' => 1,
         ];
+    } else {
+        // No discount - show individual items
+        foreach ($order_items as $item) {
+            $product_data = [
+                'name' => $item['name'],
+            ];
+
+            // Add product image if available
+            if (!empty($item['main_image_path'])) {
+                // Convert relative path to absolute URL
+                $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
+                $product_data['images'] = [$image_url];
+            }
+
+            $line_items[] = [
+                'price_data' => [
+                    'currency' => 'myr',
+                    'product_data' => $product_data,
+                    'unit_amount' => intval($item['price'] * 100), // Convert to cents
+                ],
+                'quantity' => $item['quantity'],
+            ];
+        }
     }
 
     // 3️⃣ Create Stripe Checkout Session

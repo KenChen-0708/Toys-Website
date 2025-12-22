@@ -1160,7 +1160,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
           <div class="price-wrapper">
             <span class="current-price">RM <?= number_format($product['price'], 2) ?></span>
           </div>
-          <?php if ($product['status'] == 'Available'): ?>
+          <?php if ($product['status'] == 'Available' && $product['stock'] > 0): ?>
             <span class="stock-badge in-stock">
               <i class="fi fi-rs-check-circle"></i> In Stock
             </span>
@@ -1210,15 +1210,15 @@ $title = htmlspecialchars($product['name']) . " — Details";
         </div>
 
         <div class="action-buttons">
-          <button class="btn btn-primary" id="addToCartBtn" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-primary" id="addToCartBtn" <?= ($product['status'] != 'Available' || $product['stock'] <= 0) ? 'disabled' : '' ?>>
             <i class="fi fi-rs-shopping-cart-add"></i>
             Add to Cart
           </button>
-          <button class="btn btn-secondary" id="buyNowBtn" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-secondary" id="buyNowBtn" <?= ($product['status'] != 'Available' || $product['stock'] <= 0) ? 'disabled' : '' ?>>
             <i class="fi fi-rs-shopping-bag"></i>
             Buy Now
           </button>
-          <button class="btn btn-icon" id="addToWishlistBtn" title="Add to Wishlist" <?= $product['status'] != 'Available' ? 'disabled' : '' ?>>
+          <button class="btn btn-icon" id="addToWishlistBtn" title="Add to Wishlist">
             <i class="fi fi-rs-heart"></i>
           </button>
         </div>
@@ -1392,6 +1392,20 @@ $title = htmlspecialchars($product['name']) . " — Details";
         input.value = current - 1;
       }
     }
+
+    // Validate quantity input on manual change
+    document.getElementById('quantity')?.addEventListener('input', function() {
+      const max = parseInt(this.max);
+      const min = parseInt(this.min);
+      let value = parseInt(this.value);
+      
+      if (isNaN(value) || value < min) {
+        this.value = min;
+      } else if (value > max) {
+        this.value = max;
+        showToast('Maximum available stock is ' + max + ' units', 'error');
+      }
+    });
 
     // Profile menu toggle
     document.querySelector('.avatar-btn')?.addEventListener('click', function(e) {
@@ -1646,7 +1660,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         });
       }
 
-      // Toast notification (matching product_list.js style)
+      // Toast notification - centered with transparent background
       function showToast(message, type = 'success') {
         $('.toast').remove();
 
@@ -1659,41 +1673,44 @@ $title = htmlspecialchars($product['name']) . " — Details";
         const $toast = $(`
           <div class="toast toast--${type}" style="
             position: fixed;
-            top: 20px;
-            right: 20px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.75rem;
-            padding: 1rem 1.25rem;
-            background: white;
-            border-radius: 0.75rem;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            padding: 1.25rem 2rem;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 1rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
             z-index: 10000;
             opacity: 0;
-            transform: translateX(100px);
             transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            min-width: 280px;
-            max-width: 400px;
-            border-left: 4px solid ${type === 'success' ? '#10b981' : '#ef4444'};
+            min-width: 300px;
+            max-width: 90%;
+            pointer-events: none;
+            border: 2px solid ${type === 'success' ? '#10b981' : '#ef4444'};
           ">
-            <i class="fi ${iconMap[type]}" style="font-size: 1.25rem; flex-shrink: 0; color: ${type === 'success' ? '#10b981' : '#ef4444'};"></i>
-            <span style="font-size: 0.875rem; font-weight: 500; color: #1f2937;">${escapeHtml(message)}</span>
+            <i class="fi ${iconMap[type]}" style="font-size: 1.5rem; flex-shrink: 0; color: ${type === 'success' ? '#10b981' : '#ef4444'};"></i>
+            <span style="font-size: 1rem; font-weight: 600; color: #1f2937;">${escapeHtml(message)}</span>
           </div>
         `);
 
         $('body').append($toast);
         setTimeout(() => $toast.css({
           opacity: 1,
-          transform: 'translateX(0)'
+          transform: 'translate(-50%, -50%) scale(1)'
         }), 10);
 
         setTimeout(() => {
           $toast.css({
             opacity: 0,
-            transform: 'translateX(100px)'
+            transform: 'translate(-50%, -50%) scale(0.8)'
           });
           setTimeout(() => $toast.remove(), 300);
-        }, 3000);
+        }, 2500);
       }
 
       // Escape HTML to prevent XSS
