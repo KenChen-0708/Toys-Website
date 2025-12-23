@@ -3,6 +3,7 @@ session_start();
 $title = "Products";
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
+redirect_if_admin();
 
 function user_initials($name)
 {
@@ -30,8 +31,8 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
 </head>
 
 <body>
-  
-<?php include '../../partials/header.php';?>
+
+  <?php include '../../partials/header.php'; ?>
 
   <!-- ========== MAIN CONTENT ========== -->
   <main class="products-page">

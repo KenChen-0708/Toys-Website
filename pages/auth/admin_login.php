@@ -2,6 +2,7 @@
 $title = "Admin Login";
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
+redirect_if_admin();
 // For now, reuse require_guest() so logged-in users can't hit admin login.
 require_guest();
 

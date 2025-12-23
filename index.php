@@ -1,5 +1,7 @@
 <?php
 session_start();
+require_once 'helper/auth.php';
+redirect_if_admin();
 $title = "Home";
 ?>
 <!DOCTYPE html>

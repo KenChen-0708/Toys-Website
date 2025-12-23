@@ -34,6 +34,18 @@ function require_auth()
   }
 }
 
+
+function redirect_if_admin()
+{
+  if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+  }
+  if (!empty($_SESSION['admin'])) {
+    header('Location: /admin/admin_dashboard.php');
+    exit;
+  }
+}
+
 function require_admin()
 {
   if (session_status() === PHP_SESSION_NONE) {

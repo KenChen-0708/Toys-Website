@@ -1,6 +1,8 @@
 <?php
 session_start();
 require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
+redirect_if_admin();
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
@@ -151,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
 
     // Enhanced validation
     $validation_errors = [];
-    
+
     if (empty($address_line1)) {
         $validation_errors[] = "Address Line 1 is required";
     } elseif (strlen($address_line1) < 5) {
@@ -159,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     } elseif (strlen($address_line1) > 100) {
         $validation_errors[] = "Address Line 1 must not exceed 100 characters";
     }
-    
+
     if (empty($city)) {
         $validation_errors[] = "City is required";
     } elseif (strlen($city) < 2) {
@@ -167,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     } elseif (strlen($city) > 50) {
         $validation_errors[] = "City must not exceed 50 characters";
     }
-    
+
     if (empty($country)) {
         $validation_errors[] = "Country is required";
     } elseif (strlen($country) < 2) {
@@ -175,11 +177,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     } elseif (strlen($country) > 50) {
         $validation_errors[] = "Country must not exceed 50 characters";
     }
-    
+
     if (!empty($address_line2) && strlen($address_line2) > 100) {
         $validation_errors[] = "Address Line 2 must not exceed 100 characters";
     }
-    
+
     if (empty($state)) {
         $validation_errors[] = "State is required";
     } elseif (strlen($state) > 50) {
@@ -187,7 +189,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     } elseif (!preg_match('/^[A-Za-z\s\-\']+$/', $state)) {
         $validation_errors[] = "State cannot contain numbers or special characters";
     }
-    
+
     if (empty($postal_code)) {
         $validation_errors[] = "Postal code is required";
     } elseif (!preg_match('/^[0-9]{5}$/', $postal_code)) {
@@ -317,11 +319,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
                 $stmt->execute([$item['product_id']]);
                 $current_stock = $stmt->fetchColumn();
-                
+
                 if ($current_stock < $item['quantity']) {
                     throw new Exception("Insufficient stock for product: " . $item['name'] . ". Available: " . $current_stock . ", Requested: " . $item['quantity']);
                 }
-                
+
                 $stmt = $pdo->prepare("
                     INSERT INTO Order_Item (order_id, product_id, quantity, price)
                     VALUES (?, ?, ?, ?)
@@ -340,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                     WHERE product_id = ? AND stock >= ?
                 ");
                 $affected_rows = $stmt->execute([$item['quantity'], $item['product_id'], $item['quantity']]);
-                
+
                 // Double-check that the update actually happened
                 if ($stmt->rowCount() === 0) {
                     throw new Exception("Stock update failed for product: " . $item['name'] . ". Possible concurrent purchase.");
@@ -791,13 +793,13 @@ $final_total = $cart_total - $voucher_discount;
         }
 
         /* Button container styling */
-        .address-form .form-group.full-width > div {
+        .address-form .form-group.full-width>div {
             display: flex;
             gap: 12px;
             margin-bottom: 8px;
         }
 
-        .address-form .form-group.full-width > div .btn {
+        .address-form .form-group.full-width>div .btn {
             flex: 1;
             min-height: 44px;
             font-size: 14px;
@@ -881,47 +883,47 @@ $final_total = $cart_total - $voucher_discount;
                             <div class="form-grid">
                                 <div class="form-group full-width">
                                     <label>Address Line 1 <span class="required">*</span></label>
-                                    <input type="text" name="address_line1" placeholder="Street address, P.O. box" 
-                                           maxlength="100" 
-                                           title="Address Line 1 must be between 5-100 characters">
+                                    <input type="text" name="address_line1" placeholder="Street address, P.O. box"
+                                        maxlength="100"
+                                        title="Address Line 1 must be between 5-100 characters">
                                 </div>
 
                                 <div class="form-group full-width">
                                     <label>Address Line 2</label>
-                                    <input type="text" name="address_line2" placeholder="Apartment, suite, unit, etc." 
-                                           maxlength="100" 
-                                           title="Address Line 2 must not exceed 100 characters">
+                                    <input type="text" name="address_line2" placeholder="Apartment, suite, unit, etc."
+                                        maxlength="100"
+                                        title="Address Line 2 must not exceed 100 characters">
                                 </div>
 
                                 <div class="form-group">
                                     <label>City <span class="required">*</span></label>
-                                    <input type="text" name="city" placeholder="City" 
-                                           maxlength="50" 
-                                           pattern="[A-Za-z\s\-']+" 
-                                           title="City must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
+                                    <input type="text" name="city" placeholder="City"
+                                        maxlength="50"
+                                        pattern="[A-Za-z\s\-']+"
+                                        title="City must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group">
                                     <label>State <span class="required">*</span></label>
-                                    <input type="text" name="state" placeholder="State/Province" 
-                                           maxlength="50" 
-                                           pattern="[A-Za-z\s\-']+" 
-                                           title="State must not exceed 50 characters and contain only letters, spaces, hyphens, and apostrophes">
+                                    <input type="text" name="state" placeholder="State/Province"
+                                        maxlength="50"
+                                        pattern="[A-Za-z\s\-']+"
+                                        title="State must not exceed 50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group">
                                     <label>Postal Code <span class="required">*</span></label>
-                                    <input type="text" name="postal_code" placeholder="Postal code" 
-                                           pattern="[0-9]{5}" maxlength="5" 
-                                           title="Please enter a 5-digit postal code">
+                                    <input type="text" name="postal_code" placeholder="Postal code"
+                                        pattern="[0-9]{5}" maxlength="5"
+                                        title="Please enter a 5-digit postal code">
                                 </div>
 
                                 <div class="form-group">
                                     <label>Country <span class="required">*</span></label>
-                                    <input type="text" name="country" placeholder="Country" value="Malaysia" 
-                                           minlength="2" maxlength="50" 
-                                           pattern="[A-Za-z\s\-']+" 
-                                           title="Country must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
+                                    <input type="text" name="country" placeholder="Country" value="Malaysia"
+                                        minlength="2" maxlength="50"
+                                        pattern="[A-Za-z\s\-']+"
+                                        title="Country must be 2-50 characters and contain only letters, spaces, hyphens, and apostrophes">
                                 </div>
 
                                 <div class="form-group full-width">
@@ -1022,9 +1024,9 @@ $final_total = $cart_total - $voucher_discount;
         function toggleAddressForm(e) {
             e.preventDefault();
             const form = document.getElementById('addressForm');
-            
+
             form.classList.toggle('active');
-            
+
             // Don't automatically add required attributes - only validate when saving
             // This prevents blocking the checkout process if user just types but doesn't save
         }
@@ -1074,14 +1076,14 @@ $final_total = $cart_total - $voucher_discount;
                         errorMessage = 'Address Line 1 must be between 5-100 characters';
                     }
                     break;
-                    
+
                 case 'address_line2':
                     if (value && value.length > 100) {
                         isValid = false;
                         errorMessage = 'Address Line 2 must not exceed 100 characters';
                     }
                     break;
-                    
+
                 case 'city':
                     if (value && (value.length < 2 || value.length > 50)) {
                         isValid = false;
@@ -1094,7 +1096,7 @@ $final_total = $cart_total - $voucher_discount;
                         errorMessage = 'City cannot contain numbers';
                     }
                     break;
-                    
+
                 case 'state':
                     if (value && value.length > 50) {
                         isValid = false;
@@ -1107,14 +1109,14 @@ $final_total = $cart_total - $voucher_discount;
                         errorMessage = 'State cannot contain numbers';
                     }
                     break;
-                    
+
                 case 'postal_code':
                     if (value && !/^[0-9]{5}$/.test(value)) {
                         isValid = false;
                         errorMessage = 'Postal code must be exactly 5 digits';
                     }
                     break;
-                    
+
                 case 'country':
                     if (value && (value.length < 2 || value.length > 50)) {
                         isValid = false;
@@ -1159,7 +1161,7 @@ $final_total = $cart_total - $voucher_discount;
         function showFieldErrors(errors) {
             // Clear all existing errors first
             document.querySelectorAll('.error-message').forEach(error => error.remove());
-            
+
             // Map error messages to fields and show them
             errors.forEach(error => {
                 if (error.includes('Address Line 1')) {
@@ -1187,18 +1189,18 @@ $final_total = $cart_total - $voucher_discount;
         // Prevent form submission conflicts and add validation
         document.addEventListener('submit', function(e) {
             console.log('Form submission detected:', e.target);
-            
+
             // Only prevent default for AJAX-handled forms when JS is working
             if (e.target.querySelector('button[name="add_address"]') || e.target.querySelector('button[name="apply_voucher"]')) {
                 console.log('AJAX form detected, allowing default behavior');
                 // These are handled by AJAX, don't prevent
                 return;
             }
-            
+
             // Validate main checkout form
             if (e.target.querySelector('button[name="place_order"]')) {
                 console.log('Checkout form submission detected');
-                
+
                 // Clear ALL address form inputs to prevent any validation blocking
                 const addressForm = document.getElementById('addressForm');
                 if (addressForm) {
@@ -1215,7 +1217,7 @@ $final_total = $cart_total - $voucher_discount;
                     });
                     console.log('Cleared all address form inputs and errors');
                 }
-                
+
                 // Check if user selected an existing address
                 const selectedAddress = document.querySelector('input[name="shipping_address_id"]:checked');
                 if (!selectedAddress) {
@@ -1247,7 +1249,7 @@ $final_total = $cart_total - $voucher_discount;
                                 return false;
                             }
                         });
-                        
+
                         // Handle paste events - strip out any numbers or invalid characters
                         input.addEventListener('paste', function(e) {
                             e.preventDefault();
@@ -1257,7 +1259,7 @@ $final_total = $cart_total - $voucher_discount;
                             // Trigger input event to clear any error styling
                             this.dispatchEvent(new Event('input'));
                         });
-                        
+
                         // Additional sanitization on input change
                         input.addEventListener('input', function(e) {
                             const originalValue = this.value;
@@ -1267,7 +1269,7 @@ $final_total = $cart_total - $voucher_discount;
                             }
                         });
                     }
-                    
+
                     // Strict number-only filtering for postal code
                     if (input.name === 'postal_code') {
                         // Prevent any non-numbers during typing
@@ -1279,7 +1281,7 @@ $final_total = $cart_total - $voucher_discount;
                                 return false;
                             }
                         });
-                        
+
                         // Handle paste events - only keep numbers
                         input.addEventListener('paste', function(e) {
                             e.preventDefault();
@@ -1289,7 +1291,7 @@ $final_total = $cart_total - $voucher_discount;
                             // Trigger input event to clear any error styling
                             this.dispatchEvent(new Event('input'));
                         });
-                        
+
                         // Additional sanitization on input change
                         input.addEventListener('input', function(e) {
                             const originalValue = this.value;
@@ -1299,11 +1301,11 @@ $final_total = $cart_total - $voucher_discount;
                             }
                         });
                     }
-                    
+
                     input.addEventListener('blur', function() {
                         validateField(this);
                     });
-                    
+
                     input.addEventListener('input', function() {
                         // Clear previous error styling when user starts typing
                         this.style.borderColor = '';
@@ -1313,7 +1315,7 @@ $final_total = $cart_total - $voucher_discount;
                         }
                     });
                 });
-                
+
                 // Add clear form functionality
                 const clearBtn = document.getElementById('clearAddressBtn');
                 if (clearBtn) {
@@ -1335,7 +1337,7 @@ $final_total = $cart_total - $voucher_discount;
                     });
                 }
             }
-            
+
             const voucherForm = document.querySelector('form[method="POST"]');
             const applyVoucherBtn = document.querySelector('button[name="apply_voucher"]');
 
@@ -1402,13 +1404,13 @@ $final_total = $cart_total - $voucher_discount;
 
                     // Validate all fields using the same logic as the validateField function
                     let validationErrors = [];
-                    
+
                     if (!addressLine1) {
                         validationErrors.push('Address Line 1 is required');
                     } else if (addressLine1.length < 5 || addressLine1.length > 100) {
                         validationErrors.push('Address Line 1 must be between 5-100 characters');
                     }
-                    
+
                     if (!city) {
                         validationErrors.push('City is required');
                     } else if (city.length < 2 || city.length > 50) {
@@ -1416,7 +1418,7 @@ $final_total = $cart_total - $voucher_discount;
                     } else if (!/^[A-Za-z\s\-']+$/.test(city) || /\d/.test(city)) {
                         validationErrors.push('City cannot contain numbers or special characters');
                     }
-                    
+
                     if (!country) {
                         validationErrors.push('Country is required');
                     } else if (country.length < 2 || country.length > 50) {
@@ -1424,19 +1426,19 @@ $final_total = $cart_total - $voucher_discount;
                     } else if (!/^[A-Za-z\s\-']+$/.test(country) || /\d/.test(country)) {
                         validationErrors.push('Country cannot contain numbers or special characters');
                     }
-                    
+
                     if (!state) {
                         validationErrors.push('State is required');
                     } else if (state.length > 50 || !/^[A-Za-z\s\-']+$/.test(state) || /\d/.test(state)) {
                         validationErrors.push('State cannot contain numbers or special characters');
                     }
-                    
+
                     if (!postalCode) {
                         validationErrors.push('Postal code is required');
                     } else if (!/^[0-9]{5}$/.test(postalCode)) {
                         validationErrors.push('Postal code must be exactly 5 digits');
                     }
-                    
+
                     if (addressLine2 && addressLine2.length > 100) {
                         validationErrors.push('Address Line 2 must not exceed 100 characters');
                     }
@@ -1646,7 +1648,7 @@ $final_total = $cart_total - $voucher_discount;
             }
         }
     </style>
-    
+
     <script>
         // Prevent browser back button after accessing checkout
         // This prevents users from going back after placing an order

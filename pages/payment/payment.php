@@ -2,6 +2,8 @@
 session_start();
 require '../../stripe-php-master/init.php'; // Stripe PHP SDK
 require '../../helper/pdo_connection.php';   // PDO connection
+require_once '../../helper/auth.php';
+redirect_if_admin();
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
@@ -74,7 +76,7 @@ try {
     if ($has_discount) {
         // If there's a discount, create a single line item with the final total
         // This ensures Stripe receives the exact discounted amount
-        
+
         // Create a descriptive name for the order
         $order_description = '';
         if (count($order_items) == 1) {
@@ -82,7 +84,7 @@ try {
         } else {
             $order_description = 'Order #' . $order_id . ' (' . count($order_items) . ' items, Voucher Applied)';
         }
-        
+
         $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
@@ -111,13 +113,13 @@ try {
                         $clean_path = substr($clean_path, 3);
                     }
                     $clean_path = ltrim($clean_path, '/');
-                    
+
                     // Split path into segments and encode each part to handle special characters
                     $path_parts = explode('/', $clean_path);
                     $encoded_parts = array_map('rawurlencode', $path_parts);
                     $encoded_path = implode('/', $encoded_parts);
                     $image_url = $domain . '/' . $encoded_path;
-                    
+
                     // Only add image if it looks like a valid URL
                     if (filter_var($image_url, FILTER_VALIDATE_URL)) {
                         $product_data['images'] = [$image_url];
@@ -142,7 +144,7 @@ try {
     // 3️⃣ Create Stripe Checkout Session
     $success_url = $domain . '/pages/payment/payment_success.php?session_id={CHECKOUT_SESSION_ID}&order_id=' . urlencode($order_id);
     $cancel_url = $domain . '/pages/payment/payment_cancel.php?order_id=' . urlencode($order_id);
-    
+
     $session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card', 'fpx', 'grabpay'],
         'line_items' => $line_items,
@@ -164,7 +166,7 @@ try {
     error_log("Stripe Payment Error: " . $e->getMessage());
     error_log("Order ID: " . $order_id);
     error_log("Line Items: " . print_r($line_items, true));
-    
+
     // Show user-friendly error
     die("Payment Error: " . $e->getMessage() . "<br><br><a href='../cart/cart.php'>Return to Cart</a>");
 }
