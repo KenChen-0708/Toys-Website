@@ -217,66 +217,80 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 <main class="main">
   <!--=============== ACCOUNTS ===============-->
   <section class="accounts section--lg">
-    <div class="accounts__container container grid">
-      <div class="account__tabs">
-        <p class="account__tab active-tab" data-target="#dashboard">
-          <i class="fi fi-rs-settings-sliders"></i> Dashboard
-        </p>
-        <p class="account__tab" data-target="#orders">
-          <i class="fi fi-rs-shopping-bag"></i> Orders
-        </p>
-        <p class="account__tab" data-target="#update-profile">
-          <i class="fi fi-rs-user"></i> Update Profile
-        </p>
-        <p class="account__tab" data-target="#address">
-          <i class="fi fi-rs-marker"></i> My Address
-        </p>
-        <p class="account__tab" data-target="#change-password">
-          <i class="fi fi-rs-settings-sliders"></i> Change Password
-        </p>
-      </div>
-
-      <div class="tabs__content">
-        <div class="tab__content active-tab" id="dashboard" content>
-          <div class="dashboard-profile-card">
-            <div class="account-summary-avatar">
-              <?php
-              $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
-              if ($hasPhoto):
-              ?>
-                <img src="<?= htmlspecialchars($member['profile_photo_path']) ?><?= $profilePhotoUpdated ? '?v=' . time() : '' ?>" alt="Profile photo" id="dashboardProfileImg">
-              <?php else: ?>
-                <span id="dashboardProfileIcon" style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
-                  <?php
-                  $initials = user_initials($member['username'] ?? '');
-                  echo htmlspecialchars($initials ?: 'U');
-                  ?>
-                </span>
-              <?php endif; ?>
+    <div class="accounts__container">
+      <!-- Left Column: Profile Sidebar (25%) -->
+      <aside class="profile-sidebar">
+        <div class="profile-sidebar__header">
+          <div class="profile-sidebar__photo" id="profilePhotoTrigger" style="cursor: pointer; position: relative;" title="Click to change profile photo">
+            <?php
+            $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+            if ($hasPhoto):
+            ?>
+              <img src="<?= htmlspecialchars($member['profile_photo_path']) ?><?= $profilePhotoUpdated ? '?v=' . time() : '' ?>" alt="Profile photo" id="sidebarProfileImg">
+            <?php else: ?>
+              <div class="profile-sidebar__photo-placeholder" id="sidebarProfileIcon">
+                <?php
+                $initials = user_initials($member['username'] ?? '');
+                echo htmlspecialchars($initials ?: 'U');
+                ?>
+              </div>
+            <?php endif; ?>
+            <!-- Camera icon badge - always visible -->
+            <div class="profile-photo-badge">
+              <i class="fi fi-rs-camera"></i>
             </div>
-            <div class="account-summary-info">
-              <p class="account-summary-name"><?= htmlspecialchars($member['username']) ?></p>
-              <p class="account-summary-email"><?= htmlspecialchars($member['email']) ?></p>
-              <p class="account-summary-meta">
-                Member since <?= htmlspecialchars(date('M Y', strtotime($member['register_date']))) ?>
-              </p>
+            <!-- Overlay text on hover -->
+            <div class="profile-photo-overlay">
+              <i class="fi fi-rs-camera"></i>
+              <span>Change Photo</span>
             </div>
           </div>
+          <h2 class="profile-sidebar__name"><?= htmlspecialchars($member['username']) ?></h2>
+          <p class="profile-sidebar__email"><?= htmlspecialchars($member['email']) ?></p>
+        </div>
+        
+        <nav class="profile-sidebar__menu">
+          <button class="profile-menu__item active" data-content="dashboard">
+            <i class="fi fi-rs-user"></i>
+            <span>Profile Info</span>
+          </button>
+          <button class="profile-menu__item" data-content="update-profile">
+            <i class="fi fi-rs-edit"></i>
+            <span>Update Profile</span>
+          </button>
+          <button class="profile-menu__item" data-content="orders">
+            <i class="fi fi-rs-shopping-bag"></i>
+            <span>Order Status</span>
+          </button>
+          <button class="profile-menu__item" data-content="change-password">
+            <i class="fi fi-rs-key"></i>
+            <span>Change Password</span>
+          </button>
+          <button class="profile-menu__item" data-content="address">
+            <i class="fi fi-rs-marker"></i>
+            <span>Addresses</span>
+          </button>
+        </nav>
+      </aside>
 
-          <div class="dashboard-header">
-            <div class="dashboard-greeting">
-              <h3 class="tab__header">Welcome back, <?= htmlspecialchars($member['username']) ?> 👋</h3>
-              <p class="tab__description">
-                Quickly see your recent activity, track your orders, and jump to common actions.
-              </p>
-            </div>
-            <div class="dashboard-meta">
-              <span>Member since <?= htmlspecialchars(date('d M Y', strtotime($member['register_date']))) ?></span>
-              <span class="dashboard-meta__points">Reward points: <?= $rewardPoints ?></span>
-            </div>
+      <!-- Right Column: Dynamic Content Panel (75%) -->
+      <div class="profile-content">
+        <div class="content-panel active" id="dashboard">
+
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">Welcome back, <?= htmlspecialchars($member['username']) ?> 👋</h3>
+            <p class="content-panel__description">
+              Quickly see your recent activity, track your orders, and jump to common actions.
+            </p>
+          </div>
+          
+          <div class="content-panel__meta">
+            <span>Member since <?= htmlspecialchars(date('d M Y', strtotime($member['register_date']))) ?></span>
+            <span class="content-panel__points">Reward points: <?= $rewardPoints ?></span>
           </div>
 
-          <div class="account-stats grid">
+          <div class="content-panel__body">
+            <div class="account-stats grid">
             <div class="account-stat-card stat-card--orders">
               <div class="stat-icon stat-icon--orders">
                 <i class="fi fi-rs-shopping-bag"></i>
@@ -373,14 +387,244 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
               </ul>
             </div>
           </div>
+          </div>
         </div>
 
-        <div class="tab__content" id="orders" content>
-          <h3 class="tab__header">Your Orders</h3>
-          <div class="tab__body">
-            <p class="tab__description" style="margin-bottom:1.5rem;">
+        <div class="content-panel" id="address">
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">Shipping Address</h3>
+            <p class="content-panel__description">
+              Manage your shipping addresses for faster checkout.
+            </p>
+          </div>
+          <div class="content-panel__body">
+            <?php if (!empty($member['address'])): ?>
+              <?php
+              // Count how many orders used this address
+              $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
+              $orderCountStmt->execute([$memberId]);
+              $orderCount = (int)$orderCountStmt->fetchColumn();
+
+              // Parse address for better display
+              $addrLines = preg_split('/[,\n]/', $member['address']);
+              $addrLines = array_map('trim', $addrLines);
+              $addrLines = array_filter($addrLines);
+              ?>
+
+              <div class="address-card">
+                <div class="address-card__header">
+                  <div class="address-card__title">
+                    <i class="fi fi-rs-marker"></i>
+                    <span>Default Shipping Address</span>
+                    <span class="address-badge address-badge--default">Default</span>
+                  </div>
+                  <div class="address-card__actions">
+                    <button type="button" class="btn btn--sm btn--outline" id="copyAddressBtn" title="Copy address">
+                      <i class="fi fi-rs-copy"></i> Copy
+                    </button>
+                    <a href="#update-profile" class="btn btn--sm btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
+                      <i class="fi fi-rs-edit"></i> Edit
+                    </a>
+                  </div>
+                </div>
+
+                <div class="address-card__body">
+                  <div class="address-display">
+                    <?php foreach ($addrLines as $line): ?>
+                      <div class="address-line"><?= htmlspecialchars($line) ?></div>
+                    <?php endforeach; ?>
+                  </div>
+
+                  <div class="address-info">
+                    <div class="address-info__item">
+                      <i class="fi fi-rs-shopping-bag"></i>
+                      <span>Used in <strong><?= $orderCount ?></strong> order<?= $orderCount !== 1 ? 's' : '' ?></span>
+                    </div>
+                    <?php if (!empty($member['phone_number'])): ?>
+                      <div class="address-info__item">
+                        <i class="fi fi-rs-phone-call"></i>
+                        <span>Contact: <strong><?= htmlspecialchars($member['phone_number']) ?></strong></span>
+                      </div>
+                    <?php endif; ?>
+                  </div>
+
+                  <div class="address-actions">
+                    <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($member['address']) ?>"
+                      target="_blank"
+                      class="btn btn--sm btn--outline"
+                      title="View on Google Maps">
+                      <i class="fi fi-rs-map-marker"></i> View on Map
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="address-hint">
+                <p>
+                  <i class="fi fi-rs-info"></i>
+                  This address will be used as the default shipping address for all your orders. You can update it anytime in the "Update Profile" section.
+                </p>
+              </div>
+            <?php else: ?>
+              <div class="address-empty">
+                <div class="address-empty__icon">
+                  <i class="fi fi-rs-marker"></i>
+                </div>
+                <h4 class="address-empty__title">No Address Added</h4>
+                <p class="address-empty__description">
+                  Add a shipping address to make checkout faster and ensure your orders are delivered to the right place.
+                </p>
+                <a href="#update-profile" class="btn btn--md btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
+                  <i class="fi fi-rs-plus"></i> Add Address
+                </a>
+              </div>
+            <?php endif; ?>
+          </div>
+        </div>
+
+        <div class="content-panel" id="change-password">
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">Change Password</h3>
+            <p class="content-panel__description">
+              Update your password to keep your account secure.
+            </p>
+          </div>
+          <div class="content-panel__body">
+            <?php if ($passwordErrors): ?>
+              <div class="alert alert--danger" role="alert" style="margin-bottom:1rem;">
+                <?php foreach ($passwordErrors as $e): ?>
+                  <div><?= htmlspecialchars($e) ?></div>
+                <?php endforeach; ?>
+              </div>
+            <?php elseif ($passwordSuccess): ?>
+              <div class="alert alert--success" role="alert" style="margin-bottom:1rem;">
+                <?= htmlspecialchars($passwordSuccess) ?>
+              </div>
+            <?php endif; ?>
+
+            <div class="password-change-card">
+              <div class="password-change-info">
+                <i class="fi fi-rs-shield-check"></i>
+                <div>
+                  <h4>Secure Your Account</h4>
+                  <p>Use a strong password to protect your account. Make sure it's unique and not used elsewhere.</p>
+                </div>
+              </div>
+
+              <form class="password-change-form" method="POST" action="/pages/auth/password_update_post.php" novalidate id="passwordChangeForm">
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+
+                <div class="password-field-group">
+                  <label class="password-label">
+                    <span>Current Password <span class="required">*</span></span>
+                    <div class="password-input-wrapper">
+                      <input
+                        type="password"
+                        name="current_password"
+                        id="current_password"
+                        placeholder="Enter your current password"
+                        class="form__input password-input"
+                        required
+                        autocomplete="current-password" />
+                      <button type="button" class="password-toggle" data-target="current_password" title="Show/Hide password">
+                        <i class="fi fi-rs-eye"></i>
+                      </button>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="password-field-group">
+                  <label class="password-label">
+                    <span>New Password <span class="required">*</span></span>
+                    <div class="password-input-wrapper">
+                      <input
+                        type="password"
+                        name="new_password"
+                        id="new_password"
+                        placeholder="Enter your new password"
+                        class="form__input password-input"
+                        required
+                        autocomplete="new-password"
+                        minlength="8" />
+                      <button type="button" class="password-toggle" data-target="new_password" title="Show/Hide password">
+                        <i class="fi fi-rs-eye"></i>
+                      </button>
+                    </div>
+                    <div class="password-strength" id="passwordStrength">
+                      <div class="password-strength-bar">
+                        <div class="password-strength-fill" id="passwordStrengthFill"></div>
+                      </div>
+                      <div class="password-strength-text" id="passwordStrengthText">Password strength</div>
+                    </div>
+                    <div class="password-requirements" id="passwordRequirements">
+                      <div class="password-req-item" data-requirement="length">
+                        <i class="fi fi-rs-cross-small req-icon"></i>
+                        <span>At least 8 characters</span>
+                      </div>
+                      <div class="password-req-item" data-requirement="uppercase">
+                        <i class="fi fi-rs-cross-small req-icon"></i>
+                        <span>One uppercase letter</span>
+                      </div>
+                      <div class="password-req-item" data-requirement="lowercase">
+                        <i class="fi fi-rs-cross-small req-icon"></i>
+                        <span>One lowercase letter</span>
+                      </div>
+                      <div class="password-req-item" data-requirement="number">
+                        <i class="fi fi-rs-cross-small req-icon"></i>
+                        <span>One number</span>
+                      </div>
+                      <div class="password-req-item" data-requirement="special">
+                        <i class="fi fi-rs-cross-small req-icon"></i>
+                        <span>One special character (@$!%*#?&^_-)</span>
+                      </div>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="password-field-group">
+                  <label class="password-label">
+                    <span>Confirm New Password <span class="required">*</span></span>
+                    <div class="password-input-wrapper">
+                      <input
+                        type="password"
+                        name="new_password_confirm"
+                        id="new_password_confirm"
+                        placeholder="Re-enter your new password"
+                        class="form__input password-input"
+                        required
+                        autocomplete="new-password" />
+                      <button type="button" class="password-toggle" data-target="new_password_confirm" title="Show/Hide password">
+                        <i class="fi fi-rs-eye"></i>
+                      </button>
+                    </div>
+                    <div class="password-match" id="passwordMatch">
+                      <i class="fi fi-rs-check"></i>
+                      <span>Passwords match</span>
+                    </div>
+                  </label>
+                </div>
+
+                <div class="password-change-actions">
+                  <button class="btn btn--md btn--primary" type="submit">
+                    <i class="fi fi-rs-check"></i> Update Password
+                  </button>
+                  <button type="button" class="btn btn--md btn--outline" id="clearPasswordForm">
+                    <i class="fi fi-rs-refresh"></i> Clear
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-panel" id="orders">
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">Your Orders</h3>
+            <p class="content-panel__description">
               View and manage all your orders. Track your purchases, check order status, and view order details.
             </p>
+          </div>
+          <div class="content-panel__body">
             <div style="text-align: center; padding: 3rem 2rem;">
               <div style="margin-bottom: 1.5rem;">
                 <i class="fi fi-rs-shopping-bag" style="font-size: 4rem; color: var(--first-color); opacity: 0.6;"></i>
@@ -397,8 +641,39 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
           </div>
         </div>
 
-        <div class="tab__content" id="update-profile" content>
-          <div class="tab__body">
+        <div class="content-panel" id="wishlist">
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">My Wishlist</h3>
+            <p class="content-panel__description">
+              View and manage your saved wishlist items.
+            </p>
+          </div>
+          <div class="content-panel__body">
+            <div style="text-align: center; padding: 3rem 2rem;">
+              <div style="margin-bottom: 1.5rem;">
+                <i class="fi fi-rs-heart" style="font-size: 4rem; color: var(--first-color); opacity: 0.6;"></i>
+              </div>
+              <h4 style="margin-bottom: 1rem; color: var(--title-color);">View Your Wishlist</h4>
+              <p style="margin-bottom: 2rem; color: var(--text-color); max-width: 500px; margin-left: auto; margin-right: auto;">
+                You have <?= $stats['wishlist_items'] ?> item<?= $stats['wishlist_items'] !== 1 ? 's' : '' ?> in your wishlist.
+              </p>
+              <a href="/pages/wishlist/wishlist.php" class="btn btn--md btn--primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                <i class="fi fi-rs-heart"></i>
+                Go to Wishlist Page
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Update Profile Content -->
+        <div class="content-panel" id="update-profile">
+          <div class="content-panel__header">
+            <h3 class="content-panel__title">Update Profile</h3>
+            <p class="content-panel__description">
+              Update your personal information and contact details.
+            </p>
+          </div>
+          <div class="content-panel__body">
             <?php if ($profileErrors): ?>
               <div class="alert alert--danger" role="alert" style="margin-bottom:1rem;">
                 <?php foreach ($profileErrors as $e): ?>
@@ -411,109 +686,8 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
               </div>
             <?php endif; ?>
 
-            <!-- Profile Photo Section (Separate Form) -->
+            <!-- Profile Information Section -->
             <div class="profile-edit-card">
-              <form class="profile-photo-form" method="POST" action="/pages/profile/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                <div class="profile-section">
-                  <h4 class="profile-section__title">Profile Photo</h4>
-                  <div class="profile-edit-photo-row">
-                    <div class="profile-photo-wrapper">
-                      <div class="profile-photo-current" id="profilePhotoCurrent">
-                        <?php
-                        $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
-                        if ($hasPhoto):
-                        ?>
-                          <img src="<?= htmlspecialchars($member['profile_photo_path']) ?>" alt="Profile photo" id="currentProfileImg">
-                        <?php else: ?>
-                          <div class="profile-edit-avatar" id="defaultProfileAvatar">
-                            <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
-                              <?php
-                              $initials = user_initials($member['username'] ?? '');
-                              echo htmlspecialchars($initials ?: 'U');
-                              ?>
-                            </span>
-                          </div>
-                        <?php endif; ?>
-                        <img id="photoPreview" class="photo-preview" alt="" style="display:none;">
-                        <video id="webcamVideo" autoplay playsinline style="display:none;"></video>
-                        <button type="button" id="removePreviewBtn" class="photo-preview-remove" title="Remove image" style="display:none;">
-                          <i class="fi fi-rs-cross"></i>
-                        </button>
-                        <div class="webcam-controls" id="webcamControls" style="display:none;">
-                          <button type="button" id="captureWebcamBtn" class="webcam-capture-btn" title="Capture photo">
-                            <i class="fi fi-rs-camera"></i>
-                          </button>
-                          <button type="button" id="closeWebcamBtn" class="webcam-close-btn" title="Close webcam">
-                            <i class="fi fi-rs-cross"></i>
-                          </button>
-                        </div>
-                      </div>
-
-                      <div class="photo-upload-options">
-                        <div id="photoDropZone" class="photo-dropzone">
-                          <p class="photo-dropzone__text">
-                            Drag &amp; drop an image here, or <span class="photo-dropzone__browse">browse</span>
-                          </p>
-                          <input
-                            type="file"
-                            name="profile_photo"
-                            id="profilePhotoInput"
-                            accept="image/*"
-                            style="display:none" />
-                        </div>
-
-                        <div id="photoEditControls" class="photo-edit-controls" style="display:none;">
-                          <div class="photo-edit-controls__title">Image Processing</div>
-                          <div class="photo-edit-controls__buttons">
-                            <button type="button" id="rotateLeftBtn" class="photo-edit-btn" title="Rotate Left">
-                              <i class="fi fi-rs-rotate-left"></i>
-                              <span>Rotate Left</span>
-                            </button>
-                            <button type="button" id="rotateRightBtn" class="photo-edit-btn" title="Rotate Right">
-                              <i class="fi fi-rs-rotate-right"></i>
-                              <span>Rotate Right</span>
-                            </button>
-                            <button type="button" id="flipHorizontalBtn" class="photo-edit-btn" title="Flip Horizontal">
-                              <i class="fi fi-rs-arrows-horizontal"></i>
-                              <span>Flip H</span>
-                            </button>
-                            <button type="button" id="flipVerticalBtn" class="photo-edit-btn" title="Flip Vertical">
-                              <i class="fi fi-rs-arrows-vertical"></i>
-                              <span>Flip V</span>
-                            </button>
-                            <button type="button" id="resetImageBtn" class="photo-edit-btn photo-edit-btn--reset" title="Reset">
-                              <i class="fi fi-rs-refresh"></i>
-                              <span>Reset</span>
-                            </button>
-                          </div>
-                        </div>
-
-                        <div class="photo-or">or</div>
-
-                        <div class="photo-webcam">
-                          <button type="button" id="openWebcamBtn" class="btn btn--sm">Use webcam</button>
-                          <canvas id="webcamCanvas" style="display:none;"></canvas>
-                        </div>
-                      </div>
-                    </div>
-                    <input type="hidden" name="capture_data" id="captureData">
-                    <p class="profile-photo-hint">
-                      Optional. JPG, PNG or WEBP. Max 2MB. You can upload a file or capture with your webcam.
-                    </p>
-                  </div>
-                </div>
-                <!-- Action Button for Photo -->
-                <div class="profile-edit-actions">
-                  <button class="btn btn--md btn--primary" type="submit">
-                    <i class="fi fi-rs-check"></i> Save Photo
-                  </button>
-                </div>
-              </form>
-            </div>
-
-            <!-- Profile Information Section (Separate Form) -->
-            <div class="profile-edit-card" style="margin-top: 2rem;">
               <form class="profile-edit-form" method="POST" action="/pages/profile/profile_update_post.php" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
@@ -649,228 +823,116 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
             </div>
           </div>
         </div>
-
-        <div class="tab__content" id="address" content>
-          <h3 class="tab__header">Shipping Address</h3>
-          <div class="tab__body">
-            <?php if (!empty($member['address'])): ?>
-              <?php
-              // Count how many orders used this address
-              $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
-              $orderCountStmt->execute([$memberId]);
-              $orderCount = (int)$orderCountStmt->fetchColumn();
-
-              // Parse address for better display
-              $addrLines = preg_split('/[,\n]/', $member['address']);
-              $addrLines = array_map('trim', $addrLines);
-              $addrLines = array_filter($addrLines);
-              ?>
-
-              <div class="address-card">
-                <div class="address-card__header">
-                  <div class="address-card__title">
-                    <i class="fi fi-rs-marker"></i>
-                    <span>Default Shipping Address</span>
-                    <span class="address-badge address-badge--default">Default</span>
-                  </div>
-                  <div class="address-card__actions">
-                    <button type="button" class="btn btn--sm btn--outline" id="copyAddressBtn" title="Copy address">
-                      <i class="fi fi-rs-copy"></i> Copy
-                    </button>
-                    <a href="#update-profile" class="btn btn--sm btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
-                      <i class="fi fi-rs-edit"></i> Edit
-                    </a>
-                  </div>
-                </div>
-
-                <div class="address-card__body">
-                  <div class="address-display">
-                    <?php foreach ($addrLines as $line): ?>
-                      <div class="address-line"><?= htmlspecialchars($line) ?></div>
-                    <?php endforeach; ?>
-                  </div>
-
-                  <div class="address-info">
-                    <div class="address-info__item">
-                      <i class="fi fi-rs-shopping-bag"></i>
-                      <span>Used in <strong><?= $orderCount ?></strong> order<?= $orderCount !== 1 ? 's' : '' ?></span>
-                    </div>
-                    <?php if (!empty($member['phone_number'])): ?>
-                      <div class="address-info__item">
-                        <i class="fi fi-rs-phone-call"></i>
-                        <span>Contact: <strong><?= htmlspecialchars($member['phone_number']) ?></strong></span>
-                      </div>
-                    <?php endif; ?>
-                  </div>
-
-                  <div class="address-actions">
-                    <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($member['address']) ?>"
-                      target="_blank"
-                      class="btn btn--sm btn--outline"
-                      title="View on Google Maps">
-                      <i class="fi fi-rs-map-marker"></i> View on Map
-                    </a>
-                  </div>
-                </div>
-              </div>
-
-              <div class="address-hint">
-                <p>
-                  <i class="fi fi-rs-info"></i>
-                  This address will be used as the default shipping address for all your orders. You can update it anytime in the "Update Profile" section.
-                </p>
-              </div>
-            <?php else: ?>
-              <div class="address-empty">
-                <div class="address-empty__icon">
-                  <i class="fi fi-rs-marker"></i>
-                </div>
-                <h4 class="address-empty__title">No Address Added</h4>
-                <p class="address-empty__description">
-                  Add a shipping address to make checkout faster and ensure your orders are delivered to the right place.
-                </p>
-                <a href="#update-profile" class="btn btn--md btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
-                  <i class="fi fi-rs-plus"></i> Add Address
-                </a>
-              </div>
-            <?php endif; ?>
-          </div>
-        </div>
-
-        <div class="tab__content" id="change-password" content>
-          <h3 class="tab__header">Change Password</h3>
-          <div class="tab__body">
-            <?php if ($passwordErrors): ?>
-              <div class="alert alert--danger" role="alert" style="margin-bottom:1rem;">
-                <?php foreach ($passwordErrors as $e): ?>
-                  <div><?= htmlspecialchars($e) ?></div>
-                <?php endforeach; ?>
-              </div>
-            <?php elseif ($passwordSuccess): ?>
-              <div class="alert alert--success" role="alert" style="margin-bottom:1rem;">
-                <?= htmlspecialchars($passwordSuccess) ?>
-              </div>
-            <?php endif; ?>
-
-            <div class="password-change-card">
-              <div class="password-change-info">
-                <i class="fi fi-rs-shield-check"></i>
-                <div>
-                  <h4>Secure Your Account</h4>
-                  <p>Use a strong password to protect your account. Make sure it's unique and not used elsewhere.</p>
-                </div>
-              </div>
-
-              <form class="password-change-form" method="POST" action="/pages/auth/password_update_post.php" novalidate id="passwordChangeForm">
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-
-                <div class="password-field-group">
-                  <label class="password-label">
-                    <span>Current Password <span class="required">*</span></span>
-                    <div class="password-input-wrapper">
-                      <input
-                        type="password"
-                        name="current_password"
-                        id="current_password"
-                        placeholder="Enter your current password"
-                        class="form__input password-input"
-                        required
-                        autocomplete="current-password" />
-                      <button type="button" class="password-toggle" data-target="current_password" title="Show/Hide password">
-                        <i class="fi fi-rs-eye"></i>
-                      </button>
-                    </div>
-                  </label>
-                </div>
-
-                <div class="password-field-group">
-                  <label class="password-label">
-                    <span>New Password <span class="required">*</span></span>
-                    <div class="password-input-wrapper">
-                      <input
-                        type="password"
-                        name="new_password"
-                        id="new_password"
-                        placeholder="Enter your new password"
-                        class="form__input password-input"
-                        required
-                        autocomplete="new-password"
-                        minlength="8" />
-                      <button type="button" class="password-toggle" data-target="new_password" title="Show/Hide password">
-                        <i class="fi fi-rs-eye"></i>
-                      </button>
-                    </div>
-                    <div class="password-strength" id="passwordStrength">
-                      <div class="password-strength-bar">
-                        <div class="password-strength-fill" id="passwordStrengthFill"></div>
-                      </div>
-                      <div class="password-strength-text" id="passwordStrengthText">Password strength</div>
-                    </div>
-                    <div class="password-requirements" id="passwordRequirements">
-                      <div class="password-req-item" data-requirement="length">
-                        <i class="fi fi-rs-cross-small req-icon"></i>
-                        <span>At least 8 characters</span>
-                      </div>
-                      <div class="password-req-item" data-requirement="uppercase">
-                        <i class="fi fi-rs-cross-small req-icon"></i>
-                        <span>One uppercase letter</span>
-                      </div>
-                      <div class="password-req-item" data-requirement="lowercase">
-                        <i class="fi fi-rs-cross-small req-icon"></i>
-                        <span>One lowercase letter</span>
-                      </div>
-                      <div class="password-req-item" data-requirement="number">
-                        <i class="fi fi-rs-cross-small req-icon"></i>
-                        <span>One number</span>
-                      </div>
-                      <div class="password-req-item" data-requirement="special">
-                        <i class="fi fi-rs-cross-small req-icon"></i>
-                        <span>One special character (@$!%*#?&^_-)</span>
-                      </div>
-                    </div>
-                  </label>
-                </div>
-
-                <div class="password-field-group">
-                  <label class="password-label">
-                    <span>Confirm New Password <span class="required">*</span></span>
-                    <div class="password-input-wrapper">
-                      <input
-                        type="password"
-                        name="new_password_confirm"
-                        id="new_password_confirm"
-                        placeholder="Re-enter your new password"
-                        class="form__input password-input"
-                        required
-                        autocomplete="new-password" />
-                      <button type="button" class="password-toggle" data-target="new_password_confirm" title="Show/Hide password">
-                        <i class="fi fi-rs-eye"></i>
-                      </button>
-                    </div>
-                    <div class="password-match" id="passwordMatch">
-                      <i class="fi fi-rs-check"></i>
-                      <span>Passwords match</span>
-                    </div>
-                  </label>
-                </div>
-
-                <div class="password-change-actions">
-                  <button class="btn btn--md btn--primary" type="submit">
-                    <i class="fi fi-rs-check"></i> Update Password
-                  </button>
-                  <button type="button" class="btn btn--md btn--outline" id="clearPasswordForm">
-                    <i class="fi fi-rs-refresh"></i> Clear
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </section>
 </main>
+
+<!-- Profile Photo Change Modal -->
+<div class="profile-photo-modal" id="profilePhotoModal">
+  <div class="profile-photo-modal__content">
+    <button class="profile-photo-modal__close" id="closePhotoModal">
+      <i class="fi fi-rs-cross"></i>
+    </button>
+    <h3 class="profile-photo-modal__title">Change Profile Photo</h3>
+    
+    <form class="profile-photo-form" method="POST" action="/pages/profile/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <div class="profile-section">
+        <div class="profile-edit-photo-row">
+          <div class="profile-photo-wrapper">
+            <!-- Current/Preview Photo Display -->
+            <div class="profile-photo-current" id="modalProfilePhotoCurrent" style="position: relative; width: 140px; height: 140px; margin: 0 auto 2rem;">
+              <?php
+              $hasPhoto = !empty($member['profile_photo_path']) && file_exists(__DIR__ . $member['profile_photo_path']);
+              if ($hasPhoto):
+              ?>
+                <img src="<?= htmlspecialchars($member['profile_photo_path']) ?>" alt="Profile photo" id="modalCurrentProfileImg" style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover;">
+              <?php else: ?>
+                <div class="profile-edit-avatar" id="modalDefaultProfileAvatar" style="width: 100%; height: 100%; border-radius: 50%;">
+                  <span style="display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; font-size: 2.25rem; font-weight: 700; color: #fff; line-height: 1;">
+                    <?php
+                    $initials = user_initials($member['username'] ?? '');
+                    echo htmlspecialchars($initials ?: 'U');
+                    ?>
+                  </span>
+                </div>
+              <?php endif; ?>
+              <img id="modalPhotoPreview" class="photo-preview" alt="" style="display:none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; z-index: 2;">
+              <video id="modalWebcamVideo" autoplay playsinline style="display:none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; z-index: 1;"></video>
+              <button type="button" id="modalRemovePreviewBtn" class="photo-preview-remove" title="Remove image" style="display:none; position: absolute; top: -8px; right: -8px; z-index: 10;">
+                <i class="fi fi-rs-cross"></i>
+              </button>
+              <div class="webcam-controls" id="modalWebcamControls" style="display:none; position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%); z-index: 10;">
+                <button type="button" id="modalCaptureWebcamBtn" class="webcam-capture-btn" title="Capture photo">
+                  <i class="fi fi-rs-camera"></i>
+                  <span>Capture</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Upload Options - Image Processing above Dropzone -->
+            <div class="photo-upload-options">
+              <div id="modalPhotoEditControls" class="photo-edit-controls" style="display:none;">
+                <div class="photo-edit-controls__buttons">
+                  <button type="button" id="modalRotateLeftBtn" class="photo-edit-btn" title="Rotate Left">
+                    <i class="fi fi-rs-rotate-left"></i>
+                    <span>Rotate Left</span>
+                  </button>
+                  <button type="button" id="modalRotateRightBtn" class="photo-edit-btn" title="Rotate Right">
+                    <i class="fi fi-rs-rotate-right"></i>
+                    <span>Rotate Right</span>
+                  </button>
+                  <button type="button" id="modalFlipHorizontalBtn" class="photo-edit-btn" title="Flip Horizontal">
+                    <i class="fi fi-rs-arrows-horizontal"></i>
+                    <span>Flip H</span>
+                  </button>
+                  <button type="button" id="modalFlipVerticalBtn" class="photo-edit-btn" title="Flip Vertical">
+                    <i class="fi fi-rs-arrows-vertical"></i>
+                    <span>Flip V</span>
+                  </button>
+                  <button type="button" id="modalResetImageBtn" class="photo-edit-btn photo-edit-btn--reset" title="Reset">
+                    <i class="fi fi-rs-refresh"></i>
+                    <span>Reset</span>
+                  </button>
+                </div>
+              </div>
+
+              <div id="modalPhotoDropZone" class="photo-dropzone">
+                <p class="photo-dropzone__text">
+                  <strong>Drag & drop</strong> an image here<br>
+                  or <span class="photo-dropzone__browse">click to browse</span>
+                </p>
+                <input
+                  type="file"
+                  name="profile_photo"
+                  id="modalProfilePhotoInput"
+                  accept="image/*"
+                  style="display:none" />
+              </div>
+            </div>
+          </div>
+          <input type="hidden" name="capture_data" id="modalCaptureData">
+          <p class="profile-photo-hint">
+            <i class="fi fi-rs-info"></i> JPG, PNG or WEBP. Max 2MB. Use webcam or upload a file.
+          </p>
+        </div>
+      </div>
+      <!-- Action Button for Photo -->
+      <div class="profile-edit-actions">
+        <button class="btn btn--md btn--primary" type="submit">
+          <i class="fi fi-rs-check"></i> Save Photo
+        </button>
+        <button type="button" class="btn btn--md btn--outline" id="cancelPhotoModal">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <?php include_once __DIR__ . '/partials/footer.php'; ?>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
   // Cities by state mapping for JavaScript
   const citiesByState = <?= json_encode($citiesByState, JSON_UNESCAPED_UNICODE) ?>;
