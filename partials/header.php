@@ -35,7 +35,7 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
   <header class="header">
     <nav class="nav container">
       <a href="/index.php" class="nav__logo">
-        <img class="nav__logo-img" src="/assets/img/logo.png" alt="website logo" />
+        <img class="nav__logo-img" src="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? '/assets/img/logo_dark_theme.png' : '/assets/img/logo.png'; ?>" alt="website logo" />
       </a>
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
