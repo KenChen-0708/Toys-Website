@@ -145,6 +145,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_voucher'])) {
                             $voucher_discount = $voucher['max_discount'];
                         }
                     }
+                    
+                    // Ensure discount doesn't exceed cart total
+                    if ($voucher_discount > $cart_total) {
+                        $voucher_discount = $cart_total;
+                    }
+                    
                     $voucher_applied = true;
                     $success_message = "Voucher applied successfully! You saved RM" . number_format($voucher_discount, 2);
                 }
@@ -306,11 +312,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                             $final_discount = $voucher['max_discount'];
                         }
                     }
+                    
+                    // Ensure discount doesn't exceed cart total
+                    if ($final_discount > $cart_total) {
+                        $final_discount = $cart_total;
+                    }
+                    
                     $voucher_data = $voucher;
                 }
             }
 
-            $final_amount = $cart_total - $final_discount;
+            // Calculate shipping fee
+            $shipping_fee = 5.00; // Default shipping fee RM5
+            $free_shipping_threshold = 15.00; // Free shipping for orders over RM15
+
+            // Apply free shipping if cart total (before discount) meets threshold
+            if ($cart_total >= $free_shipping_threshold) {
+                $shipping_fee = 0.00;
+            }
+
+            $final_amount = $cart_total - $final_discount + $shipping_fee;
+            
+            // Ensure final amount is never negative (minimum should be shipping fee if applicable)
+            if ($final_amount < 0) {
+                $final_amount = $shipping_fee;
+                // Adjust discount to prevent negative total
+                $final_discount = $cart_total;
+            }
 
             // Store checkout data in session for payment processing
             $_SESSION['checkout_data'] = [
@@ -321,6 +349,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 'voucher_data' => $voucher_data,
                 'voucher_code' => $voucher_code,
                 'cart_total' => $cart_total,
+                'shipping_fee' => $shipping_fee,
                 'final_discount' => $final_discount,
                 'final_amount' => $final_amount,
                 'checkout_timestamp' => time()
@@ -335,7 +364,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     }
 }
 
-$final_total = $cart_total - $voucher_discount;
+// Calculate shipping fee
+$shipping_fee = 5.00; // Default shipping fee RM5
+$free_shipping_threshold = 15.00; // Free shipping for orders over RM15
+
+// Apply free shipping if cart total (before discount) meets threshold
+if ($cart_total >= $free_shipping_threshold) {
+    $shipping_fee = 0.00;
+}
+
+$final_total = $cart_total - $voucher_discount + $shipping_fee;
+
+// Ensure final total is never negative (minimum should be shipping fee if applicable)
+if ($final_total < 0) {
+    $final_total = $shipping_fee;
+    // Adjust discount to prevent negative total
+    $voucher_discount = $cart_total;
+}
 ?>
 
 <!DOCTYPE html>
@@ -952,6 +997,24 @@ $final_total = $cart_total - $voucher_discount;
                                 <span>RM<?php echo number_format($cart_total, 2); ?></span>
                             </div>
 
+                            <div class="price-row">
+                                <span>Shipping</span>
+                                <span>
+                                    <?php if ($shipping_fee > 0): ?>
+                                        RM<?php echo number_format($shipping_fee, 2); ?>
+                                    <?php else: ?>
+                                        <span style="color: #28a745; font-weight: 600;">FREE</span>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+
+                            <?php if ($cart_total < $free_shipping_threshold && $shipping_fee > 0): ?>
+                                <div class="price-row" style="font-size: 12px; color: #666; font-style: italic;">
+                                    <span>Free shipping on orders over RM<?php echo number_format($free_shipping_threshold, 2); ?></span>
+                                    <span>Add RM<?php echo number_format($free_shipping_threshold - $cart_total, 2); ?> more</span>
+                                </div>
+                            <?php endif; ?>
+
                             <?php if ($voucher_applied): ?>
                                 <div class="price-row discount">
                                     <span>Discount</span>
@@ -1486,28 +1549,62 @@ $final_total = $cart_total - $voucher_discount;
 
         function updatePriceSummary(cartTotal, voucherDiscount, finalTotal, voucherCode) {
             const priceSummary = document.querySelector('.price-summary');
+            
+            // Calculate shipping fee
+            const freeShippingThreshold = 15.00;
+            const defaultShippingFee = 5.00;
+            const shippingFee = cartTotal >= freeShippingThreshold ? 0 : defaultShippingFee;
 
             let html = `
                 <div class="price-row">
                     <span>Subtotal</span>
                     <span>RM${parseFloat(cartTotal).toFixed(2)}</span>
                 </div>
+                <div class="price-row">
+                    <span>Shipping</span>
+                    <span>${shippingFee > 0 ? 'RM' + shippingFee.toFixed(2) : '<span style="color: #28a745; font-weight: 600;">FREE</span>'}</span>
+                </div>
             `;
 
-            if (voucherDiscount > 0) {
+            // Show free shipping message if applicable
+            if (cartTotal < freeShippingThreshold && shippingFee > 0) {
+                const amountNeeded = freeShippingThreshold - cartTotal;
+                html += `
+                    <div class="price-row" style="font-size: 12px; color: #666; font-style: italic;">
+                        <span>Free shipping on orders over RM${freeShippingThreshold.toFixed(2)}</span>
+                        <span>Add RM${amountNeeded.toFixed(2)} more</span>
+                    </div>
+                `;
+            }
+
+            // Ensure discount doesn't exceed cart total
+            let adjustedVoucherDiscount = voucherDiscount;
+            if (adjustedVoucherDiscount > cartTotal) {
+                adjustedVoucherDiscount = cartTotal;
+            }
+
+            if (adjustedVoucherDiscount > 0) {
                 html += `
                     <div class="price-row discount">
                         <span>Discount</span>
-                        <span>-RM${parseFloat(voucherDiscount).toFixed(2)}</span>
+                        <span>-RM${parseFloat(adjustedVoucherDiscount).toFixed(2)}</span>
                     </div>
                     <input type="hidden" name="voucher_code_hidden" value="${voucherCode}">
                 `;
             }
 
+            // Recalculate final total with shipping and prevent negative values
+            let calculatedTotal = cartTotal + shippingFee - adjustedVoucherDiscount;
+            
+            // Ensure final total is never negative (minimum should be shipping fee if applicable)
+            if (calculatedTotal < 0) {
+                calculatedTotal = shippingFee;
+            }
+
             html += `
                 <div class="price-row total">
                     <span>Total</span>
-                    <span>RM${parseFloat(finalTotal).toFixed(2)}</span>
+                    <span>RM${calculatedTotal.toFixed(2)}</span>
                 </div>
             `;
 

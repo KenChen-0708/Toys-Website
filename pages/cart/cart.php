@@ -819,36 +819,75 @@ foreach ($cart_items as $item) {
       function updateTotals() {
         let total = 0;
         $('.cart-item').each(function() {
-          const subtotal = parseFloat($(this).find('.subtotal-value').text().replace(/,/g, ''));
-          total += subtotal;
+          const subtotalText = $(this).find('.subtotal-value').text().replace(/,/g, '');
+          const subtotal = parseFloat(subtotalText);
+          // Only add to total if it's a valid number
+          if (!isNaN(subtotal) && isFinite(subtotal)) {
+            total += subtotal;
+          }
         });
+
+        // Ensure total is always a valid number
+        if (isNaN(total) || !isFinite(total)) {
+          total = 0;
+        }
 
         $('#cart-subtotal').text('RM ' + total.toFixed(2));
         $('#cart-total').text('RM ' + total.toFixed(2));
       }
+
+      // Prevent non-numeric input in quantity fields
+      $(document).on('keypress', '.quantity-input', function(e) {
+        // Allow: backspace, delete, tab, escape, enter
+        if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+            // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+            (e.keyCode === 65 && e.ctrlKey === true) ||
+            (e.keyCode === 67 && e.ctrlKey === true) ||
+            (e.keyCode === 86 && e.ctrlKey === true) ||
+            (e.keyCode === 88 && e.ctrlKey === true)) {
+          return;
+        }
+        // Ensure that it is a number and stop the keypress
+        if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+          e.preventDefault();
+        }
+      });
+
+      // Handle paste events to prevent invalid data
+      $(document).on('paste', '.quantity-input', function(e) {
+        const $input = $(this);
+        setTimeout(function() {
+          const value = parseInt($input.val());
+          if (isNaN(value) || value < 1) {
+            $input.val(1);
+            $input.trigger('input');
+          }
+        }, 1);
+      });
 
       // Update quantity
       let updateTimeout;
       $(document).on('input', '.quantity-input', function() {
         const $input = $(this);
         const cartItemId = $input.data('cart-item-id');
-        const quantity = parseInt($input.val());
+        let quantity = parseInt($input.val());
         const $cartItem = $input.closest('.cart-item');
         const price = parseFloat($cartItem.data('price'));
         const maxStock = parseInt($input.attr('max'));
 
-        if (quantity < 1) {
+        // Handle invalid input
+        if (isNaN(quantity) || quantity < 1) {
           $input.val(1);
-          return;
+          quantity = 1;
         }
 
         if (quantity > maxStock) {
           showAlert('Quantity exceeds available stock', 'error');
           $input.val(maxStock);
-          return;
+          quantity = maxStock;
         }
 
-        // Update subtotal immediately
+        // Update subtotal immediately with validated quantity
         const newSubtotal = (price * quantity).toFixed(2);
         $cartItem.find('.subtotal-value').text(newSubtotal.replace(/\B(?=(\d{3})+(?!\d))/g, ","));
         updateTotals();
@@ -872,6 +911,8 @@ foreach ($cart_items as $item) {
               $('#loading').hide();
               if (!response.success) {
                 showAlert(response.message, 'error');
+                // Revert to previous valid value if server rejects
+                location.reload();
               }
             },
             error: function() {

@@ -89,12 +89,34 @@ if (isset($_POST['apply_voucher'])) {
             }
         }
         
-        $final_total = $cart_total - $voucher_discount;
+        // Ensure discount doesn't exceed cart total
+        if ($voucher_discount > $cart_total) {
+            $voucher_discount = $cart_total;
+        }
+        
+        // Calculate shipping fee
+        $shipping_fee = 5.00; // Default shipping fee RM5
+        $free_shipping_threshold = 15.00; // Free shipping for orders over RM15
+        
+        // Apply free shipping if cart total (before discount) meets threshold
+        if ($cart_total >= $free_shipping_threshold) {
+            $shipping_fee = 0.00;
+        }
+        
+        $final_total = $cart_total - $voucher_discount + $shipping_fee;
+        
+        // Ensure final total is never negative (minimum should be shipping fee if applicable)
+        if ($final_total < 0) {
+            $final_total = $shipping_fee;
+            // Adjust discount to prevent negative total
+            $voucher_discount = $cart_total;
+        }
         
         echo json_encode([
             'success' => true,
             'message' => 'Voucher applied successfully! You saved RM' . number_format($voucher_discount, 2),
             'cart_total' => $cart_total,
+            'shipping_fee' => $shipping_fee,
             'voucher_discount' => $voucher_discount,
             'final_total' => $final_total
         ]);
