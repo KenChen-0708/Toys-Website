@@ -180,14 +180,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
         $validation_errors[] = "Address Line 2 must not exceed 100 characters";
     }
     
-    if (!empty($state) && strlen($state) > 50) {
+    if (empty($state)) {
+        $validation_errors[] = "State is required";
+    } elseif (strlen($state) > 50) {
         $validation_errors[] = "State must not exceed 50 characters";
+    } elseif (!preg_match('/^[A-Za-z\s\-\']+$/', $state)) {
+        $validation_errors[] = "State cannot contain numbers or special characters";
     }
     
-    if (!empty($postal_code)) {
-        if (!preg_match('/^[0-9]{5}$/', $postal_code)) {
-            $validation_errors[] = "Postal code must be exactly 5 digits";
-        }
+    if (empty($postal_code)) {
+        $validation_errors[] = "Postal code is required";
+    } elseif (!preg_match('/^[0-9]{5}$/', $postal_code)) {
+        $validation_errors[] = "Postal code must be exactly 5 digits";
     }
 
     if (!empty($validation_errors)) {
@@ -898,7 +902,7 @@ $final_total = $cart_total - $voucher_discount;
                                 </div>
 
                                 <div class="form-group">
-                                    <label>State</label>
+                                    <label>State <span class="required">*</span></label>
                                     <input type="text" name="state" placeholder="State/Province" 
                                            maxlength="50" 
                                            pattern="[A-Za-z\s\-']+" 
@@ -906,7 +910,7 @@ $final_total = $cart_total - $voucher_discount;
                                 </div>
 
                                 <div class="form-group">
-                                    <label>Postal Code</label>
+                                    <label>Postal Code <span class="required">*</span></label>
                                     <input type="text" name="postal_code" placeholder="Postal code" 
                                            pattern="[0-9]{5}" maxlength="5" 
                                            title="Please enter a 5-digit postal code">
@@ -1421,11 +1425,15 @@ $final_total = $cart_total - $voucher_discount;
                         validationErrors.push('Country cannot contain numbers or special characters');
                     }
                     
-                    if (state && (state.length > 50 || !/^[A-Za-z\s\-']+$/.test(state) || /\d/.test(state))) {
+                    if (!state) {
+                        validationErrors.push('State is required');
+                    } else if (state.length > 50 || !/^[A-Za-z\s\-']+$/.test(state) || /\d/.test(state)) {
                         validationErrors.push('State cannot contain numbers or special characters');
                     }
                     
-                    if (postalCode && !/^[0-9]{5}$/.test(postalCode)) {
+                    if (!postalCode) {
+                        validationErrors.push('Postal code is required');
+                    } else if (!/^[0-9]{5}$/.test(postalCode)) {
                         validationErrors.push('Postal code must be exactly 5 digits');
                     }
                     
