@@ -11,12 +11,19 @@ if (!isset($_SESSION['member'])) {
 
 $member_id = $_SESSION['member']['id'];
 $session_id = $_GET['session_id'] ?? null;
-$order_id = $_GET['order_id'] ?? null;
 
-if (!$session_id || !$order_id) {
+if (!$session_id) {
     header('Location: ../../index.php');
     exit();
 }
+
+// Check if checkout data exists in session
+if (!isset($_SESSION['checkout_data'])) {
+    header('Location: ../checkout/checkout.php?error=session_expired');
+    exit();
+}
+
+$checkout_data = $_SESSION['checkout_data'];
 
 \Stripe\Stripe::setApiKey('sk_test_51SSdhpL3TTFqZeEiC8Zq2GlP6vX1oU0BVr1Il5xr0T5OXKXkewj27TGIxs0AvwzSfcHlY2znCsIlexDHk9gbJOXE00vbXRgf2n');
 
@@ -25,17 +32,126 @@ try {
     $session = \Stripe\Checkout\Session::retrieve($session_id);
 
     if ($session->payment_status === 'paid') {
-        // Start transaction
+        // Start transaction to create order after successful payment
         $pdo->beginTransaction();
 
-        // Get order details first
+        // Create the order now that payment is successful
+        $stmt = $pdo->prepare("
+            INSERT INTO `Order` (
+                member_id, 
+                shipping_address_line1, 
+                shipping_address_line2, 
+                shipping_city, 
+                shipping_state, 
+                shipping_postal_code, 
+                shipping_country, 
+                total_amount, 
+                status
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
+        ");
+        $stmt->execute([
+            $member_id,
+            $checkout_data['shipping_address']['address_line1'],
+            $checkout_data['shipping_address']['address_line2'],
+            $checkout_data['shipping_address']['city'],
+            $checkout_data['shipping_address']['state'],
+            $checkout_data['shipping_address']['postal_code'],
+            $checkout_data['shipping_address']['country'],
+            $checkout_data['final_amount']
+        ]);
+        $order_id = $pdo->lastInsertId();
+
+        // Create order items and update stock
+        foreach ($checkout_data['cart_items'] as $item) {
+            // Double-check stock availability
+            $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
+            $stmt->execute([$item['product_id']]);
+            $current_stock = $stmt->fetchColumn();
+            
+            if ($current_stock < $item['quantity']) {
+                throw new Exception("Insufficient stock for product: " . $item['name'] . ". Available: " . $current_stock . ", Requested: " . $item['quantity']);
+            }
+            
+            // Create order item
+            $stmt = $pdo->prepare("
+                INSERT INTO Order_Item (order_id, product_id, quantity, price)
+                VALUES (?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $order_id,
+                $item['product_id'],
+                $item['quantity'],
+                $item['price']
+            ]);
+
+            // Update stock
+            $stmt = $pdo->prepare("
+                UPDATE Product 
+                SET stock = stock - ? 
+                WHERE product_id = ? AND stock >= ?
+            ");
+            $stmt->execute([$item['quantity'], $item['product_id'], $item['quantity']]);
+            
+            if ($stmt->rowCount() === 0) {
+                throw new Exception("Stock update failed for product: " . $item['name'] . ". Possible concurrent purchase.");
+            }
+        }
+
+        // Handle voucher usage if applicable
+        if ($checkout_data['voucher_data']) {
+            $stmt = $pdo->prepare("
+                INSERT INTO Voucher_Usage (voucher_id, member_id, order_id)
+                VALUES (?, ?, ?)
+            ");
+            $stmt->execute([$checkout_data['voucher_data']['voucher_id'], $member_id, $order_id]);
+        }
+
+        // Determine payment method from Stripe
+        $payment_method = 'Credit Card'; // Default
+        if (isset($session->payment_method_types[0])) {
+            $stripe_method = $session->payment_method_types[0];
+            switch ($stripe_method) {
+                case 'card':
+                    $payment_method = 'Credit Card';
+                    break;
+                case 'fpx':
+                    $payment_method = 'Online Banking';
+                    break;
+                case 'grabpay':
+                    $payment_method = 'E-Wallet';
+                    break;
+                default:
+                    $payment_method = 'Credit Card';
+            }
+        }
+
+        // Insert payment record
+        $stmt = $pdo->prepare("
+            INSERT INTO Payment (order_id, payment_method, payment_date, amount, status)
+            VALUES (?, ?, NOW(), ?, 'Completed')
+        ");
+        $stmt->execute([$order_id, $payment_method, $checkout_data['final_amount']]);
+
+        // Clear cart only after successful order creation
+        if (!$checkout_data['is_buy_now']) {
+            $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
+            $stmt->execute([$member_id]);
+        } else {
+            // Clear buy_now session data
+            unset($_SESSION['buy_now_item']);
+        }
+
+        // Clear checkout data from session
+        unset($_SESSION['checkout_data']);
+
+        // Get order details for display
         $stmt = $pdo->prepare("
             SELECT o.*, 
                    (SELECT COUNT(*) FROM Order_Item WHERE order_id = o.order_id) as item_count
             FROM `Order` o
-            WHERE o.order_id = ? AND o.member_id = ?
+            WHERE o.order_id = ?
         ");
-        $stmt->execute([$order_id, $member_id]);
+        $stmt->execute([$order_id]);
         $order = $stmt->fetch();
 
         // Get order items for receipt
@@ -48,62 +164,18 @@ try {
         $stmt->execute([$order_id]);
         $order_items = $stmt->fetchAll();
 
-        if (!$order) {
-            throw new Exception("Order not found");
-        }
-
-        // Check if payment record already exists (prevent duplicate)
-        $stmt = $pdo->prepare("SELECT payment_id FROM Payment WHERE order_id = ?");
-        $stmt->execute([$order_id]);
-        $existing_payment = $stmt->fetch();
-
-        if (!$existing_payment) {
-            // Determine payment method from Stripe
-            $payment_method = 'Credit Card'; // Default
-            if (isset($session->payment_method_types[0])) {
-                $stripe_method = $session->payment_method_types[0];
-                switch ($stripe_method) {
-                    case 'card':
-                        $payment_method = 'Credit Card';
-                        break;
-                    case 'fpx':
-                        $payment_method = 'Online Banking';
-                        break;
-                    case 'grabpay':
-                        $payment_method = 'E-Wallet';
-                        break;
-                    default:
-                        $payment_method = 'Credit Card';
-                }
-            }
-
-            // Insert payment record
-            $stmt = $pdo->prepare("
-                INSERT INTO Payment (order_id, payment_method, payment_date, amount, status)
-                VALUES (?, ?, NOW(), ?, 'Completed')
-            ");
-            $stmt->execute([$order_id, $payment_method, $order['total_amount']]);
-        }
-
-        // Update order status to 'Preparing'
-        $stmt = $pdo->prepare("
-            UPDATE `Order` 
-            SET status = 'Preparing' 
-            WHERE order_id = ? AND member_id = ?
-        ");
-        $stmt->execute([$order_id, $member_id]);
-
         // Commit transaction
         $pdo->commit();
     } else {
-        header('Location: payment_cancel.php?order_id=' . $order_id);
+        header('Location: payment_cancel.php');
         exit();
     }
 } catch (Exception $e) {
     if ($pdo->inTransaction()) {
         $pdo->rollBack();
     }
-    die("Error verifying payment: " . $e->getMessage());
+    error_log("Payment Success Error: " . $e->getMessage());
+    die("Error processing payment: " . $e->getMessage() . "<br><br><a href='../cart/cart.php'>Return to Cart</a>");
 }
 ?>
 
@@ -351,6 +423,10 @@ try {
 
         .order-value.status-completed {
             color: #4CAF50;
+        }
+
+        .order-value.status-pending {
+            color: #FF9800;
         }
 
         .order-value.status-preparing {
@@ -748,7 +824,7 @@ try {
                 </div>
                 <div class="order-row">
                     <span class="order-label">Order Status</span>
-                    <span class="order-value status-preparing"><?php echo $order['status']; ?></span>
+                    <span class="order-value status-<?php echo strtolower($order['status']); ?>"><?php echo $order['status']; ?></span>
                 </div>
                 <div class="order-row">
                     <span class="order-label">Items Ordered</span>

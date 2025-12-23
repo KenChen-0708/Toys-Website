@@ -642,7 +642,7 @@ try {
   <div class="container">
     <div class="wishlist-header">
       <h1>My Wishlist</h1>
-      <a href="../../index.php" class="btn btn-primary">Continue Shopping</a>
+      <a href="../product/product_list.php" class="btn btn-primary">Continue Shopping</a>
     </div>
 
     <div id="alert-container"></div>
@@ -664,7 +664,7 @@ try {
           <h2>Your wishlist is empty</h2>
           <p>Save items you love for later</p>
           <br>
-          <a href="../../index.php" class="btn btn-primary">Browse Products</a>
+          <a href="../product/product_list.php" class="btn btn-primary">Browse Products</a>
         </div>
       <?php else: ?>
         <div class="wishlist-table">
