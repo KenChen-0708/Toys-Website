@@ -98,9 +98,9 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
           <div class="filter-group">
             <label class="filter-label">Price Range</label>
             <div class="price-inputs">
-              <input type="number" id="minPrice" class="price-input" placeholder="Min" min="0" step="0.01">
+              <input type="number" id="minPrice" class="price-input" placeholder="Min" min="0" step="1">
               <span class="price-separator">—</span>
-              <input type="number" id="maxPrice" class="price-input" placeholder="Max" min="0" step="0.01">
+              <input type="number" id="maxPrice" class="price-input" placeholder="Max" min="0" step="1">
             </div>
           </div>
 

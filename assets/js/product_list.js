@@ -62,6 +62,42 @@ $(document).ready(function () {
     }
   });
 
+  // Price input validation - prevent negative values
+  $('#minPrice, #maxPrice').on('input', function() {
+    let value = parseFloat($(this).val());
+    if (value < 0) {
+      $(this).val('');
+    }
+  });
+
+  // Price input validation on blur - ensure min <= max
+  $('#minPrice, #maxPrice').on('blur', function() {
+    validatePriceRange();
+  });
+
+  // Prevent negative values on keypress
+  $('#minPrice, #maxPrice').on('keypress', function(e) {
+    // Allow: backspace, delete, tab, escape, enter
+    if ([46, 8, 9, 27, 13].indexOf(e.keyCode) !== -1 ||
+        // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+        (e.keyCode === 65 && e.ctrlKey === true) ||
+        (e.keyCode === 67 && e.ctrlKey === true) ||
+        (e.keyCode === 86 && e.ctrlKey === true) ||
+        (e.keyCode === 88 && e.ctrlKey === true) ||
+        // Allow: home, end, left, right
+        (e.keyCode >= 35 && e.keyCode <= 39)) {
+      return;
+    }
+    // Ensure that it is a number and stop the keypress
+    if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105) && e.keyCode !== 190) {
+      e.preventDefault();
+    }
+    // Prevent minus sign
+    if (e.keyCode === 189 || e.keyCode === 109) {
+      e.preventDefault();
+    }
+  });
+
   // Pagination clicks (delegated)
   $(document).on('click', '.pagination-btn, .pagination-number', function (e) {
     e.preventDefault();
@@ -105,6 +141,20 @@ $(document).ready(function () {
     loadProducts();
     closeMobileSidebar();
   });
+
+  /**
+   * Validate price range inputs
+   */
+  function validatePriceRange() {
+    const minPrice = parseFloat($('#minPrice').val()) || 0;
+    const maxPrice = parseFloat($('#maxPrice').val()) || 0;
+    
+    // If both values are set and min > max, swap them
+    if (minPrice > 0 && maxPrice > 0 && minPrice > maxPrice) {
+      $('#minPrice').val(maxPrice);
+      $('#maxPrice').val(minPrice);
+    }
+  }
 
   /**
    * Close mobile sidebar
