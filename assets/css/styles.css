@@ -596,6 +596,12 @@ table {
   color: #166534;
 }
 
+.alert--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
 /*=============== TABLES ===============*/
 .placed__order-table th,
 .placed__order-table td {

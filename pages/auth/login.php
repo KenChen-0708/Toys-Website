@@ -64,10 +64,11 @@ $requireCaptcha = $failedAttempts >= 3;
 include '../../partials/header.php';
 
 $errors = $_SESSION['errors'] ?? [];
+$message = $_SESSION['message'] ?? '';
 $old = $_SESSION['old'] ?? [];
 $rememberedUsername = $_COOKIE['remember_username'] ?? '';
 
-unset($_SESSION['errors'], $_SESSION['old']);
+unset($_SESSION['errors'], $_SESSION['old'], $_SESSION['message']);
 ?>
 
 <main class="main">
@@ -76,6 +77,12 @@ unset($_SESSION['errors'], $_SESSION['old']);
         <div class="auth-card">
             <h1 class="auth-title">Welcome Back</h1>
             <p class="auth-sub">Sign in to continue shopping</p>
+
+            <?php if ($message): ?>
+                <div class="alert alert--warning">
+                    <div><?= htmlspecialchars($message) ?></div>
+                </div>
+            <?php endif; ?>
 
             <?php if ($errors): ?>
                 <div class="alert alert--danger">
