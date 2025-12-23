@@ -123,28 +123,89 @@ if (!$errors) {
     }
 }
 
+// Determine redirect location
+$redirectTo = $_POST['redirect_to'] ?? 'update-profile';
+
 if ($errors) {
     $_SESSION['profile_errors'] = $errors;
-    header('Location: /accounts.php#update-profile');
+    header('Location: /accounts.php#' . $redirectTo);
     exit;
 }
 
-// Perform update (only update non-photo fields)
+// Perform update (only update non-photo fields - NO address field)
 $stmt = $pdo->prepare("
     UPDATE Member
        SET username = ?,
            email = ?,
-           phone_number = ?,
-           address = ?
+           phone_number = ?
      WHERE member_id = ?
 ");
 $stmt->execute([
     $username,
     $email,
     $phone !== '' ? $phone : null,
-    $address !== '' ? $address : null,
     $memberId,
 ]);
+
+// Update or create default shipping address in Shipping_Address table
+if ($addressStreet || $addressCity) {
+    // Check if user has a default shipping address (most recent one)
+    $checkStmt = $pdo->prepare("
+        SELECT shipping_address_id 
+        FROM Shipping_Address 
+        WHERE member_id = ? 
+        ORDER BY created_date DESC 
+        LIMIT 1
+    ");
+    $checkStmt->execute([$memberId]);
+    $existingAddress = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    
+    $shippingAddressLine1 = $addressStreet ?: '';
+    $shippingAddressLine2 = '';
+    $shippingCity = $addressCity ?: '';
+    $shippingState = $addressState ?: '';
+    $shippingPostcode = $addressPostcode ?: '';
+    $shippingCountry = $addressCountry ?: 'Malaysia';
+    
+    if ($existingAddress) {
+        // Update existing default address
+        $updateStmt = $pdo->prepare("
+            UPDATE Shipping_Address 
+            SET address_line1 = ?,
+                address_line2 = ?,
+                city = ?,
+                state = ?,
+                postal_code = ?,
+                country = ?
+            WHERE shipping_address_id = ?
+        ");
+        $updateStmt->execute([
+            $shippingAddressLine1,
+            $shippingAddressLine2,
+            $shippingCity,
+            $shippingState,
+            $shippingPostcode,
+            $shippingCountry,
+            $existingAddress['shipping_address_id']
+        ]);
+    } else {
+        // Create new default shipping address
+        $insertStmt = $pdo->prepare("
+            INSERT INTO Shipping_Address 
+            (member_id, address_line1, address_line2, city, state, postal_code, country, created_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $insertStmt->execute([
+            $memberId,
+            $shippingAddressLine1,
+            $shippingAddressLine2,
+            $shippingCity,
+            $shippingState,
+            $shippingPostcode,
+            $shippingCountry
+        ]);
+    }
+}
 
 // Update session so header shows fresh info
 $_SESSION['member']['username'] = $username;
@@ -152,6 +213,6 @@ $_SESSION['member']['email']    = $email;
 
 $_SESSION['profile_success'] = 'Profile updated successfully.';
 
-header('Location: /accounts.php#update-profile');
+header('Location: /accounts.php#' . $redirectTo);
 exit;
 

@@ -14,8 +14,187 @@
   });
 })();
 
+// Password toggle functionality - reusable function (defined globally)
+function initializePasswordToggles() {
+  // Use event delegation on document to handle dynamically loaded elements
+  // Handle clicks on both the button and the icon inside it
+  $(document).off('click', '.password-toggle, .password-toggle i').on('click', '.password-toggle, .password-toggle i', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Find the button element (in case click was on icon)
+    const $toggle = $(this).closest('.password-toggle');
+    if (!$toggle.length) {
+      return;
+    }
+    
+    const targetId = $toggle.attr('data-target');
+    
+    if (!targetId) {
+      console.error('Password toggle: data-target not found');
+      return;
+    }
+    
+    const $input = $('#' + targetId);
+    if (!$input.length) {
+      console.error('Password toggle: input not found for targetId:', targetId);
+      return;
+    }
+    
+    // Find or ensure icon exists - NEVER remove or change the icon class
+    let $icon = $toggle.find('i');
+    if (!$icon.length) {
+      // Icon doesn't exist, create it with the standard eye icon
+      $icon = $('<i class="fi fi-rs-eye"></i>');
+      $toggle.append($icon);
+    }
+    
+    // CRITICAL: Always ensure icon has the base classes and NEVER remove them
+    if (!$icon.hasClass('fi')) {
+      $icon.addClass('fi');
+    }
+    if (!$icon.hasClass('fi-rs-eye')) {
+      $icon.addClass('fi-rs-eye');
+    }
+    
+    // NEVER remove the fi-rs-eye class - keep it always
+    // Just toggle password visibility and use data attribute for state
+    if ($input.attr('type') === 'password') {
+      $input.attr('type', 'text');
+      $toggle.attr('title', 'Hide password');
+      $toggle.attr('data-password-visible', 'true');
+      // Add a class to the button for styling if needed, but keep icon unchanged
+      $toggle.addClass('password-showing');
+    } else {
+      $input.attr('type', 'password');
+      $toggle.attr('title', 'Show password');
+      $toggle.attr('data-password-visible', 'false');
+      $toggle.removeClass('password-showing');
+    }
+    
+    // CRITICAL: Always force icon to be visible using inline styles - do this EVERY time
+    $icon.css({
+      'display': 'inline-block',
+      'visibility': 'visible',
+      'opacity': '1',
+      'font-size': '1.125rem'
+    });
+    
+    // CRITICAL: Always force button to be visible
+    $toggle.css({
+      'display': 'flex',
+      'visibility': 'visible',
+      'opacity': '1'
+    });
+    
+    // Double-check icon is still there after a brief delay
+    setTimeout(function() {
+      const checkIcon = $toggle.find('i');
+      if (!checkIcon.length || checkIcon.css('display') === 'none' || checkIcon.css('visibility') === 'hidden') {
+        // Icon disappeared, recreate it
+        $toggle.find('i').remove();
+        const newIcon = $('<i class="fi fi-rs-eye"></i>');
+        $toggle.append(newIcon);
+        newIcon.css({
+          'display': 'inline-block',
+          'visibility': 'visible',
+          'opacity': '1',
+          'font-size': '1.125rem'
+        });
+      }
+    }, 50);
+  });
+}
+
+// Clear password form functionality - reusable function
+function initializeClearPasswordButton() {
+  $(document).off('click', '#clearPasswordForm').on('click', '#clearPasswordForm', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get form elements fresh each time
+    const form = document.getElementById('passwordChangeForm');
+    const currentPwd = document.getElementById('current_password');
+    const newPwd = document.getElementById('new_password');
+    const confirmPwd = document.getElementById('new_password_confirm');
+    const strengthFill = document.getElementById('passwordStrengthFill');
+    const strengthText = document.getElementById('passwordStrengthText');
+    const matchIndicator = document.getElementById('passwordMatch');
+    const reqItems = document.querySelectorAll('.password-req-item');
+    
+    // Explicitly clear all password fields
+    if (currentPwd) {
+      currentPwd.value = '';
+      currentPwd.type = 'password';
+      currentPwd.setCustomValidity('');
+    }
+    if (newPwd) {
+      newPwd.value = '';
+      newPwd.type = 'password';
+      newPwd.setCustomValidity('');
+    }
+    if (confirmPwd) {
+      confirmPwd.value = '';
+      confirmPwd.type = 'password';
+      confirmPwd.setCustomValidity('');
+    }
+    
+    // Reset form
+    if (form) {
+      form.reset();
+    }
+    
+    // Reset password strength indicator
+    if (strengthFill) {
+      strengthFill.className = 'password-strength-fill';
+    }
+    if (strengthText) {
+      strengthText.textContent = 'Password strength';
+    }
+    
+    // Reset password requirements
+    reqItems.forEach(item => {
+      item.classList.remove('valid');
+      const icon = item.querySelector('.req-icon');
+      if (icon) {
+        icon.classList.remove('fi-rs-check');
+        icon.classList.add('fi-rs-cross-small');
+      }
+    });
+    
+    // Reset password match indicator
+    if (matchIndicator) {
+      matchIndicator.classList.remove('show');
+    }
+    
+    // Reset password input types and toggle icons
+    const toggles = document.querySelectorAll('.password-toggle');
+    toggles.forEach(toggle => {
+      const icon = toggle.querySelector('i');
+      if (icon) {
+        icon.classList.remove('fi-rs-eye-crossed');
+        icon.classList.add('fi-rs-eye');
+      }
+      const targetId = toggle.getAttribute('data-target');
+      if (targetId) {
+        const input = document.getElementById(targetId);
+        if (input) {
+          input.type = 'password';
+          input.value = '';
+        }
+      }
+    });
+  });
+}
+
 // Dynamic content switching using jQuery
 $(document).ready(function() {
+  // Initialize password toggles on page load
+  initializePasswordToggles();
+  
+  // Initialize clear password button on page load
+  initializeClearPasswordButton();
+  
   // Handle menu item clicks
   $('.profile-menu__item').on('click', function() {
     const contentId = $(this).data('content');
@@ -35,6 +214,12 @@ $(document).ready(function() {
     
     // Show the selected content panel
     $('#' + contentId).addClass('active');
+    
+    // Initialize password toggles and clear button when password panel is shown
+    if (contentId === 'change-password') {
+      initializePasswordToggles();
+      initializeClearPasswordButton();
+    }
     
     // Update URL hash without scrolling
     if (history.pushState) {
@@ -69,6 +254,75 @@ $(document).ready(function() {
         $('.content-panel').removeClass('active');
         $('#' + contentId).addClass('active');
       }
+    }
+  });
+
+  // Address edit modal functionality
+  $(document).on('click', '#editAddressBtn', function() {
+    $('#addressEditModal').addClass('active');
+  });
+
+  $(document).on('click', '#closeAddressModal, #cancelAddressModalBtn', function() {
+    $('#addressEditModal').removeClass('active');
+  });
+
+  // Close modal when clicking outside
+  $(document).on('click', '#addressEditModal', function(e) {
+    if ($(e.target).is('#addressEditModal')) {
+      $(this).removeClass('active');
+    }
+  });
+
+  // Handle checklist item clicks
+  $(document).on('click', '.profile-check-item', function(e) {
+    e.preventDefault();
+    const action = $(this).data('checklist-action');
+    const field = $(this).data('checklist-field');
+    
+    if (action === 'photo') {
+      // Open profile photo modal
+      $('#profilePhotoTrigger').trigger('click');
+    } else if (action === 'update-profile') {
+      // Navigate to update profile page
+      const menuItem = $('.profile-menu__item[data-content="update-profile"]');
+      if (menuItem.length) {
+        menuItem.trigger('click');
+        
+        // Scroll to the specific field if needed
+        setTimeout(function() {
+          const fieldId = 'phone_number';
+          if (field === 'phone') {
+            const phoneInput = document.getElementById(fieldId);
+            if (phoneInput) {
+              phoneInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              phoneInput.focus();
+            }
+          }
+        }, 300);
+      }
+    }
+  });
+
+  // Handle stat card clicks
+  $(document).on('click', '.account-stat-card', function(e) {
+    e.preventDefault();
+    const url = $(this).data('stat-url');
+    const panel = $(this).data('stat-panel');
+    
+    if (panel) {
+      // Navigate to a panel within the same page
+      const menuItem = $('.profile-menu__item[data-content="' + panel + '"]');
+      if (menuItem.length) {
+        menuItem.trigger('click');
+      } else {
+        // If no menu item exists, directly show the content panel
+        $('.profile-menu__item').removeClass('active');
+        $('.content-panel').removeClass('active');
+        $('#' + panel).addClass('active');
+      }
+    } else if (url) {
+      // Navigate to external page
+      window.location.href = url;
     }
   });
 
@@ -808,7 +1062,9 @@ $(document).ready(function() {
     });
   }
 
-  // Handle city dropdown filtering based on state selection
+  // Address state/city dropdown functionality - removed since address fields are no longer in the form
+  // The code below is safe because it checks if elements exist before attaching listeners
+  // If address fields are re-added in the future, this code will automatically work again
   const stateSelect = document.getElementById('address_state');
   const citySelect = document.getElementById('address_city');
   
@@ -931,31 +1187,14 @@ $(document).ready(function() {
     const currentPassword = document.getElementById('current_password');
     const newPassword = document.getElementById('new_password');
     const confirmPassword = document.getElementById('new_password_confirm');
-    const passwordToggles = document.querySelectorAll('.password-toggle');
     const passwordStrengthFill = document.getElementById('passwordStrengthFill');
     const passwordStrengthText = document.getElementById('passwordStrengthText');
     const passwordRequirements = document.querySelectorAll('.password-req-item');
     const passwordMatch = document.getElementById('passwordMatch');
     const clearBtn = document.getElementById('clearPasswordForm');
 
-    // Password toggle functionality
-    passwordToggles.forEach(toggle => {
-      toggle.addEventListener('click', function() {
-        const targetId = this.getAttribute('data-target');
-        const input = document.getElementById(targetId);
-        const icon = this.querySelector('i');
-        
-        if (input.type === 'password') {
-          input.type = 'text';
-          icon.classList.remove('fi-rs-eye');
-          icon.classList.add('fi-rs-eye-crossed');
-        } else {
-          input.type = 'password';
-          icon.classList.remove('fi-rs-eye-crossed');
-          icon.classList.add('fi-rs-eye');
-        }
-      });
-    });
+    // Initialize password toggles on page load
+    initializePasswordToggles();
 
     // Password strength checker
     function checkPasswordStrength(password) {
@@ -1038,30 +1277,6 @@ $(document).ready(function() {
       }
     });
 
-    // Clear form
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function() {
-        passwordForm.reset();
-        passwordStrengthFill.className = 'password-strength-fill';
-        passwordStrengthText.textContent = 'Password strength';
-        passwordRequirements.forEach(item => {
-          item.classList.remove('valid');
-          const icon = item.querySelector('.req-icon');
-          if (icon) {
-            icon.classList.remove('fi-rs-check');
-            icon.classList.add('fi-rs-cross-small');
-          }
-        });
-        passwordMatch.classList.remove('show');
-        passwordToggles.forEach(toggle => {
-          const icon = toggle.querySelector('i');
-          icon.classList.remove('fi-rs-eye-crossed');
-          icon.classList.add('fi-rs-eye');
-          const targetId = toggle.getAttribute('data-target');
-          document.getElementById(targetId).type = 'password';
-        });
-      });
-    }
 
     // Form validation
     passwordForm.addEventListener('submit', function(e) {
