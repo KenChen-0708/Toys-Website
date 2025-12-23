@@ -4,6 +4,7 @@ require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
+  $_SESSION['message'] = "Please log in to continue.";
   header('Location: /pages/auth/login.php');
   exit();
 }
@@ -13,22 +14,22 @@ $member_id = $_SESSION['member']['id'];
 // Handle error messages from redirects
 $error_message = '';
 if (isset($_GET['error'])) {
-    switch ($_GET['error']) {
-        case 'empty_cart':
-            $error_message = 'Your cart is empty. Please add items before proceeding to checkout.';
-            break;
-        case 'session_expired':
-            $error_message = 'Your session has expired. Please select products again.';
-            break;
-        case 'invalid_order':
-            $error_message = 'Invalid order. Please try again.';
-            break;
-        case 'order_not_found':
-            $error_message = 'Order not found or already processed.';
-            break;
-        default:
-            $error_message = 'An error occurred. Please try again.';
-    }
+  switch ($_GET['error']) {
+    case 'empty_cart':
+      $error_message = 'Your cart is empty. Please add items before proceeding to checkout.';
+      break;
+    case 'session_expired':
+      $error_message = 'Your session has expired. Please select products again.';
+      break;
+    case 'invalid_order':
+      $error_message = 'Invalid order. Please try again.';
+      break;
+    case 'order_not_found':
+      $error_message = 'Order not found or already processed.';
+      break;
+    default:
+      $error_message = 'An error occurred. Please try again.';
+  }
 }
 
 // Clear buy_now session when user visits cart page
