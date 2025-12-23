@@ -192,11 +192,8 @@
             <h2>Ready to Explore?</h2>
             <p>Visit us in-store or browse our extensive collection online</p>
             <div class="cta-buttons">
-                <a href="products.php" class="cta-btn primary-btn">
+                <a href="/pages/product/product_list.php" class="cta-btn primary-btn">
                     <i class="fas fa-shopping-bag"></i> Shop Now
-                </a>
-                <a href="contact.php" class="cta-btn secondary-btn">
-                    <i class="fas fa-envelope"></i> Contact Us
                 </a>
             </div>
         </div>
