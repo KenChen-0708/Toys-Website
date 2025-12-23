@@ -21,7 +21,7 @@ $title = "Home";
 
   <title><?= htmlspecialchars($title) ?></title>
 </head>
-<?php include 'partials/header.php'; ?>
+<?php include 'partials/header.php'; ?>z
 
 <!--=============== MAIN ===============-->
 <main class="main">
