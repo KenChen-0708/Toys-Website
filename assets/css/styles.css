@@ -1044,3 +1044,21 @@ table {
     max-width: 270px;
   }
 }
+
+/*=============== ANIMATIONS ===============*/
+/* Pulse animation for count badges */
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.pulse {
+  animation: pulse 0.5s ease-in-out;
+}
