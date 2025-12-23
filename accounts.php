@@ -3,7 +3,6 @@ $title = 'Ecommerce Website — Account';
 require_once __DIR__ . '/helper/pdo_connection.php';
 require_once __DIR__ . '/helper/auth.php';
 require_auth();
-redirect_if_admin();
 
 // Ensure user_initials function is available
 if (!function_exists('user_initials')) {
@@ -18,12 +17,12 @@ if (!function_exists('user_initials')) {
 
 $memberId = $_SESSION['member']['id'];
 
-// Fetch fresh member data from DB
-$stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, address, profile_photo_path, register_date FROM Member WHERE member_id = ?");
+// Fetch fresh member data from DB (NO address field - using Shipping_Address table instead)
+$stmt = $pdo->prepare("SELECT member_id, username, email, phone_number, profile_photo_path, register_date FROM Member WHERE member_id = ?");
 $stmt->execute([$memberId]);
 $member = $stmt->fetch(PDO::FETCH_ASSOC);
 
-// Parse address into components if it exists
+// Fetch default shipping address from Shipping_Address table (most recent one)
 $addressParts = [
   'street' => '',
   'city' => '',
@@ -32,33 +31,22 @@ $addressParts = [
   'country' => 'Malaysia'
 ];
 
-if (!empty($member['address'])) {
-  // Try to parse existing address (format: "Street, City, State Postcode, Country")
-  $addr = $member['address'];
-  // Simple parsing - split by commas and newlines
-  $lines = preg_split('/[,\n]/', $addr);
-  $lines = array_map('trim', $lines);
-  $lines = array_filter($lines);
+$defaultAddress = null;
+$addressStmt = $pdo->prepare("
+    SELECT * FROM Shipping_Address 
+    WHERE member_id = ? 
+    ORDER BY created_date DESC 
+    LIMIT 1
+");
+$addressStmt->execute([$memberId]);
+$defaultAddress = $addressStmt->fetch(PDO::FETCH_ASSOC);
 
-  if (count($lines) >= 1) $addressParts['street'] = $lines[0];
-  if (count($lines) >= 2) $addressParts['city'] = $lines[1];
-  if (count($lines) >= 3) {
-    // Check if this line has postcode (numbers)
-    if (preg_match('/^(.+?)\s+(\d{5})$/', $lines[2], $matches)) {
-      $addressParts['state'] = $matches[1];
-      $addressParts['postcode'] = $matches[2];
-    } else {
-      $addressParts['state'] = $lines[2];
-    }
-  }
-  if (count($lines) >= 4) {
-    if (preg_match('/\d{5}/', $lines[3])) {
-      $addressParts['postcode'] = $lines[3];
-    } else {
-      $addressParts['country'] = $lines[3];
-    }
-  }
-  if (count($lines) >= 5) $addressParts['country'] = end($lines);
+if ($defaultAddress) {
+    $addressParts['street'] = $defaultAddress['address_line1'] ?? '';
+    $addressParts['city'] = $defaultAddress['city'] ?? '';
+    $addressParts['state'] = $defaultAddress['state'] ?? '';
+    $addressParts['postcode'] = $defaultAddress['postal_code'] ?? '';
+    $addressParts['country'] = $defaultAddress['country'] ?? 'Malaysia';
 }
 
 // Malaysian states list
@@ -176,7 +164,8 @@ if (!empty($member['email'])) {
 if (!empty($member['phone_number'])) {
   $profileFieldsDone++;
 }
-if (!empty($member['address'])) {
+// Check if user has a shipping address
+if ($defaultAddress) {
   $profileFieldsDone++;
 }
 if (!empty($member['profile_photo_path'])) {
@@ -259,10 +248,6 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
             <i class="fi fi-rs-edit"></i>
             <span>Update Profile</span>
           </button>
-          <button class="profile-menu__item" data-content="orders">
-            <i class="fi fi-rs-shopping-bag"></i>
-            <span>Order Status</span>
-          </button>
           <button class="profile-menu__item" data-content="change-password">
             <i class="fi fi-rs-key"></i>
             <span>Change Password</span>
@@ -292,102 +277,99 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
           <div class="content-panel__body">
             <div class="account-stats grid">
-              <div class="account-stat-card stat-card--orders">
-                <div class="stat-icon stat-icon--orders">
-                  <i class="fi fi-rs-shopping-bag"></i>
-                </div>
-                <div class="stat-body">
-                  <p class="stat-label">Total Orders</p>
-                  <p class="stat-value"><?= $stats['total_orders'] ?></p>
-                </div>
+            <div class="account-stat-card stat-card--orders" data-stat-action="orders" data-stat-url="orders.php">
+              <div class="stat-icon stat-icon--orders">
+                <i class="fi fi-rs-shopping-bag"></i>
               </div>
-
-              <div class="account-stat-card stat-card--spent">
-                <div class="stat-icon stat-icon--spent">
-                  <i class="fi fi-rs-credit-card"></i>
-                </div>
-                <div class="stat-body">
-                  <p class="stat-label">Total Spent</p>
-                  <p class="stat-value">RM <?= number_format($stats['total_spent'], 2) ?></p>
-                </div>
-              </div>
-
-              <div class="account-stat-card stat-card--active">
-                <div class="stat-icon stat-icon--active">
-                  <i class="fi fi-rs-truck-side"></i>
-                </div>
-                <div class="stat-body">
-                  <p class="stat-label">Active Orders</p>
-                  <p class="stat-value"><?= $stats['active_orders'] ?></p>
-                </div>
-              </div>
-
-              <div class="account-stat-card stat-card--wishlist">
-                <div class="stat-icon stat-icon--wishlist">
-                  <i class="fi fi-rs-heart"></i>
-                </div>
-                <div class="stat-body">
-                  <p class="stat-label">Wishlist Items</p>
-                  <p class="stat-value"><?= $stats['wishlist_items'] ?></p>
-                </div>
+              <div class="stat-body">
+                <p class="stat-label">Total Orders</p>
+                <p class="stat-value"><?= $stats['total_orders'] ?></p>
               </div>
             </div>
 
-            <div class="dashboard-panel profile-panel">
-              <div class="profile-panel-left">
-                <h4 class="dashboard-panel__title">Profile completeness</h4>
-                <div class="profile-progress">
-                  <div class="profile-progress-bar">
-                    <div class="profile-progress-fill" style="width: <?= $profileProgress ?>%;"></div>
-                  </div>
-                  <div class="profile-progress-meta">
-                    <span class="profile-progress-percent"><?= $profileProgress ?>%</span>
-                    <span class="profile-progress-hint">
-                      <?= $profileProgress === 100 ? 'Your profile is complete.' : 'Complete your profile to make checkout faster.' ?>
-                    </span>
-                  </div>
-                </div>
+            <div class="account-stat-card stat-card--spent" data-stat-action="orders" data-stat-url="orders.php">
+              <div class="stat-icon stat-icon--spent">
+                <i class="fi fi-rs-credit-card"></i>
               </div>
-              <div class="profile-panel-right">
-                <h5 class="dashboard-panel__subtitle">Profile checklist</h5>
-                <ul class="profile-checklist">
-                  <li class="profile-check-item">
-                    <span>
-                      <strong>Email</strong>
-                      <small>Your login and contact email.</small>
-                    </span>
-                    <span class="profile-check-badge profile-check-badge--done">Done</span>
-                  </li>
-                  <li class="profile-check-item">
-                    <span>
-                      <strong>Phone number</strong>
-                      <small><?= $member['phone_number'] ? 'Used for contact and delivery.' : 'Add a phone number in "Update Profile".' ?></small>
-                    </span>
-                    <span class="profile-check-badge <?= $member['phone_number'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                      <?= $member['phone_number'] ? 'Done' : 'Missing' ?>
-                    </span>
-                  </li>
-                  <li class="profile-check-item">
-                    <span>
-                      <strong>Address</strong>
-                      <small><?= $member['address'] ? 'We will use this as your default shipping address.' : 'Add your shipping address in "Update Profile".' ?></small>
-                    </span>
-                    <span class="profile-check-badge <?= $member['address'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                      <?= $member['address'] ? 'Done' : 'Missing' ?>
-                    </span>
-                  </li>
-                  <li class="profile-check-item">
-                    <span>
-                      <strong>Profile photo</strong>
-                      <small><?= $member['profile_photo_path'] ? 'Helps personalize your account.' : 'Upload a profile photo in "Update Profile".' ?></small>
-                    </span>
-                    <span class="profile-check-badge <?= $member['profile_photo_path'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                      <?= $member['profile_photo_path'] ? 'Done' : 'Missing' ?>
-                    </span>
-                  </li>
-                </ul>
+              <div class="stat-body">
+                <p class="stat-label">Total Spent</p>
+                <p class="stat-value">RM <?= number_format($stats['total_spent'], 2) ?></p>
               </div>
             </div>
+
+            <div class="account-stat-card stat-card--active" data-stat-action="orders" data-stat-url="orders.php?status=active">
+              <div class="stat-icon stat-icon--active">
+                <i class="fi fi-rs-truck-side"></i>
+              </div>
+              <div class="stat-body">
+                <p class="stat-label">Active Orders</p>
+                <p class="stat-value"><?= $stats['active_orders'] ?></p>
+              </div>
+            </div>
+
+            <div class="account-stat-card stat-card--wishlist" data-stat-action="wishlist" data-stat-url="/pages/wishlist/wishlist.php">
+              <div class="stat-icon stat-icon--wishlist">
+                <i class="fi fi-rs-heart"></i>
+              </div>
+              <div class="stat-body">
+                <p class="stat-label">Wishlist Items</p>
+                <p class="stat-value"><?= $stats['wishlist_items'] ?></p>
+              </div>
+            </div>
+            </div>
+
+          <h5 class="dashboard-panel__subtitle">Profile checklist</h5>
+          <ul class="profile-checklist">
+            <li class="profile-check-item" data-checklist-action="update-profile" data-checklist-field="email">
+              <span>
+                <strong>Email</strong>
+                <small>Your login and contact email.</small>
+              </span>
+              <span class="profile-check-badge profile-check-badge--done">Done</span>
+            </li>
+            <li class="profile-check-item" data-checklist-action="update-profile" data-checklist-field="phone">
+              <span>
+                <strong>Phone number</strong>
+                <small><?= $member['phone_number'] ? 'Used for contact and delivery.' : 'Add a phone number in "Update Profile".' ?></small>
+              </span>
+              <span class="profile-check-badge <?= $member['phone_number'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                <?= $member['phone_number'] ? 'Done' : 'Missing' ?>
+              </span>
+            </li>
+            <li class="profile-check-item" data-checklist-action="update-profile" data-checklist-field="address">
+              <span>
+                <strong>Address</strong>
+                <small><?= $defaultAddress ? 'We will use this as your default shipping address.' : 'Add your shipping address in "Update Profile".' ?></small>
+              </span>
+              <span class="profile-check-badge <?= $defaultAddress ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                <?= $defaultAddress ? 'Done' : 'Missing' ?>
+              </span>
+            </li>
+            <li class="profile-check-item" data-checklist-action="photo" data-checklist-field="photo">
+              <span>
+                <strong>Profile photo</strong>
+                <small><?= $member['profile_photo_path'] ? 'Helps personalize your account.' : 'Upload a profile photo in "Update Profile".' ?></small>
+              </span>
+              <span class="profile-check-badge <?= $member['profile_photo_path'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                <?= $member['profile_photo_path'] ? 'Done' : 'Missing' ?>
+              </span>
+            </li>
+          </ul>
+          
+          <div class="profile-completeness">
+            <h4 class="dashboard-panel__title">Profile completeness</h4>
+            <div class="profile-progress">
+              <div class="profile-progress-bar">
+                <div class="profile-progress-fill" style="width: <?= $profileProgress ?>%;"></div>
+              </div>
+              <div class="profile-progress-meta">
+                <span class="profile-progress-percent"><?= $profileProgress ?>%</span>
+                <span class="profile-progress-hint">
+                  <?= $profileProgress === 100 ? 'Your profile is complete.' : 'Complete your profile to make checkout faster.' ?>
+                </span>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
 
@@ -399,17 +381,12 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
             </p>
           </div>
           <div class="content-panel__body">
-            <?php if (!empty($member['address'])): ?>
+            <?php if ($defaultAddress): ?>
               <?php
               // Count how many orders used this address
               $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
               $orderCountStmt->execute([$memberId]);
               $orderCount = (int)$orderCountStmt->fetchColumn();
-
-              // Parse address for better display
-              $addrLines = preg_split('/[,\n]/', $member['address']);
-              $addrLines = array_map('trim', $addrLines);
-              $addrLines = array_filter($addrLines);
               ?>
 
               <div class="address-card">
@@ -423,17 +400,40 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                     <button type="button" class="btn btn--sm btn--outline" id="copyAddressBtn" title="Copy address">
                       <i class="fi fi-rs-copy"></i> Copy
                     </button>
-                    <a href="#update-profile" class="btn btn--sm btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
+                    <button type="button" class="btn btn--sm btn--primary" id="editAddressBtn">
                       <i class="fi fi-rs-edit"></i> Edit
-                    </a>
+                    </button>
                   </div>
                 </div>
 
                 <div class="address-card__body">
                   <div class="address-display">
-                    <?php foreach ($addrLines as $line): ?>
-                      <div class="address-line"><?= htmlspecialchars($line) ?></div>
-                    <?php endforeach; ?>
+                    <?php if ($defaultAddress): ?>
+                      <?php if (!empty($defaultAddress['address_line1'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($defaultAddress['address_line1']) ?></div>
+                      <?php endif; ?>
+                      <?php if (!empty($defaultAddress['address_line2'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($defaultAddress['address_line2']) ?></div>
+                      <?php endif; ?>
+                      <?php if (!empty($defaultAddress['city']) || !empty($defaultAddress['state']) || !empty($defaultAddress['postal_code'])): ?>
+                        <div class="address-line">
+                          <?php if (!empty($defaultAddress['city'])): ?>
+                            <?= htmlspecialchars($defaultAddress['city']) ?>
+                          <?php endif; ?>
+                          <?php if (!empty($defaultAddress['state'])): ?>
+                            <?= !empty($defaultAddress['city']) ? ', ' : '' ?><?= htmlspecialchars($defaultAddress['state']) ?>
+                          <?php endif; ?>
+                          <?php if (!empty($defaultAddress['postal_code'])): ?>
+                            <?= htmlspecialchars($defaultAddress['postal_code']) ?>
+                          <?php endif; ?>
+                        </div>
+                      <?php endif; ?>
+                      <?php if (!empty($defaultAddress['country'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($defaultAddress['country']) ?></div>
+                      <?php endif; ?>
+                    <?php else: ?>
+                      <div class="address-line">No address provided</div>
+                    <?php endif; ?>
                   </div>
 
                   <div class="address-info">
@@ -449,14 +449,24 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                     <?php endif; ?>
                   </div>
 
-                  <div class="address-actions">
-                    <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($member['address']) ?>"
-                      target="_blank"
-                      class="btn btn--sm btn--outline"
-                      title="View on Google Maps">
-                      <i class="fi fi-rs-map-marker"></i> View on Map
-                    </a>
-                  </div>
+                    <div class="address-actions">
+                      <?php if ($defaultAddress): 
+                        $mapAddress = trim(implode(', ', array_filter([
+                          $defaultAddress['address_line1'],
+                          $defaultAddress['city'],
+                          $defaultAddress['state'],
+                          $defaultAddress['postal_code'],
+                          $defaultAddress['country']
+                        ])));
+                      ?>
+                        <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($mapAddress) ?>"
+                          target="_blank"
+                          class="btn btn--sm btn--outline"
+                          title="View on Google Maps">
+                          <i class="fi fi-rs-map-marker"></i> View on Map
+                        </a>
+                      <?php endif; ?>
+                    </div>
                 </div>
               </div>
 
@@ -606,38 +616,14 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                 </div>
 
                 <div class="password-change-actions">
-                  <button class="btn btn--md btn--primary" type="submit">
-                    <i class="fi fi-rs-check"></i> Update Password
-                  </button>
                   <button type="button" class="btn btn--md btn--outline" id="clearPasswordForm">
                     <i class="fi fi-rs-refresh"></i> Clear
                   </button>
+                  <button class="btn btn--md btn--primary" type="submit">
+                    <i class="fi fi-rs-check"></i> Update Password
+                  </button>
                 </div>
               </form>
-            </div>
-          </div>
-        </div>
-
-        <div class="content-panel" id="orders">
-          <div class="content-panel__header">
-            <h3 class="content-panel__title">Your Orders</h3>
-            <p class="content-panel__description">
-              View and manage all your orders. Track your purchases, check order status, and view order details.
-            </p>
-          </div>
-          <div class="content-panel__body">
-            <div style="text-align: center; padding: 3rem 2rem;">
-              <div style="margin-bottom: 1.5rem;">
-                <i class="fi fi-rs-shopping-bag" style="font-size: 4rem; color: var(--first-color); opacity: 0.6;"></i>
-              </div>
-              <h4 style="margin-bottom: 1rem; color: var(--title-color);">View Your Orders</h4>
-              <p style="margin-bottom: 2rem; color: var(--text-color); max-width: 500px; margin-left: auto; margin-right: auto;">
-                Click the button below to see all your orders, track their status, and view detailed information about each purchase.
-              </p>
-              <a href="/orders.php" class="btn btn--md btn--primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-                <i class="fi fi-rs-shopping-bag"></i>
-                Go to Orders Page
-              </a>
             </div>
           </div>
         </div>
@@ -736,80 +722,6 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                         pattern="^0\d{1,2}-?\d{6,8}$"
                         maxlength="12"
                         title="Malaysian phone format: 0XX-XXXXXXX or 0XXXXXXXXX (10-11 digits)" />
-                    </label>
-
-                    <label class="form__label form__label--full">
-                      <span>Street Address</span>
-                      <input
-                        type="text"
-                        name="address_street"
-                        class="form__input"
-                        value="<?= htmlspecialchars($addressParts['street']) ?>"
-                        placeholder="e.g., No. 123, Jalan Bukit Bintang, Taman Desa"
-                        minlength="5"
-                        maxlength="200"
-                        title="Enter your complete street address including house/building number and street name" />
-                    </label>
-
-                    <label class="form__label">
-                      <span>State</span>
-                      <select
-                        name="address_state"
-                        class="form__input"
-                        id="address_state">
-                        <option value="">Select State</option>
-                        <?php foreach ($malaysianStates as $state): ?>
-                          <option value="<?= htmlspecialchars($state) ?>" <?= $addressParts['state'] === $state ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($state) ?>
-                          </option>
-                        <?php endforeach; ?>
-                      </select>
-                    </label>
-
-                    <label class="form__label">
-                      <span>City</span>
-                      <select
-                        name="address_city"
-                        class="form__input"
-                        id="address_city">
-                        <option value="">Select City</option>
-                        <?php
-                        // Show cities based on selected state, or all cities if no state selected
-                        $citiesToShow = [];
-                        if (!empty($addressParts['state']) && isset($citiesByState[$addressParts['state']])) {
-                          $citiesToShow = $citiesByState[$addressParts['state']];
-                        } else {
-                          $citiesToShow = $allCities;
-                        }
-                        foreach ($citiesToShow as $city):
-                        ?>
-                          <option value="<?= htmlspecialchars($city) ?>" <?= $addressParts['city'] === $city ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($city) ?>
-                          </option>
-                        <?php endforeach; ?>
-                      </select>
-                    </label>
-
-                    <label class="form__label">
-                      <span>Postcode</span>
-                      <input
-                        type="text"
-                        name="address_postcode"
-                        class="form__input"
-                        value="<?= htmlspecialchars($addressParts['postcode']) ?>"
-                        placeholder="e.g., 50000"
-                        pattern="[0-9]{5}"
-                        maxlength="5" />
-                    </label>
-
-                    <label class="form__label">
-                      <span>Country</span>
-                      <input
-                        type="text"
-                        name="address_country"
-                        class="form__input"
-                        value="<?= htmlspecialchars($addressParts['country']) ?>"
-                        placeholder="e.g., Malaysia" />
                     </label>
                   </div>
                 </div>
@@ -926,6 +838,94 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
         </button>
         <button type="button" class="btn btn--md btn--outline" id="cancelPhotoModal">
           Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Address Edit Modal -->
+<div class="address-edit-modal" id="addressEditModal">
+  <div class="address-edit-modal__content">
+    <button class="address-edit-modal__close" id="closeAddressModal">
+      <i class="fi fi-rs-cross"></i>
+    </button>
+    <h3 class="address-edit-modal__title">Edit Shipping Address</h3>
+    
+    <form class="address-edit-form" method="POST" action="/pages/profile/profile_update_post.php" id="addressEditForm">
+      <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="username" value="<?= htmlspecialchars($member['username']) ?>">
+      <input type="hidden" name="email" value="<?= htmlspecialchars($member['email']) ?>">
+      <input type="hidden" name="phone" value="<?= htmlspecialchars($member['phone_number'] ?? '') ?>">
+      <input type="hidden" name="redirect_to" value="address">
+      
+      <div class="address-edit-fields">
+        <label class="form__label">
+          <span>Street Address</span>
+          <input
+            type="text"
+            name="address_street"
+            class="form__input"
+            value="<?= htmlspecialchars($addressParts['street']) ?>"
+            placeholder="Enter street address" />
+        </label>
+
+        <div class="form-row">
+          <label class="form__label">
+            <span>City</span>
+            <input
+              type="text"
+              name="address_city"
+              class="form__input"
+              value="<?= htmlspecialchars($addressParts['city']) ?>"
+              placeholder="Enter city" />
+          </label>
+
+          <label class="form__label">
+            <span>State</span>
+            <select name="address_state" class="form__input" id="addressEditState">
+              <option value="">Select State</option>
+              <?php foreach ($malaysianStates as $state): ?>
+                <option value="<?= htmlspecialchars($state) ?>" <?= $addressParts['state'] === $state ? 'selected' : '' ?>>
+                  <?= htmlspecialchars($state) ?>
+                </option>
+              <?php endforeach; ?>
+            </select>
+          </label>
+        </div>
+
+        <div class="form-row">
+          <label class="form__label">
+            <span>Postcode</span>
+            <input
+              type="text"
+              name="address_postcode"
+              class="form__input"
+              value="<?= htmlspecialchars($addressParts['postcode']) ?>"
+              placeholder="e.g., 50000"
+              pattern="\d{5}"
+              maxlength="5" />
+          </label>
+
+          <label class="form__label">
+            <span>Country</span>
+            <input
+              type="text"
+              name="address_country"
+              class="form__input"
+              value="<?= htmlspecialchars($addressParts['country']) ?>"
+              placeholder="Country"
+              readonly />
+          </label>
+        </div>
+      </div>
+
+      <div class="address-edit-modal__actions">
+        <button type="button" class="btn btn--md btn--outline" id="cancelAddressModalBtn">
+          <i class="fi fi-rs-cross"></i> Cancel
+        </button>
+        <button type="submit" class="btn btn--md btn--primary">
+          <i class="fi fi-rs-check"></i> Save Address
         </button>
       </div>
     </form>
