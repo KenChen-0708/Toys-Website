@@ -41,6 +41,7 @@ try {
     $total_amount = $checkout_data['final_amount'];
     $cart_total = $checkout_data['cart_total'];
     $final_discount = $checkout_data['final_discount'];
+    $shipping_fee = $checkout_data['shipping_fee'] ?? 5.00;
 
     // Validate stock availability again (in case it changed)
     foreach ($cart_items as $item) {
@@ -61,14 +62,26 @@ try {
 
     // Check if there's a discount applied
     $has_discount = $final_discount > 0.01;
+    $has_shipping = $shipping_fee > 0.01;
 
-    if ($has_discount) {
-        // If there's a discount, create a single line item with the final total
+    if ($has_discount || $has_shipping) {
+        // If there's a discount or shipping, create a single line item with the final total
         $order_description = '';
         if (count($cart_items) == 1) {
-            $order_description = $cart_items[0]['name'] . ' (Voucher Applied)';
+            $order_description = $cart_items[0]['name'];
         } else {
-            $order_description = 'Order (' . count($cart_items) . ' items, Voucher Applied)';
+            $order_description = 'Order (' . count($cart_items) . ' items)';
+        }
+        
+        $description_parts = ['Subtotal: RM' . number_format($cart_total, 2)];
+        
+        if ($has_shipping) {
+            $description_parts[] = 'Shipping: RM' . number_format($shipping_fee, 2);
+        }
+        
+        if ($has_discount) {
+            $description_parts[] = 'Discount: RM' . number_format($final_discount, 2);
+            $order_description .= ' (Voucher Applied)';
         }
         
         $line_items[] = [
@@ -76,14 +89,14 @@ try {
                 'currency' => 'myr',
                 'product_data' => [
                     'name' => $order_description,
-                    'description' => 'Subtotal: RM' . number_format($cart_total, 2) . ', Discount: RM' . number_format($final_discount, 2),
+                    'description' => implode(', ', $description_parts),
                 ],
                 'unit_amount' => intval($total_amount * 100), // Convert to cents
             ],
             'quantity' => 1,
         ];
     } else {
-        // No discount - show individual items
+        // No discount or shipping combined - show individual items
         foreach ($cart_items as $item) {
             $product_data = [
                 'name' => $item['name'],
@@ -118,6 +131,21 @@ try {
                     'unit_amount' => intval($item['price'] * 100), // Convert to cents
                 ],
                 'quantity' => $item['quantity'],
+            ];
+        }
+        
+        // Add shipping as separate line item if applicable
+        if ($has_shipping) {
+            $line_items[] = [
+                'price_data' => [
+                    'currency' => 'myr',
+                    'product_data' => [
+                        'name' => 'Shipping',
+                        'description' => 'Standard shipping fee',
+                    ],
+                    'unit_amount' => intval($shipping_fee * 100), // Convert to cents
+                ],
+                'quantity' => 1,
             ];
         }
     }

@@ -924,7 +924,7 @@ try {
 
         <div class="button-group">
             <button onclick="printReceipt()" class="btn btn-print">Print Receipt</button>
-            <a href="../../index.php" class="btn btn-secondary">Continue Shopping</a>
+            <a href="../product/product_list.php" class="btn btn-secondary">Continue Shopping</a>
         </div>
     </div>
     
