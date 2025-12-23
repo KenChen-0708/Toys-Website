@@ -16,22 +16,29 @@ $member_id = $_SESSION['member']['id'];
 // Handle error messages from redirects
 $error_message = '';
 if (isset($_GET['error'])) {
-  switch ($_GET['error']) {
-    case 'empty_cart':
-      $error_message = 'Your cart is empty. Please add items before proceeding to checkout.';
-      break;
-    case 'session_expired':
-      $error_message = 'Your session has expired. Please select products again.';
-      break;
-    case 'invalid_order':
-      $error_message = 'Invalid order. Please try again.';
-      break;
-    case 'order_not_found':
-      $error_message = 'Order not found or already processed.';
-      break;
-    default:
-      $error_message = 'An error occurred. Please try again.';
-  }
+    switch ($_GET['error']) {
+        case 'empty_cart':
+            $error_message = 'Your cart is empty. Please add items before proceeding to checkout.';
+            break;
+        case 'session_expired':
+            $error_message = 'Your checkout session has expired. Please try again.';
+            break;
+        case 'invalid_order':
+            $error_message = 'Invalid order. Please try again.';
+            break;
+        case 'order_not_found':
+            $error_message = 'Order not found or already processed.';
+            break;
+        case 'insufficient_stock':
+            $product_name = $_GET['product'] ?? 'a product';
+            $error_message = 'Insufficient stock for ' . htmlspecialchars($product_name) . '. Please update your cart.';
+            break;
+        case 'invalid_session':
+            $error_message = 'Invalid session. Please start checkout again.';
+            break;
+        default:
+            $error_message = 'An error occurred. Please try again.';
+    }
 }
 
 // Clear buy_now session when user visits cart page
@@ -619,7 +626,7 @@ foreach ($cart_items as $item) {
   <div class="container">
     <div class="cart-header">
       <h1>Shopping Cart</h1>
-      <a href="../../index.php" class="btn btn-primary">Continue Shopping</a>
+      <a href="../product/product_list.php" class="btn btn-primary">Continue Shopping</a>
     </div>
 
     <div id="alert-container"></div>

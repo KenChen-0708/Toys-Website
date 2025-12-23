@@ -4,6 +4,13 @@ require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
 redirect_if_admin();
 
+// Prevent browser caching
+header("Expires: Tue, 01 Jan 2000 00:00:00 GMT");
+header("Last-Modified: " . gmdate("D, d M Y H:i:s") . " GMT");
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Cache-Control: post-check=0, pre-check=0", false);
+header("Pragma: no-cache");
+
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
     header('Location: /pages/auth/login.php');
@@ -11,6 +18,14 @@ if (!isset($_SESSION['member'])) {
 }
 
 $member_id = $_SESSION['member']['id'];
+
+// Clean up expired checkout data (older than 30 minutes)
+if (
+    isset($_SESSION['checkout_data']) &&
+    (time() - $_SESSION['checkout_data']['checkout_timestamp']) > 1800
+) {
+    unset($_SESSION['checkout_data']);
+}
 
 $error_message = '';
 $success_message = '';
@@ -231,7 +246,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_address'])) {
     }
 }
 
-// Handle order placement
+// Handle checkout preparation (store data in session, don't create order yet)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
     $shipping_address_id = $_POST['shipping_address_id'] ?? null;
     $voucher_code = $_POST['voucher_code_hidden'] ?? '';
@@ -240,10 +255,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
         $error_message = "Please select a shipping address.";
     } else {
         try {
-            $pdo->beginTransaction();
+            // Validate shipping address
+            $stmt = $pdo->prepare("SELECT * FROM Shipping_Address WHERE shipping_address_id = ? AND member_id = ?");
+            $stmt->execute([$shipping_address_id, $member_id]);
+            $selected_address = $stmt->fetch();
 
+            if (!$selected_address) {
+                throw new Exception("Invalid shipping address selected.");
+            }
+
+            // Validate stock availability before proceeding
+            foreach ($cart_items as $item) {
+                $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
+                $stmt->execute([$item['product_id']]);
+                $current_stock = $stmt->fetchColumn();
+
+                if ($current_stock < $item['quantity']) {
+                    throw new Exception("Insufficient stock for product: " . $item['name'] . ". Available: " . $current_stock . ", Requested: " . $item['quantity']);
+                }
+            }
+
+            // Validate voucher if provided
             $final_discount = 0;
-            $voucher_id = null;
+            $voucher_data = null;
             if (!empty($voucher_code)) {
                 $stmt = $pdo->prepare("
                     SELECT v.*, 
@@ -264,8 +298,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                     $voucher && $voucher['times_used_by_user'] < $voucher['usage_per_user']
                     && $cart_total >= $voucher['min_spend']
                 ) {
-                    $voucher_id = $voucher['voucher_id'];
-
                     if ($voucher['discount_type'] === 'fixed') {
                         $final_discount = $voucher['discount_value'];
                     } else {
@@ -274,105 +306,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                             $final_discount = $voucher['max_discount'];
                         }
                     }
+                    $voucher_data = $voucher;
                 }
             }
 
             $final_amount = $cart_total - $final_discount;
 
-            // Get the selected shipping address details
-            $stmt = $pdo->prepare("SELECT * FROM Shipping_Address WHERE shipping_address_id = ? AND member_id = ?");
-            $stmt->execute([$shipping_address_id, $member_id]);
-            $selected_address = $stmt->fetch();
+            // Store checkout data in session for payment processing
+            $_SESSION['checkout_data'] = [
+                'member_id' => $member_id,
+                'cart_items' => $cart_items,
+                'is_buy_now' => $is_buy_now,
+                'shipping_address' => $selected_address,
+                'voucher_data' => $voucher_data,
+                'voucher_code' => $voucher_code,
+                'cart_total' => $cart_total,
+                'final_discount' => $final_discount,
+                'final_amount' => $final_amount,
+                'checkout_timestamp' => time()
+            ];
 
-            if (!$selected_address) {
-                throw new Exception("Invalid shipping address selected.");
-            }
-
-            // Insert order with shipping address details
-            $stmt = $pdo->prepare("
-                INSERT INTO `Order` (
-                    member_id, 
-                    shipping_address_line1, 
-                    shipping_address_line2, 
-                    shipping_city, 
-                    shipping_state, 
-                    shipping_postal_code, 
-                    shipping_country, 
-                    total_amount, 
-                    status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'Pending')
-            ");
-            $stmt->execute([
-                $member_id,
-                $selected_address['address_line1'],
-                $selected_address['address_line2'],
-                $selected_address['city'],
-                $selected_address['state'],
-                $selected_address['postal_code'],
-                $selected_address['country'],
-                $final_amount
-            ]);
-            $order_id = $pdo->lastInsertId();
-
-            foreach ($cart_items as $item) {
-                // First, check current stock before creating order item
-                $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
-                $stmt->execute([$item['product_id']]);
-                $current_stock = $stmt->fetchColumn();
-
-                if ($current_stock < $item['quantity']) {
-                    throw new Exception("Insufficient stock for product: " . $item['name'] . ". Available: " . $current_stock . ", Requested: " . $item['quantity']);
-                }
-
-                $stmt = $pdo->prepare("
-                    INSERT INTO Order_Item (order_id, product_id, quantity, price)
-                    VALUES (?, ?, ?, ?)
-                ");
-                $stmt->execute([
-                    $order_id,
-                    $item['product_id'],
-                    $item['quantity'],
-                    $item['price']
-                ]);
-
-                // Update stock with additional safety check
-                $stmt = $pdo->prepare("
-                    UPDATE Product 
-                    SET stock = stock - ? 
-                    WHERE product_id = ? AND stock >= ?
-                ");
-                $affected_rows = $stmt->execute([$item['quantity'], $item['product_id'], $item['quantity']]);
-
-                // Double-check that the update actually happened
-                if ($stmt->rowCount() === 0) {
-                    throw new Exception("Stock update failed for product: " . $item['name'] . ". Possible concurrent purchase.");
-                }
-            }
-
-            if ($voucher_id) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO Voucher_Usage (voucher_id, member_id, order_id)
-                    VALUES (?, ?, ?)
-                ");
-                $stmt->execute([$voucher_id, $member_id, $order_id]);
-            }
-
-            // Clear cart only if not buy_now (buy_now doesn't affect cart)
-            if (!$is_buy_now) {
-                $stmt = $pdo->prepare("DELETE FROM Cart_Item WHERE cart_id IN (SELECT cart_id FROM Cart WHERE member_id = ?)");
-                $stmt->execute([$member_id]);
-            } else {
-                // Clear buy_now session data
-                unset($_SESSION['buy_now_item']);
-            }
-
-            $pdo->commit();
-
-            header("Location: ../payment/payment.php?order_id=" . $order_id);
+            // Redirect to payment without creating order
+            header("Location: ../payment/payment.php");
             exit();
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $error_message = "Error placing order: " . $e->getMessage();
+        } catch (Exception $e) {
+            $error_message = "Error preparing checkout: " . $e->getMessage();
         }
     }
 }
