@@ -306,7 +306,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                 }
             }
 
-            $final_amount = $cart_total - $final_discount;
+            // Calculate shipping fee
+            $shipping_fee = 5.00; // Default shipping fee RM5
+            $free_shipping_threshold = 15.00; // Free shipping for orders over RM15
+
+            // Apply free shipping if cart total (before discount) meets threshold
+            if ($cart_total >= $free_shipping_threshold) {
+                $shipping_fee = 0.00;
+            }
+
+            $final_amount = $cart_total - $final_discount + $shipping_fee;
 
             // Store checkout data in session for payment processing
             $_SESSION['checkout_data'] = [

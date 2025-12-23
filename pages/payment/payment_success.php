@@ -850,6 +850,45 @@ try {
                     <span class="order-label">Payment Status</span>
                     <span class="order-value status-completed"><?php echo $payment['status']; ?></span>
                 </div>
+                
+                <?php
+                // Calculate subtotal from order items
+                $subtotal = 0;
+                foreach ($order_items as $item) {
+                    $subtotal += ($item['price'] * $item['quantity']);
+                }
+                
+                // Calculate shipping fee (same logic as checkout)
+                $shipping_fee = 5.00;
+                $free_shipping_threshold = 15.00;
+                if ($subtotal >= $free_shipping_threshold) {
+                    $shipping_fee = 0.00;
+                }
+                
+                // Calculate any discount applied
+                $discount_amount = $subtotal + $shipping_fee - $order['total_amount'];
+                ?>
+                
+                <div class="order-row">
+                    <span class="order-label">Subtotal</span>
+                    <span class="order-value">RM<?php echo number_format($subtotal, 2); ?></span>
+                </div>
+                <div class="order-row">
+                    <span class="order-label">Shipping</span>
+                    <span class="order-value">
+                        <?php if ($shipping_fee > 0): ?>
+                            RM<?php echo number_format($shipping_fee, 2); ?>
+                        <?php else: ?>
+                            <span style="color: #28a745; font-weight: 600;">FREE</span>
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <?php if ($discount_amount > 0.01): ?>
+                <div class="order-row">
+                    <span class="order-label">Discount</span>
+                    <span class="order-value" style="color: #28a745; font-weight: 600;">-RM<?php echo number_format($discount_amount, 2); ?></span>
+                </div>
+                <?php endif; ?>
                 <div class="order-row">
                     <span class="order-label">Total Amount</span>
                     <span class="order-value amount">RM<?php echo number_format($order['total_amount'], 2); ?></span>
@@ -902,6 +941,44 @@ try {
                             </td>
                         </tr>
                     <?php endforeach; ?>
+                    
+                    <!-- Subtotal row -->
+                    <tr>
+                        <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            Subtotal:
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            RM<?php echo number_format($subtotal, 2); ?>
+                        </td>
+                    </tr>
+                    
+                    <!-- Shipping row -->
+                    <tr>
+                        <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            Shipping:
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            <?php if ($shipping_fee > 0): ?>
+                                RM<?php echo number_format($shipping_fee, 2); ?>
+                            <?php else: ?>
+                                FREE
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    
+                    <!-- Discount row (if applicable) -->
+                    <?php if ($discount_amount > 0.01): ?>
+                    <tr>
+                        <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            Discount:
+                        </td>
+                        <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">
+                            -RM<?php echo number_format($discount_amount, 2); ?>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                    
+                    <!-- Total row -->
                     <tr>
                         <td colspan="3" style="border: 1px solid #ddd; padding: 10px; text-align: right; font-weight: bold;">
                             Total Amount:
@@ -953,65 +1030,29 @@ try {
         // Auto-redirect to home page after 60 seconds
         let countdown = 60;
         const countdownElement = document.createElement('div');
-        countdownElement.className = 'countdown-timer';
         countdownElement.style.cssText = `
             position: fixed;
             top: 20px;
             right: 20px;
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.95), rgba(69, 160, 73, 0.95));
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.8);
             color: white;
-            padding: 12px 18px;
-            border-radius: 12px;
+            padding: 10px 15px;
+            border-radius: 5px;
             font-size: 14px;
-            font-weight: 500;
             z-index: 1000;
-            box-shadow: 0 8px 32px rgba(76, 175, 80, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            transition: all 0.3s ease;
-            animation: slideInRight 0.5s ease;
+            cursor: pointer;
         `;
-        countdownElement.innerHTML = `⏱️ Redirecting to home in <strong>${countdown}s</strong>`;
+        countdownElement.textContent = `Redirecting to home in ${countdown}s`;
+        countdownElement.title = 'Click to cancel auto-redirect';
         document.body.appendChild(countdownElement);
-
-        // Add slide-in animation
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideInRight {
-                from {
-                    transform: translateX(100%);
-                    opacity: 0;
-                }
-                to {
-                    transform: translateX(0);
-                    opacity: 1;
-                }
-            }
-            @keyframes pulse {
-                0%, 100% {
-                    transform: scale(1);
-                }
-                50% {
-                    transform: scale(1.05);
-                }
-            }
-        `;
-        document.head.appendChild(style);
         
         const countdownTimer = setInterval(() => {
             countdown--;
-            countdownElement.innerHTML = `⏱️ Redirecting to home in <strong>${countdown}s</strong>`;
-            
-            // Add urgency styling when countdown is low
-            if (countdown <= 10) {
-                countdownElement.style.background = 'linear-gradient(135deg, rgba(255, 152, 0, 0.95), rgba(255, 111, 0, 0.95))';
-                countdownElement.style.animation = 'pulse 1s infinite';
-                countdownElement.style.boxShadow = '0 8px 32px rgba(255, 152, 0, 0.3)';
-            }
+            countdownElement.textContent = `Redirecting to home in ${countdown}s`;
             
             if (countdown <= 0) {
                 clearInterval(countdownTimer);
-                countdownElement.innerHTML = '🔄 Redirecting...';
+                countdownElement.textContent = 'Redirecting...';
                 window.location.href = '../../index.php';
             }
         }, 1000);
@@ -1019,26 +1060,10 @@ try {
         // Allow user to cancel auto-redirect by clicking the countdown
         countdownElement.addEventListener('click', () => {
             clearInterval(countdownTimer);
-            countdownElement.innerHTML = '✅ Auto-redirect cancelled';
-            countdownElement.style.background = 'linear-gradient(135deg, rgba(76, 175, 80, 0.95), rgba(69, 160, 73, 0.95))';
-            countdownElement.style.animation = 'none';
+            countdownElement.textContent = 'Auto-redirect cancelled';
             setTimeout(() => {
-                countdownElement.style.transform = 'translateX(100%)';
-                countdownElement.style.opacity = '0';
-                setTimeout(() => countdownElement.remove(), 300);
+                countdownElement.remove();
             }, 2000);
-        });
-        
-        countdownElement.title = 'Click to cancel auto-redirect';
-        countdownElement.style.cursor = 'pointer';
-        
-        // Add hover effect
-        countdownElement.addEventListener('mouseenter', () => {
-            countdownElement.style.transform = 'scale(1.05)';
-        });
-        
-        countdownElement.addEventListener('mouseleave', () => {
-            countdownElement.style.transform = 'scale(1)';
         });
         
         // Clear buy_now session if it exists (cleanup)
