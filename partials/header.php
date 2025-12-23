@@ -44,12 +44,6 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
           <li><a href="/pages/product/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
           <li><a href="/feedback.php" class="nav__link <?= $current_page === 'feedback.php' ? 'active-link' : '' ?>">Feedback</a></li>
         </ul>
-        <div class="header__search">
-          <input type="text" placeholder="Search For Items..." class="form__input" />
-          <button class="search__btn">
-            <img src="/assets/img/search.png" alt="search icon" />
-          </button>
-        </div>
       </div>
 
       <div class="header__user-actions">
