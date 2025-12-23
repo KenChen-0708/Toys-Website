@@ -1,4 +1,3 @@
-
 /* =========================================
    DARK THEME GLOBALS
    ========================================= */
@@ -48,12 +47,6 @@ body.dark-theme .active-link {
 /* Fix Icons (Cart, Wishlist, Search) to be white */
 body.dark-theme .header__action-btn img,
 body.dark-theme .search__btn img {
-  filter: brightness(0) invert(1);
-}
-
-/* Logo Fix (Inverts black logos to white) */
-body.dark-theme .nav__logo-img,
-body.dark-theme .footer__logo-img {
   filter: brightness(0) invert(1);
 }
 
@@ -904,6 +897,7 @@ body.dark-theme .toggle-advanced {
   align-items: center;
   gap: 6px;
 }
+
 body.dark-theme .toggle-advanced:hover {
   text-decoration: underline;
 }
@@ -965,6 +959,7 @@ body.dark-theme .btn-primary {
   color: #fff;
   border: none;
 }
+
 body.dark-theme .btn-primary:hover {
   opacity: 0.85;
 }
@@ -975,6 +970,7 @@ body.dark-theme .btn-secondary {
   color: var(--title-color);
   border: 1px solid var(--border-color);
 }
+
 body.dark-theme .btn-secondary:hover {
   border-color: var(--title-color);
   background: rgba(255, 255, 255, 0.05);
@@ -988,6 +984,7 @@ body.dark-theme .results-info {
   font-size: 0.9rem;
   color: var(--text-color-light);
 }
+
 body.dark-theme .results-info strong {
   color: var(--first-color);
 }
@@ -1059,18 +1056,21 @@ body.dark-theme .status.Pending {
   color: #facc15;
   border-color: rgba(234, 179, 8, 0.3);
 }
+
 /* Shipped */
 body.dark-theme .status.Shipped {
   background: rgba(59, 130, 246, 0.15);
   color: #93c5fd;
   border-color: rgba(59, 130, 246, 0.3);
 }
+
 /* Delivered */
 body.dark-theme .status.Delivered {
   background: rgba(34, 197, 94, 0.15);
   color: #86efac;
   border-color: rgba(34, 197, 94, 0.35);
 }
+
 /* Cancelled */
 body.dark-theme .status.Cancelled {
   background: rgba(239, 68, 68, 0.15);
@@ -1130,6 +1130,3 @@ body.dark-theme .pagination .page-info {
     height: 40px;
   }
 }
-
-
-
