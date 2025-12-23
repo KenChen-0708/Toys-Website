@@ -158,29 +158,31 @@ foreach ($cart_items as $item) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shopping Cart - Online Store</title>
   <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
+  <link rel="stylesheet" href="/assets/css/styles.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
+    /* Scoped styles for cart page only - don't override header/footer */
+    .cart-page * {
       box-sizing: border-box;
     }
 
-    body {
+    .cart-page {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
       background-color: #fafafa;
       color: #1a1a1a;
       line-height: 1.6;
+      min-height: 100vh;
+      padding-top: 20px;
     }
 
-    .container {
+    .cart-page .container {
       max-width: 1100px;
       margin: 40px auto;
       background: white;
       border: 1px solid #e5e5e5;
     }
 
-    h1 {
+    .cart-page h1 {
       font-size: 28px;
       font-weight: 500;
       color: #1a1a1a;
@@ -188,7 +190,7 @@ foreach ($cart_items as $item) {
       letter-spacing: -0.5px;
     }
 
-    .cart-header {
+    .cart-page .cart-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -196,7 +198,7 @@ foreach ($cart_items as $item) {
       border-bottom: 1px solid #e5e5e5;
     }
 
-    .btn {
+    .cart-page .btn {
       padding: 11px 24px;
       border: 1px solid #1a1a1a;
       background: white;
@@ -204,80 +206,107 @@ foreach ($cart_items as $item) {
       cursor: pointer;
       font-size: 13px;
       font-weight: 500;
-      transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+      transition: all 0.3s ease;
       text-decoration: none;
       display: inline-block;
       letter-spacing: 0.3px;
+      border-radius: 4px;
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn:hover {
+    .cart-page .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .cart-page .btn:hover {
+      background-color: #1a1a1a;
+      color: white;
+      border-color: #1a1a1a;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 26, 26, 0.15);
+    }
+
+    .cart-page .btn:hover::before {
+      left: 100%;
+    }
+
+    .cart-page .btn:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 6px rgba(26, 26, 26, 0.1);
+    }
+
+    .cart-page .btn-primary {
       background-color: #1a1a1a;
       color: white;
       border-color: #1a1a1a;
     }
 
-    .btn-primary {
-      background-color: #1a1a1a;
-      color: white;
-      border-color: #1a1a1a;
+    .cart-page .btn-primary::before {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
     }
 
-    .btn-primary:hover {
+    .cart-page .btn-primary:hover {
       background-color: #000;
       border-color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
 
-    .btn-danger {
+    .cart-page .btn-danger {
       background-color: white;
       color: #1a1a1a;
       border-color: #d0d0d0;
     }
 
-    .btn-danger:hover {
+    .cart-page .btn-danger:hover {
       background-color: #1a1a1a;
       border-color: #1a1a1a;
       color: white;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(26, 26, 26, 0.15);
     }
 
-    .btn-success {
+    .cart-page .btn-success {
       background-color: #1a1a1a;
       color: white;
       border-color: #1a1a1a;
     }
 
-    .btn-success:hover {
+    .cart-page .btn-success::before {
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    }
+
+    .cart-page .btn-success:hover {
       background-color: #000;
       border-color: #000;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
     }
 
-    .alert {
+    .cart-page .alert {
       padding: 16px 24px;
       margin: 0 auto;
-      /* center */
       display: none;
       font-size: 13px;
-
       width: 320px;
-      /* ❗ set width */
       max-width: 90%;
-      /* responsive */
       text-align: center;
-      /* center text */
-
       position: fixed;
       top: 20px;
-      /* move slightly below top */
       left: 50%;
-      /* center horizontally */
       transform: translateX(-50%);
-      /* center correction */
-
       z-index: 999;
       animation: fadeIn 0.3s ease;
       border-radius: 6px;
-      /* optional, looks nicer */
     }
-
 
     @keyframes fadeIn {
       from {
@@ -289,45 +318,45 @@ foreach ($cart_items as $item) {
       }
     }
 
-    .alert-success {
+    .cart-page .alert-success {
       background-color: #1a1a1a;
       color: white;
     }
 
-    .alert-error {
+    .cart-page .alert-error {
       background-color: #1a1a1a;
       color: white;
     }
 
-    .cart-empty {
+    .cart-page .cart-empty {
       text-align: center;
       padding: 80px 40px;
       color: #999;
     }
 
-    .cart-empty div {
+    .cart-page .cart-empty div {
       font-size: 48px;
       margin-bottom: 20px;
       opacity: 0.3;
     }
 
-    .cart-empty h2 {
+    .cart-page .cart-empty h2 {
       font-size: 18px;
       font-weight: 500;
       color: #666;
       margin-bottom: 8px;
     }
 
-    .cart-empty p {
+    .cart-page .cart-empty p {
       font-size: 14px;
       color: #999;
     }
 
-    .cart-table {
+    .cart-page .cart-table {
       width: 100%;
     }
 
-    .cart-item {
+    .cart-page .cart-item {
       display: grid;
       grid-template-columns: 40px 100px 1fr 100px 140px 120px 60px;
       gap: 24px;
@@ -336,32 +365,32 @@ foreach ($cart_items as $item) {
       align-items: center;
     }
 
-    .cart-item:hover {
+    .cart-page .cart-item:hover {
       background-color: #fafafa;
     }
 
-    .item-checkbox {
+    .cart-page .item-checkbox {
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .item-select,
-    #select-all {
+    .cart-page .item-select,
+    .cart-page #select-all {
       width: 18px;
       height: 18px;
       cursor: pointer;
       accent-color: #1a1a1a;
     }
 
-    .item-image {
+    .cart-page .item-image {
       width: 100px;
       height: 100px;
       object-fit: cover;
       border: 1px solid #e5e5e5;
     }
 
-    .item-details h3 {
+    .cart-page .item-details h3 {
       color: #1a1a1a;
       margin-bottom: 8px;
       font-size: 15px;
@@ -369,7 +398,7 @@ foreach ($cart_items as $item) {
       letter-spacing: -0.2px;
     }
 
-    .item-details .status {
+    .cart-page .item-details .status {
       font-size: 11px;
       padding: 4px 8px;
       display: inline-block;
@@ -379,32 +408,32 @@ foreach ($cart_items as $item) {
       font-weight: 500;
     }
 
-    .status-available {
+    .cart-page .status-available {
       background-color: #f5f5f5;
       color: #666;
       border: 1px solid #e5e5e5;
     }
 
-    .status-unavailable {
+    .cart-page .status-unavailable {
       background-color: #f5f5f5;
       color: #999;
       border: 1px solid #e5e5e5;
     }
 
-    .item-price {
+    .cart-page .item-price {
       font-size: 15px;
       font-weight: 400;
       color: #1a1a1a;
       letter-spacing: -0.2px;
     }
 
-    .item-quantity {
+    .cart-page .item-quantity {
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
-    .quantity-input {
+    .cart-page .quantity-input {
       width: 70px;
       padding: 10px;
       border: 1px solid #d0d0d0;
@@ -415,63 +444,87 @@ foreach ($cart_items as $item) {
       transition: border-color 0.3s ease;
     }
 
-    .quantity-input:focus {
+    .cart-page .quantity-input:focus {
       outline: none;
       border-color: #1a1a1a;
     }
 
-    .quantity-input:hover {
+    .cart-page .quantity-input:hover {
       border-color: #999;
     }
 
-    .stock-info {
+    .cart-page .stock-info {
       font-size: 11px;
       color: #999;
       margin-top: 6px;
       letter-spacing: 0.2px;
     }
 
-    .item-subtotal {
+    .cart-page .item-subtotal {
       font-size: 15px;
       font-weight: 500;
       color: #1a1a1a;
       letter-spacing: -0.2px;
     }
 
-    .item-remove {
+    .cart-page .item-remove {
       text-align: center;
     }
 
-    .btn-remove {
+    .cart-page .btn-remove {
       background: none;
       color: #999;
       border: none;
       padding: 8px;
       cursor: pointer;
       font-size: 20px;
-      transition: color 0.3s ease, background-color 0.3s ease, transform 0.3s ease;
+      transition: all 0.3s ease;
       width: 32px;
       height: 32px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
+      position: relative;
+      overflow: hidden;
     }
 
-    .btn-remove:hover {
-      color: white;
+    .cart-page .btn-remove::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
       background-color: #1a1a1a;
-      transform: rotate(90deg);
+      border-radius: 50%;
+      transition: all 0.3s ease;
+      transform: translate(-50%, -50%);
+      z-index: -1;
     }
 
-    .cart-summary {
+    .cart-page .btn-remove:hover {
+      color: white;
+      transform: rotate(90deg) scale(1.1);
+    }
+
+    .cart-page .btn-remove:hover::before {
+      width: 100%;
+      height: 100%;
+    }
+
+    .cart-page .btn-remove:active {
+      transform: rotate(90deg) scale(0.95);
+    }
+
+    .cart-page .cart-summary {
       background-color: #fafafa;
       padding: 32px 40px;
       border-top: 1px solid #e5e5e5;
       margin-top: 0;
     }
 
-    .summary-row {
+    .cart-page .summary-row {
       display: flex;
       justify-content: space-between;
       padding: 8px 0;
@@ -479,7 +532,7 @@ foreach ($cart_items as $item) {
       color: #666;
     }
 
-    .summary-row.total {
+    .cart-page .summary-row.total {
       border-top: 1px solid #d0d0d0;
       margin-top: 16px;
       padding-top: 20px;
@@ -489,14 +542,15 @@ foreach ($cart_items as $item) {
       letter-spacing: -0.3px;
     }
 
-    .cart-actions {
+    .cart-page .cart-actions {
       display: flex;
       justify-content: space-between;
+      align-items: center;
       padding: 24px 40px 32px;
       gap: 16px;
     }
 
-    .loading {
+    .cart-page .loading {
       display: none;
       text-align: center;
       padding: 20px;
@@ -507,7 +561,7 @@ foreach ($cart_items as $item) {
     }
 
     /* Confirmation Modal */
-    .modal-overlay {
+    .cart-page .modal-overlay {
       display: none;
       position: fixed;
       top: 0;
@@ -520,11 +574,11 @@ foreach ($cart_items as $item) {
       justify-content: center;
     }
 
-    .modal-overlay.active {
+    .cart-page .modal-overlay.active {
       display: flex;
     }
 
-    .modal-content {
+    .cart-page .modal-content {
       background: white;
       padding: 32px;
       max-width: 400px;
@@ -532,40 +586,40 @@ foreach ($cart_items as $item) {
       border: 1px solid #e5e5e5;
     }
 
-    .modal-content h3 {
+    .cart-page .modal-content h3 {
       font-size: 18px;
       font-weight: 500;
       color: #1a1a1a;
       margin-bottom: 12px;
     }
 
-    .modal-content p {
+    .cart-page .modal-content p {
       font-size: 14px;
       color: #666;
       margin-bottom: 24px;
       line-height: 1.6;
     }
 
-    .modal-actions {
+    .cart-page .modal-actions {
       display: flex;
       gap: 12px;
       justify-content: flex-end;
     }
 
-    .batch-actions {
+    .cart-page .batch-actions {
       padding: 20px 40px;
       border-bottom: 1px solid #e5e5e5;
       display: none;
       background-color: #fafafa;
     }
 
-    .batch-actions.active {
+    .cart-page .batch-actions.active {
       display: flex;
       align-items: center;
       gap: 16px;
     }
 
-    .select-all-container {
+    .cart-page .select-all-container {
       display: flex;
       align-items: center;
       gap: 8px;
@@ -574,47 +628,47 @@ foreach ($cart_items as $item) {
     }
 
     @media (max-width: 768px) {
-      .container {
+      .cart-page .container {
         margin: 0;
         border: none;
       }
 
-      .cart-header {
+      .cart-page .cart-header {
         padding: 24px 20px;
       }
 
-      h1 {
+      .cart-page h1 {
         font-size: 22px;
       }
 
-      .cart-item {
+      .cart-page .cart-item {
         grid-template-columns: 40px 80px 1fr;
         gap: 16px;
         padding: 24px 20px;
       }
 
-      .item-price,
-      .item-quantity,
-      .item-subtotal {
+      .cart-page .item-price,
+      .cart-page .item-quantity,
+      .cart-page .item-subtotal {
         grid-column: 3;
       }
 
-      .item-remove {
+      .cart-page .item-remove {
         grid-column: 3;
         text-align: right;
       }
 
-      .batch-actions {
+      .cart-page .batch-actions {
         padding: 16px 20px;
         flex-direction: column;
         align-items: flex-start;
       }
 
-      .cart-summary {
+      .cart-page .cart-summary {
         padding: 24px 20px;
       }
 
-      .cart-actions {
+      .cart-page .cart-actions {
         flex-direction: column;
         padding: 20px;
       }
@@ -622,7 +676,8 @@ foreach ($cart_items as $item) {
   </style>
 </head>
 
-<body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
+<?php include '../../partials/header.php'; ?>
+<div class="cart-page">
   <div class="container">
     <div class="cart-header">
       <h1>Shopping Cart</h1>
@@ -948,6 +1003,11 @@ foreach ($cart_items as $item) {
                   updateTotals();
                   updateSelectedCount();
 
+                  // Update header cart count
+                  if (typeof window.loadHeaderCounts === 'function') {
+                    window.loadHeaderCounts();
+                  }
+
                   if ($('.cart-item').length === 0) {
                     location.reload();
                   }
@@ -1021,6 +1081,11 @@ foreach ($cart_items as $item) {
                     updateTotals();
                     updateSelectedCount();
 
+                    // Update header cart count
+                    if (typeof window.loadHeaderCounts === 'function') {
+                      window.loadHeaderCounts();
+                    }
+
                     if (hasError) {
                       showAlert('Some items could not be removed', 'error');
                     } else {
@@ -1056,6 +1121,11 @@ foreach ($cart_items as $item) {
             success: function(response) {
               $('#loading').hide();
               if (response.success) {
+                // Update header cart count
+                if (typeof window.loadHeaderCounts === 'function') {
+                  window.loadHeaderCounts();
+                }
+                
                 showAlert(response.message, 'success');
                 setTimeout(function() {
                   location.reload();
@@ -1073,6 +1143,6 @@ foreach ($cart_items as $item) {
       });
     });
   </script>
-</body>
+</div>
 
-</html>
+<?php include '../../partials/footer.php'; ?>

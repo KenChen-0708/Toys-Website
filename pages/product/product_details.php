@@ -69,15 +69,24 @@ $title = htmlspecialchars($product['name']) . " — Details";
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-solid-straight/css/uicons-solid-straight.css" />
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
+  <link rel="stylesheet" href="/assets/css/styles.css">
   <title><?= htmlspecialchars($title) ?></title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
+    /* Scoped styles for product details page only - don't override header/footer */
+    .product-details-page * {
       box-sizing: border-box;
     }
 
-    :root {
+    .product-details-page {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--dark);
+      background: var(--gray-50);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .product-details-page {
       --primary: #0891b2;
       --primary-dark: #0e7490;
       --primary-light: #e0f2fe;
@@ -102,234 +111,15 @@ $title = htmlspecialchars($product['name']) . " — Details";
       --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
     }
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      color: var(--dark);
-      background: var(--gray-50);
-      line-height: 1.6;
-    }
-
-    /* Header Styles */
-    .header {
-      background: var(--white);
-      box-shadow: var(--shadow-sm);
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header__top {
-      background: var(--dark);
-      color: var(--white);
-      padding: 0.75rem 0;
-      font-size: 0.875rem;
-    }
-
-    .header__container {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 0 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 1rem;
-      flex-wrap: wrap;
-    }
-
-    .header__contact {
-      display: flex;
-      gap: 1.5rem;
-    }
-
-    .header__top-action {
-      color: var(--white);
-      text-decoration: none;
-      margin-left: 1rem;
-      transition: color 0.3s;
-    }
-
-    .header__top-action:hover {
-      color: var(--primary);
-    }
-
-    .header__user-profile {
-      position: relative;
-    }
-
-    .avatar-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      padding: 0;
-    }
-
-    .avatar-circle {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      background: var(--primary);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.875rem;
-      font-weight: 600;
-      color: var(--white);
-    }
-
-    .profile-menu {
-      display: none;
-      position: absolute;
-      top: calc(100% + 0.5rem);
-      right: 0;
-      background: var(--white);
-      border-radius: 0.5rem;
-      box-shadow: var(--shadow-xl);
-      min-width: 220px;
-      overflow: hidden;
-    }
-
-    .profile-menu__header {
-      padding: 1rem;
-      border-bottom: 1px solid var(--gray-200);
-    }
-
-    .profile-menu a,
-    .profile-menu button {
-      display: block;
-      width: 100%;
-      padding: 0.75rem 1rem;
-      text-decoration: none;
-      color: var(--dark);
-      border: none;
-      background: none;
-      text-align: left;
-      cursor: pointer;
-      transition: background 0.2s;
-      font-size: 0.875rem;
-    }
-
-    .profile-menu a:hover,
-    .profile-menu button:hover {
-      background: var(--gray-50);
-    }
-
-    .nav {
-      max-width: 1280px;
-      margin: 0 auto;
-      padding: 1rem 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 2rem;
-    }
-
-    .nav__logo-img {
-      height: 40px;
-    }
-
-    .nav__menu {
-      display: flex;
-      align-items: center;
-      gap: 2rem;
-      flex: 1;
-    }
-
-    .nav__list {
-      display: flex;
-      list-style: none;
-      gap: 2rem;
-    }
-
-    .nav__link {
-      text-decoration: none;
-      color: var(--dark);
-      font-weight: 500;
-      transition: color 0.3s;
-    }
-
-    .nav__link:hover,
-    .nav__link.active-link {
-      color: var(--primary);
-    }
-
-    .header__search {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      flex: 1;
-      max-width: 400px;
-    }
-
-    .form__input {
-      flex: 1;
-      padding: 0.625rem 1rem;
-      border: 1px solid var(--gray-300);
-      border-radius: 0.5rem;
-      font-size: 0.875rem;
-    }
-
-    .search__btn {
-      background: var(--primary);
-      border: none;
-      padding: 0.625rem 1rem;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      transition: background 0.3s;
-    }
-
-    .search__btn:hover {
-      background: var(--primary-dark);
-    }
-
-    .search__btn img {
-      width: 20px;
-      height: 20px;
-      filter: brightness(0) invert(1);
-    }
-
-    .header__user-actions {
-      display: flex;
-      gap: 1rem;
-    }
-
-    .header__action-btn {
-      position: relative;
-      text-decoration: none;
-    }
-
-    .header__action-btn img {
-      width: 24px;
-      height: 24px;
-    }
-
-    .header__action-btn .count {
-      position: absolute;
-      top: -8px;
-      right: -8px;
-      background: var(--primary);
-      color: var(--white);
-      font-size: 0.75rem;
-      font-weight: 600;
-      min-width: 20px;
-      height: 20px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0 0.375rem;
-    }
-
-    /* Breadcrumb - removed */
-
     /* Main Content */
-    .main {
+    .product-details-page .main {
       max-width: 1280px;
       margin: 0 auto;
       padding: 2rem 1.5rem;
     }
 
     /* Product Section */
-    .product-section {
+    .product-details-page .product-section {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 3rem;
@@ -337,13 +127,13 @@ $title = htmlspecialchars($product['name']) . " — Details";
     }
 
     /* Image Gallery */
-    .gallery {
+    .product-details-page .gallery {
       position: sticky;
       top: 100px;
       height: fit-content;
     }
 
-    .gallery__main {
+    .product-details-page .gallery__main {
       background: var(--white);
       border-radius: 1rem;
       overflow: hidden;
@@ -351,19 +141,19 @@ $title = htmlspecialchars($product['name']) . " — Details";
       box-shadow: var(--shadow);
     }
 
-    .gallery__main-img {
+    .product-details-page .gallery__main-img {
       width: 100%;
       aspect-ratio: 1;
       object-fit: cover;
     }
 
-    .gallery__thumbs {
+    .product-details-page .gallery__thumbs {
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 0.75rem;
     }
 
-    .gallery__thumb {
+    .product-details-page .gallery__thumb {
       background: var(--white);
       border-radius: 0.5rem;
       overflow: hidden;
@@ -372,26 +162,26 @@ $title = htmlspecialchars($product['name']) . " — Details";
       transition: all 0.3s;
     }
 
-    .gallery__thumb:hover {
+    .product-details-page .gallery__thumb:hover {
       border-color: var(--primary);
       transform: translateY(-2px);
     }
 
-    .gallery__thumb-img {
+    .product-details-page .gallery__thumb-img {
       width: 100%;
       aspect-ratio: 1;
       object-fit: cover;
     }
 
     /* Product Info */
-    .product-info {
+    .product-details-page .product-info {
       background: var(--white);
       border-radius: 1rem;
       padding: 2rem;
       box-shadow: var(--shadow);
     }
 
-    .product-badge {
+    .product-details-page .product-badge {
       display: inline-block;
       padding: 0.375rem 0.875rem;
       background: var(--primary-light);
@@ -404,7 +194,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       margin-bottom: 1rem;
     }
 
-    .product-title {
+    .product-details-page .product-title {
       font-size: 2rem;
       font-weight: 700;
       color: var(--dark);
@@ -412,7 +202,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       line-height: 1.2;
     }
 
-    .product-rating-row {
+    .product-details-page .product-rating-row {
       display: flex;
       align-items: center;
       gap: 1rem;
@@ -421,23 +211,23 @@ $title = htmlspecialchars($product['name']) . " — Details";
       border-bottom: 1px solid var(--gray-200);
     }
 
-    .rating-stars {
+    .product-details-page .rating-stars {
       display: flex;
       gap: 0.25rem;
       color: #fbbf24;
     }
 
-    .rating-text {
+    .product-details-page .rating-text {
       color: var(--gray-600);
       font-size: 0.875rem;
     }
 
-    .rating-number {
+    .product-details-page .rating-number {
       font-weight: 600;
       color: var(--dark);
     }
 
-    .product-price-section {
+    .product-details-page .product-price-section {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -447,19 +237,19 @@ $title = htmlspecialchars($product['name']) . " — Details";
       border-radius: 0.75rem;
     }
 
-    .price-wrapper {
+    .product-details-page .price-wrapper {
       display: flex;
       align-items: baseline;
       gap: 0.75rem;
     }
 
-    .current-price {
+    .product-details-page .current-price {
       font-size: 2.5rem;
       font-weight: 700;
       color: var(--primary);
     }
 
-    .stock-badge {
+    .product-details-page .stock-badge {
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -469,12 +259,12 @@ $title = htmlspecialchars($product['name']) . " — Details";
       font-weight: 600;
     }
 
-    .stock-badge.in-stock {
+    .product-details-page .stock-badge.in-stock {
       background: #d1fae5;
       color: #065f46;
     }
 
-    .stock-badge.out-of-stock {
+    .product-details-page .stock-badge.out-of-stock {
       background: #fee2e2;
       color: #991b1b;
     }
@@ -588,7 +378,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       margin-bottom: 1.5rem;
     }
 
-    .btn {
+    .product-details-page .btn {
       padding: 0.875rem 1.5rem;
       border: none;
       border-radius: 0.5rem;
@@ -603,34 +393,34 @@ $title = htmlspecialchars($product['name']) . " — Details";
       text-decoration: none;
     }
 
-    .btn-primary {
+    .product-details-page .btn-primary {
       background: var(--primary);
       color: var(--white);
     }
 
-    .btn-primary:hover:not(:disabled) {
+    .product-details-page .btn-primary:hover:not(:disabled) {
       background: var(--primary-dark);
       transform: translateY(-2px);
       box-shadow: var(--shadow-md);
     }
 
-    .btn-secondary {
+    .product-details-page .btn-secondary {
       background: var(--dark);
       color: var(--white);
     }
 
-    .btn-secondary:hover:not(:disabled) {
+    .product-details-page .btn-secondary:hover:not(:disabled) {
       background: var(--gray-700);
       transform: translateY(-2px);
       box-shadow: var(--shadow-md);
     }
 
-    .btn:disabled {
+    .product-details-page .btn:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
-    .btn-icon {
+    .product-details-page .btn-icon {
       width: 44px;
       height: 44px;
       padding: 0;
@@ -639,7 +429,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       color: var(--dark);
     }
 
-    .btn-icon:hover {
+    .product-details-page .btn-icon:hover {
       background: var(--primary);
       color: var(--white);
       border-color: var(--primary);
@@ -1036,77 +826,8 @@ $title = htmlspecialchars($product['name']) . " — Details";
   </style>
 </head>
 
-<body>
-  <!-- Header -->
-  <header class="header">
-    <div class="header__top">
-      <div class="header__container">
-        <div class="header__contact">
-          <span>(+01) - 2345 - 6789</span>
-          <span>Our location</span>
-        </div>
-        <p class="header__alert-news">Super Values Deals - Save more coupons</p>
-        <div>
-          <?php if (is_logged_in()): ?>
-            <div class="header__user-profile">
-              <button class="avatar-btn">
-                <span class="avatar-circle"><?= htmlspecialchars(user_initials($_SESSION['member']['username'])) ?></span>
-              </button>
-              <div class="profile-menu">
-                <div class="profile-menu__header">
-                  <strong><?= htmlspecialchars($_SESSION['member']['username']) ?></strong><br>
-                  <small><?= htmlspecialchars($_SESSION['member']['email']) ?></small>
-                </div>
-                <a href="/accounts.php">My Account</a>
-                <a href="/orders.php">My Orders</a>
-                <form action="/pages/auth/logout.php" method="post">
-                  <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-                  <button type="submit">Log Out</button>
-                </form>
-              </div>
-            </div>
-          <?php else: ?>
-            <a href="/pages/auth/login.php" class="header__top-action">Log In</a>
-            <a href="/pages/auth/register.php" class="header__top-action">Register</a>
-          <?php endif; ?>
-        </div>
-      </div>
-    </div>
-
-    <nav class="nav">
-      <a href="/index.php" class="nav__logo">
-        <img class="nav__logo-img" src="/assets/img/logo.jpg" alt="website logo" />
-      </a>
-      <div class="nav__menu">
-        <ul class="nav__list">
-          <li><a href="/index.php" class="nav__link">Home</a></li>
-          <li><a href="/pages/product/product_list.php" class="nav__link active-link">Product</a></li>
-          <li><a href="/accounts.php" class="nav__link">My Account</a></li>
-          <li><a href="/compare.php" class="nav__link">Compare</a></li>
-        </ul>
-        <div class="header__search">
-          <input type="text" placeholder="Search For Items..." class="form__input" />
-          <button class="search__btn">
-            <img src="/assets/img/search.png" alt="search icon" />
-          </button>
-        </div>
-      </div>
-      <div class="header__user-actions">
-        <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
-          <img src="/assets/img/icon-heart.svg" alt="Wishlist" />
-          <span class="count wishlist-count">0</span>
-        </a>
-        <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
-          <img src="/assets/img/icon-cart.svg" alt="Cart" />
-          <span class="count cart-count">0</span>
-        </a>
-      </div>
-    </nav>
-  </header>
-
-
-
-  <!-- Main Content -->
+<?php include '../../partials/header.php'; ?>
+<div class="product-details-page">
   <main class="main">
     <!-- Product Section -->
     <div class="product-section">
@@ -1450,12 +1171,8 @@ $title = htmlspecialchars($product['name']) . " — Details";
       menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
     });
 
-    document.addEventListener('click', function(e) {
-      const menu = document.querySelector('.profile-menu');
-      if (menu && !e.target.closest('.header__user-profile')) {
-        menu.style.display = 'none';
-      }
-    });
+    // Load header counts on page load
+    loadHeaderCounts();
 
     // Add to Cart functionality
     $(document).ready(function() {
@@ -1762,6 +1479,6 @@ $title = htmlspecialchars($product['name']) . " — Details";
       }
     });
   </script>
-</body>
+</div>
 
-</html>
+<?php include '../../partials/footer.php'; ?>
