@@ -2,6 +2,8 @@
 session_start();
 require '../../stripe-php-master/init.php'; // Stripe PHP SDK
 require '../../helper/pdo_connection.php';   // PDO connection
+require_once '../../helper/auth.php';
+redirect_if_admin();
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
@@ -48,7 +50,7 @@ try {
         $stmt = $pdo->prepare("SELECT stock FROM Product WHERE product_id = ?");
         $stmt->execute([$item['product_id']]);
         $current_stock = $stmt->fetchColumn();
-        
+
         if ($current_stock < $item['quantity']) {
             unset($_SESSION['checkout_data']);
             header('Location: ../cart/cart.php?error=insufficient_stock&product=' . urlencode($item['name']));
@@ -83,7 +85,7 @@ try {
             $description_parts[] = 'Discount: RM' . number_format($final_discount, 2);
             $order_description .= ' (Voucher Applied)';
         }
-        
+
         $line_items[] = [
             'price_data' => [
                 'currency' => 'myr',
@@ -110,12 +112,12 @@ try {
                         $clean_path = substr($clean_path, 3);
                     }
                     $clean_path = ltrim($clean_path, '/');
-                    
+
                     $path_parts = explode('/', $clean_path);
                     $encoded_parts = array_map('rawurlencode', $path_parts);
                     $encoded_path = implode('/', $encoded_parts);
                     $image_url = $domain . '/' . $encoded_path;
-                    
+
                     if (filter_var($image_url, FILTER_VALIDATE_URL)) {
                         $product_data['images'] = [$image_url];
                     }
@@ -153,7 +155,7 @@ try {
     // Create Stripe Checkout Session
     $success_url = $domain . '/pages/payment/payment_success.php?session_id={CHECKOUT_SESSION_ID}';
     $cancel_url = $domain . '/pages/payment/payment_cancel.php';
-    
+
     $session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card', 'fpx', 'grabpay'],
         'line_items' => $line_items,
@@ -174,8 +176,7 @@ try {
     // Log the full error for debugging
     error_log("Stripe Payment Error: " . $e->getMessage());
     error_log("Checkout Data: " . print_r($checkout_data, true));
-    
+
     // Show user-friendly error
     die("Payment Error: " . $e->getMessage() . "<br><br><a href='../cart/cart.php'>Return to Cart</a>");
 }
-?>

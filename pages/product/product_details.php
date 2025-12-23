@@ -2,6 +2,7 @@
 session_start();
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
+redirect_if_admin();
 
 function user_initials($name)
 {
@@ -1404,7 +1405,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
       const max = parseInt(this.max);
       const min = parseInt(this.min);
       let value = parseInt(this.value);
-      
+
       if (isNaN(value) || value < min) {
         this.value = min;
       } else if (value > max) {

@@ -2,6 +2,7 @@
 session_start();
 require_once 'helper/pdo_connection.php';
 require_once 'helper/auth.php';
+redirect_if_admin();
 
 // Ensure user is logged in
 if (!isset($_SESSION['member'])) {

@@ -1,3 +1,7 @@
+<?php
+require_once 'helper/auth.php';
+redirect_if_admin();
+?>
 <!DOCTYPE html>
 <html lang="en">
 
