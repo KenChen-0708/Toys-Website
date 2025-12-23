@@ -7,6 +7,13 @@ $(document).ready(function () {
   let currentPage = 1;
   let isLoading = false;
 
+  // Check URL for category parameter and set filter
+  const urlParams = new URLSearchParams(window.location.search);
+  const categoryParam = urlParams.get('category');
+  if (categoryParam) {
+    $('#categorySelect').val(decodeURIComponent(categoryParam));
+  }
+
   // Initialize - load products and cart count on page load
   loadProducts();
   // Use global loadHeaderCounts if available (from header-counts.js), otherwise use local fallback
