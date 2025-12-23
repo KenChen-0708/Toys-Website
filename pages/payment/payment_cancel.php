@@ -9,38 +9,19 @@ if (!isset($_SESSION['member'])) {
 }
 
 $member_id = $_SESSION['member']['id'];
-$order_id = $_GET['order_id'] ?? null;
 
-if (!$order_id) {
-    header('Location: ../checkout/checkout.php');
+// Check if checkout data exists in session
+if (!isset($_SESSION['checkout_data'])) {
+    header('Location: ../checkout/checkout.php?error=session_expired');
     exit();
 }
 
-try {
-    // Get order details and validate it's still payable
-    $stmt = $pdo->prepare("
-        SELECT o.*, COUNT(oi.order_item_id) as item_count
-        FROM `Order` o
-        LEFT JOIN Order_Item oi ON o.order_id = oi.order_id
-        WHERE o.order_id = ? AND o.member_id = ? AND o.status = 'Pending'
-        GROUP BY o.order_id
-    ");
-    $stmt->execute([$order_id, $member_id]);
-    $order = $stmt->fetch();
+$checkout_data = $_SESSION['checkout_data'];
 
-    if (!$order) {
-        // Order not found, completed, or not belonging to user
-        header('Location: ../cart/cart.php?error=order_not_found');
-        exit();
-    }
-    
-    if ($order['item_count'] == 0) {
-        // Order has no items
-        header('Location: ../cart/cart.php?error=invalid_order');
-        exit();
-    }
-} catch (PDOException $e) {
-    header('Location: ../cart/cart.php?error=database_error');
+// Validate checkout data belongs to current user
+if ($checkout_data['member_id'] !== $member_id) {
+    unset($_SESSION['checkout_data']);
+    header('Location: ../checkout/checkout.php?error=invalid_session');
     exit();
 }
 ?>
@@ -213,22 +194,22 @@ try {
         </p>
 
         <div class="order-info">
-            <strong>Order #<?php echo $order['order_id']; ?> is still pending</strong>
-            <p>Total Amount: RM<?php echo number_format($order['total_amount'], 2); ?></p>
+            <strong>Your checkout is still saved</strong>
+            <p>Total Amount: RM<?php echo number_format($checkout_data['final_amount'], 2); ?></p>
         </div>
 
         <ul class="info-list">
-            <li>✓ Your order has been saved</li>
-            <li>✓ Items are reserved for you</li>
-            <li>✓ You can complete payment later</li>
+            <li>✓ Your items are still in your cart</li>
+            <li>✓ No order was created yet</li>
+            <li>✓ You can complete payment anytime</li>
         </ul>
 
         <div class="action-buttons">
-            <a href="payment.php?order_id=<?php echo $order_id; ?>" class="btn btn-primary">
+            <a href="payment.php" class="btn btn-primary">
                 Try Payment Again
             </a>
-            <a href="../../index.php" class="btn btn-secondary">
-                Back to Home
+            <a href="../checkout/checkout.php" class="btn btn-secondary">
+                Back to Checkout
             </a>
         </div>
     </div>
