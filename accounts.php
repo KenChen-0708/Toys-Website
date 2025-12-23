@@ -3,6 +3,7 @@ $title = 'Ecommerce Website — Account';
 require_once __DIR__ . '/helper/pdo_connection.php';
 require_once __DIR__ . '/helper/auth.php';
 require_auth();
+redirect_if_admin();
 
 // Ensure user_initials function is available
 if (!function_exists('user_initials')) {
