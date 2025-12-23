@@ -10,14 +10,22 @@ require_once '../../helper/pdo_connection.php';
 try {
     // Get filter parameters
     $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-    $per_page = 21; // Changed to 21 products per page
+    $per_page = 18; // Changed to 18 products per page
     $offset = ($page - 1) * $per_page;
 
     $search = isset($_GET['search']) ? trim($_GET['search']) : '';
     $category = isset($_GET['category']) ? trim($_GET['category']) : '';
-    $min_price = isset($_GET['min_price']) ? floatval($_GET['min_price']) : 0;
-    $max_price = isset($_GET['max_price']) ? floatval($_GET['max_price']) : 0;
+    $min_price = isset($_GET['min_price']) ? max(0, floatval($_GET['min_price'])) : 0;
+    $max_price = isset($_GET['max_price']) ? max(0, floatval($_GET['max_price'])) : 0;
     $sort = isset($_GET['sort']) ? $_GET['sort'] : 'newest';
+
+    // Ensure min_price <= max_price if both are set
+    if ($min_price > 0 && $max_price > 0 && $min_price > $max_price) {
+        // Swap values if min > max
+        $temp = $min_price;
+        $min_price = $max_price;
+        $max_price = $temp;
+    }
 
     // Build query conditions
     $where_conditions = [];
