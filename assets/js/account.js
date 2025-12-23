@@ -257,22 +257,124 @@ $(document).ready(function() {
     }
   });
 
-  // Address edit modal functionality
+  // Address edit modal functionality (legacy single-address button)
   $(document).on('click', '#editAddressBtn', function() {
-    // Set modal title for editing
     $('#addressModalTitle').text('Edit Shipping Address');
+    $('#addressFormAction').val('update');
+    // No id available on legacy button; treat as updating default (server side will handle by id when provided)
     $('#addressEditModal').addClass('active');
   });
 
-  // Add address button functionality
+  // Open add-address modal
   $(document).on('click', '#addAddressBtn', function() {
-    // Set modal title for adding
     $('#addressModalTitle').text('Add Shipping Address');
-    // Clear form fields for new address
-    $('#addressEditForm')[0].reset();
-    // Set country to Malaysia by default
-    $('input[name="address_country"]').val('Malaysia');
+    const $form = $('#addressEditForm');
+    if ($form.length) {
+      $form[0].reset();
+      $('#addressFormAction').val('create');
+      $('#addressFormId').val('');
+      $('input[name="address_country"]').val('Malaysia');
+    }
     $('#addressEditModal').addClass('active');
+  });
+
+  // Open edit-address modal for a specific card
+  $(document).on('click', '.edit-address-btn', function() {
+    const btn = $(this);
+    $('#addressModalTitle').text('Edit Shipping Address');
+    $('#addressFormAction').val('update');
+    $('#addressFormId').val(btn.data('address-id'));
+    $('input[name="address_street"]').val(btn.data('line1') || '');
+    $('input[name="address_city"]').val(btn.data('city') || '');
+    $('select[name="address_state"]').val(btn.data('state') || '');
+    $('input[name="address_postcode"]').val(btn.data('postcode') || '');
+    $('input[name="address_country"]').val(btn.data('country') || 'Malaysia');
+    // address_line2 may not be in form; if added later, fill similarly
+    $('#addressEditModal').addClass('active');
+  });
+
+  // Copy address text
+  $(document).on('click', '.copy-address-btn', function() {
+    const text = $(this).data('address-text') || '';
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+      $(this).text('Copied').prop('disabled', true);
+      const self = this;
+      setTimeout(() => { $(self).html('<i class="fi fi-rs-copy"></i> Copy').prop('disabled', false); }, 1200);
+    });
+  });
+
+  // Simple UI confirm helper using the local modal
+  function showUiConfirm(message, title) {
+    return new Promise(function(resolve) {
+      const $modal = $('#confirmModal');
+      $('#confirmModalTitle').text(title || 'Confirm');
+      $('#confirmModalMessage').text(message || 'Are you sure?');
+      $modal.addClass('active');
+
+      function cleanup() {
+        $modal.removeClass('active');
+        $('#okConfirmBtn').off('click', onOk);
+        $('#cancelConfirmBtn').off('click', onCancel);
+        $('#closeConfirmModal').off('click', onCancel);
+        $modal.off('click', onBackdrop);
+      }
+
+      function onOk(e) { e.preventDefault(); cleanup(); resolve(true); }
+      function onCancel(e) { e.preventDefault(); cleanup(); resolve(false); }
+      function onBackdrop(e) { if ($(e.target).is('#confirmModal')) { onCancel(e); } }
+
+      $('#okConfirmBtn').on('click', onOk);
+      $('#cancelConfirmBtn').on('click', onCancel);
+      $('#closeConfirmModal').on('click', onCancel);
+      $modal.on('click', onBackdrop);
+    });
+  }
+
+  // Delete address (UI confirmation)
+  $(document).on('click', '.delete-address-btn', function() {
+    const id = $(this).data('address-id');
+    if (!id) return;
+    const form = $('#addressEditForm');
+    showUiConfirm('Delete this address? This action cannot be undone.', 'Delete Address')
+      .then(function(confirmed) {
+        if (!confirmed) return;
+        $.post('/pages/profile/addresses_api.php', {
+          action: 'delete',
+          address_id: id,
+          csrf_token: form.find('input[name="csrf_token"]').val()
+        }).done(function(resp){
+          if (resp && resp.ok) {
+            window.location.hash = '#address';
+            window.location.reload();
+          } else {
+            alert(resp && resp.error ? resp.error : 'Failed to delete address');
+          }
+        }).fail(function(){
+          alert('Failed to delete address');
+        });
+      });
+  });
+
+  // Set default address
+  $(document).on('click', '.set-default-address-btn', function() {
+    const id = $(this).data('address-id');
+    if (!id) return;
+    const form = $('#addressEditForm');
+    $.post('/pages/profile/addresses_api.php', {
+      action: 'set_default',
+      address_id: id,
+      csrf_token: form.find('input[name="csrf_token"]').val()
+    }).done(function(resp){
+      if (resp && resp.ok) {
+        window.location.hash = '#address';
+        window.location.reload();
+      } else {
+        alert(resp && resp.error ? resp.error : 'Failed to set default');
+      }
+    }).fail(function(){
+      alert('Failed to set default');
+    });
   });
 
   $(document).on('click', '#closeAddressModal, #cancelAddressModalBtn', function() {
@@ -284,6 +386,29 @@ $(document).ready(function() {
     if ($(e.target).is('#addressEditModal')) {
       $(this).removeClass('active');
     }
+  });
+
+  // Submit address form via AJAX
+  $(document).on('submit', '#addressEditForm', function(e) {
+    e.preventDefault();
+    const $form = $(this);
+    const data = $form.serialize();
+    $.ajax({
+      url: $form.attr('action'),
+      method: 'POST',
+      data: data,
+      dataType: 'json'
+    }).done(function(resp){
+      if (resp && resp.ok) {
+        $('#addressEditModal').removeClass('active');
+        window.location.hash = '#address';
+        window.location.reload();
+      } else {
+        alert(resp && resp.error ? resp.error : 'Failed to save address');
+      }
+    }).fail(function(){
+      alert('Failed to save address');
+    });
   });
 
   // Handle checklist item clicks

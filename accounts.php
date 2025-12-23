@@ -32,15 +32,15 @@ $addressParts = [
   'country' => 'Malaysia'
 ];
 
-$defaultAddress = null;
-$addressStmt = $pdo->prepare("
-    SELECT * FROM Shipping_Address 
-    WHERE member_id = ? 
-    ORDER BY created_date DESC 
-    LIMIT 1
-");
+// Fetch all addresses (most recent first). First item will be treated as default.
+$addresses = [];
+$addressStmt = $pdo->prepare(
+  "SELECT * FROM Shipping_Address WHERE member_id = ? ORDER BY created_date DESC, shipping_address_id DESC"
+);
 $addressStmt->execute([$memberId]);
-$defaultAddress = $addressStmt->fetch(PDO::FETCH_ASSOC);
+$addresses = $addressStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+$defaultAddress = $addresses[0] ?? null;
 
 if ($defaultAddress) {
     $addressParts['street'] = $defaultAddress['address_line1'] ?? '';
@@ -376,116 +376,124 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
         <div class="content-panel" id="address">
           <div class="content-panel__header">
-            <h3 class="content-panel__title">Shipping Address</h3>
-            <p class="content-panel__description">
-              Manage your shipping addresses for faster checkout.
-            </p>
+            <h3 class="content-panel__title">Shipping Addresses</h3>
+            <p class="content-panel__description">Manage multiple shipping addresses and choose a default.</p>
           </div>
           <div class="content-panel__body">
-            <?php if ($defaultAddress): ?>
+            <div style="margin-bottom:1rem; display:flex; justify-content:flex-end;">
+              <button type="button" class="btn btn--md btn--primary" id="addAddressBtn">
+                <i class="fi fi-rs-plus"></i> Add New Address
+              </button>
+            </div>
+
+            <?php if (!empty($addresses)): ?>
               <?php
-              // Count how many orders used this address
-              $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
-              $orderCountStmt->execute([$memberId]);
-              $orderCount = (int)$orderCountStmt->fetchColumn();
+                $orderCountStmt = $pdo->prepare("SELECT COUNT(*) FROM `Order` WHERE member_id = ?");
+                $orderCountStmt->execute([$memberId]);
+                $orderCount = (int)$orderCountStmt->fetchColumn();
               ?>
 
-              <div class="address-card">
-                <div class="address-card__header">
-                  <div class="address-card__title">
-                    <i class="fi fi-rs-marker"></i>
-                    <span>Default Shipping Address</span>
-                    <span class="address-badge address-badge--default">Default</span>
+              <?php foreach ($addresses as $idx => $addr): ?>
+                <?php
+                  $isDefault = ($idx === 0);
+                  $mapAddress = trim(implode(', ', array_filter([
+                    $addr['address_line1'] ?? '',
+                    $addr['city'] ?? '',
+                    $addr['state'] ?? '',
+                    $addr['postal_code'] ?? '',
+                    $addr['country'] ?? ''
+                  ])));
+                  $fullText = trim(implode("\n", array_filter([
+                    $addr['address_line1'] ?? '',
+                    $addr['address_line2'] ?? '',
+                    trim(implode(', ', array_filter([$addr['city'] ?? '', $addr['state'] ?? '', $addr['postal_code'] ?? '']))) ,
+                    $addr['country'] ?? ''
+                  ])));
+                ?>
+                <div class="address-card" data-address-id="<?= (int)$addr['shipping_address_id'] ?>">
+                  <div class="address-card__header">
+                    <div class="address-card__title">
+                      <i class="fi fi-rs-marker"></i>
+                      <span><?= $isDefault ? 'Default Shipping Address' : 'Shipping Address' ?></span>
+                      <?php if ($isDefault): ?><span class="address-badge address-badge--default">Default</span><?php endif; ?>
+                    </div>
+                    <div class="address-card__actions">
+                      <button type="button" class="btn btn--sm btn--outline copy-address-btn" title="Copy address" data-address-text="<?= htmlspecialchars($fullText) ?>">
+                        <i class="fi fi-rs-copy"></i> Copy
+                      </button>
+                      <button type="button"
+                              class="btn btn--sm btn--primary edit-address-btn"
+                              data-address-id="<?= (int)$addr['shipping_address_id'] ?>"
+                              data-line1="<?= htmlspecialchars($addr['address_line1'] ?? '') ?>"
+                              data-line2="<?= htmlspecialchars($addr['address_line2'] ?? '') ?>"
+                              data-city="<?= htmlspecialchars($addr['city'] ?? '') ?>"
+                              data-state="<?= htmlspecialchars($addr['state'] ?? '') ?>"
+                              data-postcode="<?= htmlspecialchars($addr['postal_code'] ?? '') ?>"
+                              data-country="<?= htmlspecialchars($addr['country'] ?? 'Malaysia') ?>">
+                        <i class="fi fi-rs-edit"></i> Edit
+                      </button>
+                    </div>
                   </div>
-                  <div class="address-card__actions">
-                    <button type="button" class="btn btn--sm btn--outline" id="copyAddressBtn" title="Copy address">
-                      <i class="fi fi-rs-copy"></i> Copy
-                    </button>
-                    <button type="button" class="btn btn--sm btn--primary" id="editAddressBtn">
-                      <i class="fi fi-rs-edit"></i> Edit
-                    </button>
-                  </div>
-                </div>
-
-                <div class="address-card__body">
-                  <div class="address-display">
-                    <?php if ($defaultAddress): ?>
-                      <?php if (!empty($defaultAddress['address_line1'])): ?>
-                        <div class="address-line"><?= htmlspecialchars($defaultAddress['address_line1']) ?></div>
+                  <div class="address-card__body">
+                    <div class="address-display">
+                      <?php if (!empty($addr['address_line1'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($addr['address_line1']) ?></div>
                       <?php endif; ?>
-                      <?php if (!empty($defaultAddress['address_line2'])): ?>
-                        <div class="address-line"><?= htmlspecialchars($defaultAddress['address_line2']) ?></div>
+                      <?php if (!empty($addr['address_line2'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($addr['address_line2']) ?></div>
                       <?php endif; ?>
-                      <?php if (!empty($defaultAddress['city']) || !empty($defaultAddress['state']) || !empty($defaultAddress['postal_code'])): ?>
+                      <?php if (!empty($addr['city']) || !empty($addr['state']) || !empty($addr['postal_code'])): ?>
                         <div class="address-line">
-                          <?php if (!empty($defaultAddress['city'])): ?>
-                            <?= htmlspecialchars($defaultAddress['city']) ?>
-                          <?php endif; ?>
-                          <?php if (!empty($defaultAddress['state'])): ?>
-                            <?= !empty($defaultAddress['city']) ? ', ' : '' ?><?= htmlspecialchars($defaultAddress['state']) ?>
-                          <?php endif; ?>
-                          <?php if (!empty($defaultAddress['postal_code'])): ?>
-                            <?= htmlspecialchars($defaultAddress['postal_code']) ?>
-                          <?php endif; ?>
+                          <?= htmlspecialchars(trim($addr['city'] ?? '')) ?><?= (!empty($addr['city']) && !empty($addr['state'])) ? ', ' : '' ?><?= htmlspecialchars(trim($addr['state'] ?? '')) ?> <?= htmlspecialchars(trim($addr['postal_code'] ?? '')) ?>
                         </div>
                       <?php endif; ?>
-                      <?php if (!empty($defaultAddress['country'])): ?>
-                        <div class="address-line"><?= htmlspecialchars($defaultAddress['country']) ?></div>
+                      <?php if (!empty($addr['country'])): ?>
+                        <div class="address-line"><?= htmlspecialchars($addr['country']) ?></div>
                       <?php endif; ?>
-                    <?php else: ?>
-                      <div class="address-line">No address provided</div>
-                    <?php endif; ?>
-                  </div>
-
-                  <div class="address-info">
-                    <div class="address-info__item">
-                      <i class="fi fi-rs-shopping-bag"></i>
-                      <span>Used in <strong><?= $orderCount ?></strong> order<?= $orderCount !== 1 ? 's' : '' ?></span>
                     </div>
-                    <?php if (!empty($member['phone_number'])): ?>
+                    <div class="address-info">
                       <div class="address-info__item">
-                        <i class="fi fi-rs-phone-call"></i>
-                        <span>Contact: <strong><?= htmlspecialchars($member['phone_number']) ?></strong></span>
+                        <i class="fi fi-rs-shopping-bag"></i>
+                        <span>Used in <strong><?= $orderCount ?></strong> order<?= $orderCount !== 1 ? 's' : '' ?></span>
                       </div>
-                    <?php endif; ?>
-                  </div>
-
-                    <div class="address-actions">
-                      <?php if ($defaultAddress): 
-                        $mapAddress = trim(implode(', ', array_filter([
-                          $defaultAddress['address_line1'],
-                          $defaultAddress['city'],
-                          $defaultAddress['state'],
-                          $defaultAddress['postal_code'],
-                          $defaultAddress['country']
-                        ])));
-                      ?>
-                        <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($mapAddress) ?>"
-                          target="_blank"
-                          class="btn btn--sm btn--outline"
-                          title="View on Google Maps">
-                          <i class="fi fi-rs-map-marker"></i> View on Map
-                        </a>
+                      <?php if (!empty($member['phone_number'])): ?>
+                        <div class="address-info__item">
+                          <i class="fi fi-rs-phone-call"></i>
+                          <span>Contact: <strong><?= htmlspecialchars($member['phone_number']) ?></strong></span>
+                        </div>
                       <?php endif; ?>
                     </div>
+                    <div class="address-actions">
+                      <a href="https://www.google.com/maps/search/?api=1&query=<?= urlencode($mapAddress) ?>"
+                         target="_blank"
+                         class="btn btn--sm btn--outline"
+                         title="View on Google Maps">
+                        <i class="fi fi-rs-map-marker"></i> View on Map
+                      </a>
+                      <?php if (!$isDefault): ?>
+                        <button type="button" class="btn btn--sm btn--primary set-default-address-btn" data-address-id="<?= (int)$addr['shipping_address_id'] ?>">
+                          <i class="fi fi-rs-badge-check"></i> Set as Default
+                        </button>
+                      <?php endif; ?>
+                      <button type="button" class="btn btn--sm btn--outline delete-address-btn" data-address-id="<?= (int)$addr['shipping_address_id'] ?>">
+                        <i class="fi fi-rs-trash"></i> Delete
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              <?php endforeach; ?>
 
               <div class="address-hint">
                 <p>
                   <i class="fi fi-rs-info"></i>
-                  This address will be used as the default shipping address for all your orders. You can update it anytime in the "Update Profile" section.
+                  Your default address is used automatically during checkout. You can set a different default anytime.
                 </p>
               </div>
             <?php else: ?>
               <div class="address-empty">
-                <div class="address-empty__icon">
-                  <i class="fi fi-rs-marker"></i>
-                </div>
+                <div class="address-empty__icon"><i class="fi fi-rs-marker"></i></div>
                 <h4 class="address-empty__title">No Address Added</h4>
-                <p class="address-empty__description">
-                  Add a shipping address to make checkout faster and ensure your orders are delivered to the right place.
-                </p>
+                <p class="address-empty__description">Add shipping addresses to make checkout faster and ensure accurate delivery.</p>
                 <button type="button" class="btn btn--md btn--primary" id="addAddressBtn">
                   <i class="fi fi-rs-plus"></i> Add Address
                 </button>
@@ -853,12 +861,10 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
     </button>
     <h3 class="address-edit-modal__title" id="addressModalTitle">Edit Shipping Address</h3>
     
-    <form class="address-edit-form" method="POST" action="/pages/profile/profile_update_post.php" id="addressEditForm">
+    <form class="address-edit-form" method="POST" action="/pages/profile/addresses_api.php" id="addressEditForm">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <input type="hidden" name="username" value="<?= htmlspecialchars($member['username']) ?>">
-      <input type="hidden" name="email" value="<?= htmlspecialchars($member['email']) ?>">
-      <input type="hidden" name="phone" value="<?= htmlspecialchars($member['phone_number'] ?? '') ?>">
-      <input type="hidden" name="redirect_to" value="address">
+      <input type="hidden" name="action" id="addressFormAction" value="create">
+      <input type="hidden" name="address_id" id="addressFormId" value="">
       
       <div class="address-edit-fields">
         <label class="form__label">
@@ -940,3 +946,23 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
   const citiesByState = <?= json_encode($citiesByState, JSON_UNESCAPED_UNICODE) ?>;
 </script>
 <script src="/assets/js/account.js"></script>
+
+<!-- UI Confirm Modal -->
+<div class="address-edit-modal" id="confirmModal">
+  <div class="address-edit-modal__content">
+    <button class="address-edit-modal__close" id="closeConfirmModal">
+      <i class="fi fi-rs-cross"></i>
+    </button>
+    <h3 class="address-edit-modal__title" id="confirmModalTitle">Confirm</h3>
+    <p id="confirmModalMessage" style="margin: 0 0 1.5rem; color: var(--text-color);"></p>
+    <div class="address-edit-modal__actions">
+      <button type="button" class="btn btn--md btn--outline" id="cancelConfirmBtn">
+        <i class="fi fi-rs-cross"></i> Cancel
+      </button>
+      <button type="button" class="btn btn--md btn--primary" id="okConfirmBtn">
+        <i class="fi fi-rs-check"></i> Confirm
+      </button>
+    </div>
+  </div>
+  
+</div>
