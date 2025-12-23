@@ -259,6 +259,19 @@ $(document).ready(function() {
 
   // Address edit modal functionality
   $(document).on('click', '#editAddressBtn', function() {
+    // Set modal title for editing
+    $('#addressModalTitle').text('Edit Shipping Address');
+    $('#addressEditModal').addClass('active');
+  });
+
+  // Add address button functionality
+  $(document).on('click', '#addAddressBtn', function() {
+    // Set modal title for adding
+    $('#addressModalTitle').text('Add Shipping Address');
+    // Clear form fields for new address
+    $('#addressEditForm')[0].reset();
+    // Set country to Malaysia by default
+    $('input[name="address_country"]').val('Malaysia');
     $('#addressEditModal').addClass('active');
   });
 
