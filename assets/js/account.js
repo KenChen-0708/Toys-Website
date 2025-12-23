@@ -14,54 +14,499 @@
   });
 })();
 
-// Tab navigation for account page
-(function () {
-  const tabs = document.querySelectorAll('.account__tab');
-  const tabContents = document.querySelectorAll('.tab__content');
-
-  function switchTab(targetId) {
-    // Remove active class from all tabs
-    tabs.forEach(tab => {
-      tab.classList.remove('active-tab');
-    });
-
-    // Remove active class from all content sections
-    tabContents.forEach(content => {
-      content.classList.remove('active-tab');
-    });
-
-    // Add active class to clicked tab
-    const activeTab = document.querySelector(`[data-target="${targetId}"]`);
-    if (activeTab) {
-      activeTab.classList.add('active-tab');
+// Dynamic content switching using jQuery
+$(document).ready(function() {
+  // Handle menu item clicks
+  $('.profile-menu__item').on('click', function() {
+    const contentId = $(this).data('content');
+    
+    if (!contentId) {
+      return;
     }
 
-    // Add active class to target content section
-    const targetContent = document.querySelector(targetId);
-    if (targetContent) {
-      targetContent.classList.add('active-tab');
+    // Remove active class from all menu items
+    $('.profile-menu__item').removeClass('active');
+    
+    // Add active class to clicked menu item
+    $(this).addClass('active');
+    
+    // Hide all content panels
+    $('.content-panel').removeClass('active');
+    
+    // Show the selected content panel
+    $('#' + contentId).addClass('active');
+    
+    // Update URL hash without scrolling
+    if (history.pushState) {
+      history.pushState(null, null, '#' + contentId);
+    } else {
+      window.location.hash = '#' + contentId;
     }
-  }
-
-  // Add click event listeners to all tabs
-  tabs.forEach(tab => {
-    tab.addEventListener('click', function() {
-      const targetId = this.getAttribute('data-target');
-      if (targetId) {
-        switchTab(targetId);
-      }
-    });
   });
 
-  // Handle hash navigation (e.g., #update-profile from address section)
+  // Handle hash navigation on page load
   if (window.location.hash) {
-    const hash = window.location.hash;
-    const targetTab = document.querySelector(`[data-target="${hash}"]`);
-    if (targetTab) {
-      switchTab(hash);
+    const hash = window.location.hash.substring(1); // Remove #
+    const menuItem = $('.profile-menu__item[data-content="' + hash + '"]');
+    if (menuItem.length) {
+      menuItem.trigger('click');
+    }
+  } else {
+    // Default: show dashboard
+    $('.profile-menu__item[data-content="dashboard"]').trigger('click');
+  }
+
+  // Handle link buttons that switch content (e.g., "update profile" link in dashboard)
+  $(document).on('click', '.profile-link-btn', function() {
+    const contentId = $(this).data('content');
+    if (contentId) {
+      const menuItem = $('.profile-menu__item[data-content="' + contentId + '"]');
+      if (menuItem.length) {
+        menuItem.trigger('click');
+      } else {
+        // If no menu item exists, directly show the content panel
+        $('.profile-menu__item').removeClass('active');
+        $('.content-panel').removeClass('active');
+        $('#' + contentId).addClass('active');
+      }
+    }
+  });
+
+  // Handle profile photo click to open modal and auto-start webcam
+  $('#profilePhotoTrigger').on('click', function() {
+    $('#profilePhotoModal').addClass('active');
+    // Auto-start webcam when modal opens
+    setTimeout(function() {
+      startModalWebcam();
+    }, 100);
+  });
+
+  // Close modal handlers
+  $('#closePhotoModal, #cancelPhotoModal').on('click', function() {
+    stopModalWebcam();
+    $('#profilePhotoModal').removeClass('active');
+  });
+
+  // Close modal when clicking outside
+  $('#profilePhotoModal').on('click', function(e) {
+    if ($(e.target).is('#profilePhotoModal')) {
+      stopModalWebcam();
+      $(this).removeClass('active');
+    }
+  });
+
+  // Modal webcam functions
+  let modalStream = null;
+  
+  function startModalWebcam() {
+    const video = document.getElementById('modalWebcamVideo');
+    const currentImg = document.getElementById('modalCurrentProfileImg');
+    const defaultAvatar = document.getElementById('modalDefaultProfileAvatar');
+    const webcamControls = document.getElementById('modalWebcamControls');
+    const dropZone = document.getElementById('modalPhotoDropZone');
+    
+    if (!video) return;
+    
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then(function(stream) {
+        modalStream = stream;
+        video.srcObject = stream;
+        video.style.display = 'block';
+        
+        // Hide current profile image
+        if (currentImg) {
+          currentImg.style.display = 'none';
+        }
+        if (defaultAvatar) {
+          defaultAvatar.style.display = 'none';
+        }
+        
+        // Show webcam controls
+        if (webcamControls) {
+          webcamControls.style.display = 'flex';
+        }
+        
+        // Make dropzone less prominent but still functional
+        if (dropZone) {
+          dropZone.style.opacity = '0.7';
+        }
+      })
+      .catch(function(err) {
+        console.error('Webcam access error:', err);
+        // If webcam fails, show upload option prominently
+        if (dropZone) {
+          dropZone.style.opacity = '1';
+        }
+      });
+  }
+  
+  function stopModalWebcam() {
+    if (modalStream) {
+      modalStream.getTracks().forEach(function(track) {
+        track.stop();
+      });
+      modalStream = null;
+    }
+    
+    const video = document.getElementById('modalWebcamVideo');
+    const currentImg = document.getElementById('modalCurrentProfileImg');
+    const defaultAvatar = document.getElementById('modalDefaultProfileAvatar');
+    const webcamControls = document.getElementById('modalWebcamControls');
+    const dropZone = document.getElementById('modalPhotoDropZone');
+    
+    if (video) {
+      video.style.display = 'none';
+      video.srcObject = null;
+    }
+    if (webcamControls) {
+      webcamControls.style.display = 'none';
+    }
+    if (dropZone) {
+      dropZone.style.opacity = '1';
     }
   }
-})();
+  
+  // Switch from webcam to file upload
+  $('#modalSwitchToUploadBtn').on('click', function() {
+    stopModalWebcam();
+    const dropZone = document.getElementById('modalPhotoDropZone');
+    if (dropZone) {
+      dropZone.style.opacity = '1';
+      dropZone.style.transform = 'scale(1.05)';
+      setTimeout(function() {
+        dropZone.style.transform = 'scale(1)';
+      }, 200);
+    }
+  });
+  
+  // Modal webcam capture
+  $('#modalCaptureWebcamBtn').on('click', function() {
+    const video = document.getElementById('modalWebcamVideo');
+    const canvas = document.getElementById('modalWebcamCanvas');
+    const previewImg = document.getElementById('modalPhotoPreview');
+    const currentImg = document.getElementById('modalCurrentProfileImg');
+    const defaultAvatar = document.getElementById('modalDefaultProfileAvatar');
+    const webcamControls = document.getElementById('modalWebcamControls');
+    const captureField = document.getElementById('modalCaptureData');
+    const editControls = document.getElementById('modalPhotoEditControls');
+    
+    if (!video || !modalStream) return;
+    
+    const width = video.videoWidth || 320;
+    const height = video.videoHeight || 240;
+    
+    if (!canvas) {
+      const newCanvas = document.createElement('canvas');
+      newCanvas.id = 'modalWebcamCanvas';
+      newCanvas.style.display = 'none';
+      document.body.appendChild(newCanvas);
+      canvas = newCanvas;
+    }
+    
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/png');
+    
+    // Stop webcam
+    stopModalWebcam();
+    
+    // Show preview
+    if (previewImg) {
+      previewImg.src = dataUrl;
+      previewImg.style.display = 'block';
+      previewImg.style.visibility = 'visible';
+      previewImg.style.opacity = '1';
+      // Store original for reset functionality
+      if (typeof modalOriginalImageSrc === 'undefined') {
+        window.modalOriginalImageSrc = dataUrl;
+      } else {
+        window.modalOriginalImageSrc = dataUrl;
+      }
+      if (typeof modalCurrentRotation === 'undefined') {
+        window.modalCurrentRotation = 0;
+        window.modalCurrentFlipH = 1;
+        window.modalCurrentFlipV = 1;
+      } else {
+        window.modalCurrentRotation = 0;
+        window.modalCurrentFlipH = 1;
+        window.modalCurrentFlipV = 1;
+      }
+    }
+    
+    // Hide current image
+    if (currentImg) {
+      currentImg.style.display = 'none';
+    }
+    if (defaultAvatar) {
+      defaultAvatar.style.display = 'none';
+    }
+    
+    // Set capture data
+    if (captureField) {
+      captureField.value = dataUrl;
+    }
+    
+    // Show edit controls
+    if (editControls) {
+      editControls.style.display = 'block';
+    }
+    
+    // Show remove button
+    const removeBtn = document.getElementById('modalRemovePreviewBtn');
+    if (removeBtn) {
+      removeBtn.style.display = 'flex';
+    }
+    
+    // Make dropzone prominent again
+    const dropZone = document.getElementById('modalPhotoDropZone');
+    if (dropZone) {
+      dropZone.style.opacity = '1';
+    }
+  });
+  
+  // Modal file upload handlers
+  const modalDropZone = document.getElementById('modalPhotoDropZone');
+  const modalFileInput = document.getElementById('modalProfilePhotoInput');
+  const modalPreviewImg = document.getElementById('modalPhotoPreview');
+  const modalCurrentImg = document.getElementById('modalCurrentProfileImg');
+  const modalDefaultAvatar = document.getElementById('modalDefaultProfileAvatar');
+  const modalCaptureField = document.getElementById('modalCaptureData');
+  const modalRemoveBtn = document.getElementById('modalRemovePreviewBtn');
+  const modalEditControls = document.getElementById('modalPhotoEditControls');
+  
+  if (modalDropZone && modalFileInput) {
+    // Click to browse
+    modalDropZone.addEventListener('click', function() {
+      modalFileInput.click();
+    });
+    
+    // Drag and drop
+    modalDropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      modalDropZone.classList.add('photo-dropzone--hover');
+    });
+    
+    modalDropZone.addEventListener('dragleave', function() {
+      modalDropZone.classList.remove('photo-dropzone--hover');
+    });
+    
+    modalDropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      modalDropZone.classList.remove('photo-dropzone--hover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        modalFileInput.files = e.dataTransfer.files;
+        handleModalFileUpload(file);
+      }
+    });
+    
+    // File input change
+    modalFileInput.addEventListener('change', function() {
+      const file = modalFileInput.files[0];
+      if (file && file.type.startsWith('image/')) {
+        handleModalFileUpload(file);
+      }
+    });
+  }
+  
+  function handleModalFileUpload(file) {
+    // Stop webcam if running
+    stopModalWebcam();
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      const dataUrl = e.target.result;
+      
+      // Show preview
+      if (modalPreviewImg) {
+        modalPreviewImg.src = dataUrl;
+        modalPreviewImg.style.display = 'block';
+        modalPreviewImg.style.visibility = 'visible';
+        modalPreviewImg.style.opacity = '1';
+        // Store original for reset functionality
+        if (typeof modalOriginalImageSrc === 'undefined') {
+          window.modalOriginalImageSrc = dataUrl;
+        } else {
+          window.modalOriginalImageSrc = dataUrl;
+        }
+        if (typeof modalCurrentRotation === 'undefined') {
+          window.modalCurrentRotation = 0;
+          window.modalCurrentFlipH = 1;
+          window.modalCurrentFlipV = 1;
+        } else {
+          window.modalCurrentRotation = 0;
+          window.modalCurrentFlipH = 1;
+          window.modalCurrentFlipV = 1;
+        }
+      }
+      
+      // Hide current image
+      if (modalCurrentImg) {
+        modalCurrentImg.style.display = 'none';
+      }
+      if (modalDefaultAvatar) {
+        modalDefaultAvatar.style.display = 'none';
+      }
+      
+      // Set capture data
+      if (modalCaptureField) {
+        modalCaptureField.value = dataUrl;
+      }
+      
+      // Clear file input so server uses capture data
+      if (modalFileInput) {
+        modalFileInput.value = '';
+      }
+      
+      // Show edit controls
+      if (modalEditControls) {
+        modalEditControls.style.display = 'block';
+      }
+      
+      // Show remove button
+      if (modalRemoveBtn) {
+        modalRemoveBtn.style.display = 'flex';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+  
+  // Modal remove preview
+  if (modalRemoveBtn) {
+    modalRemoveBtn.addEventListener('click', function() {
+      if (modalPreviewImg) {
+        modalPreviewImg.src = '';
+        modalPreviewImg.style.display = 'none';
+      }
+      if (modalCurrentImg) {
+        modalCurrentImg.style.display = 'block';
+      }
+      if (modalDefaultAvatar) {
+        modalDefaultAvatar.style.display = 'flex';
+      }
+      if (modalRemoveBtn) {
+        modalRemoveBtn.style.display = 'none';
+      }
+      if (modalEditControls) {
+        modalEditControls.style.display = 'none';
+      }
+      if (modalCaptureField) {
+        modalCaptureField.value = '';
+      }
+      // Restart webcam
+      startModalWebcam();
+    });
+  }
+
+  // Modal image processing controls
+  window.modalCurrentRotation = window.modalCurrentRotation || 0;
+  window.modalCurrentFlipH = window.modalCurrentFlipH || 1;
+  window.modalCurrentFlipV = window.modalCurrentFlipV || 1;
+  window.modalOriginalImageSrc = window.modalOriginalImageSrc || null;
+
+  function applyModalTransform() {
+    const previewImg = document.getElementById('modalPhotoPreview');
+    if (!previewImg) return;
+    
+    const transform = `rotate(${window.modalCurrentRotation}deg) scaleX(${window.modalCurrentFlipH}) scaleY(${window.modalCurrentFlipV})`;
+    previewImg.style.transform = transform;
+  }
+
+  function applyModalTransformToData() {
+    const previewImg = document.getElementById('modalPhotoPreview');
+    const captureField = document.getElementById('modalCaptureData');
+    if (!previewImg || !captureField) return;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = function() {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      ctx.save();
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((window.modalCurrentRotation * Math.PI) / 180);
+      ctx.scale(window.modalCurrentFlipH, window.modalCurrentFlipV);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+      ctx.restore();
+      
+      const dataUrl = canvas.toDataURL('image/png');
+      previewImg.src = dataUrl;
+      captureField.value = dataUrl;
+    };
+    
+    img.src = previewImg.src;
+  }
+
+  const modalRotateLeftBtn = document.getElementById('modalRotateLeftBtn');
+  const modalRotateRightBtn = document.getElementById('modalRotateRightBtn');
+  const modalFlipHorizontalBtn = document.getElementById('modalFlipHorizontalBtn');
+  const modalFlipVerticalBtn = document.getElementById('modalFlipVerticalBtn');
+  const modalResetImageBtn = document.getElementById('modalResetImageBtn');
+
+  if (modalRotateLeftBtn) {
+    modalRotateLeftBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.modalCurrentRotation -= 90;
+      applyModalTransform();
+      applyModalTransformToData();
+    });
+  }
+
+  if (modalRotateRightBtn) {
+    modalRotateRightBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.modalCurrentRotation += 90;
+      applyModalTransform();
+      applyModalTransformToData();
+    });
+  }
+
+  if (modalFlipHorizontalBtn) {
+    modalFlipHorizontalBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.modalCurrentFlipH *= -1;
+      applyModalTransform();
+      applyModalTransformToData();
+    });
+  }
+
+  if (modalFlipVerticalBtn) {
+    modalFlipVerticalBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.modalCurrentFlipV *= -1;
+      applyModalTransform();
+      applyModalTransformToData();
+    });
+  }
+
+  if (modalResetImageBtn) {
+    modalResetImageBtn.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      window.modalCurrentRotation = 0;
+      window.modalCurrentFlipH = 1;
+      window.modalCurrentFlipV = 1;
+      const previewImg = document.getElementById('modalPhotoPreview');
+      const captureField = document.getElementById('modalCaptureData');
+      if (window.modalOriginalImageSrc && previewImg) {
+        previewImg.src = window.modalOriginalImageSrc;
+        previewImg.style.transform = '';
+        if (captureField) {
+          captureField.value = window.modalOriginalImageSrc;
+        }
+      }
+    });
+  }
+});
 
 // Drag-and-drop + webcam for profile photo
 (function () {

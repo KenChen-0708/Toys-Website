@@ -6,6 +6,7 @@ is_logged_in();
 
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {
+    $_SESSION['message'] = "Please log in to continue.";
     header('Location: /pages/auth/login.php');
     exit;
 }

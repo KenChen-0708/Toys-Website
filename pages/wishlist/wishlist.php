@@ -4,6 +4,7 @@ require_once '../../helper/pdo_connection.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
+  $_SESSION['message'] = "Please log in to continue.";
   header('Location: /pages/auth/login.php');
   exit();
 }

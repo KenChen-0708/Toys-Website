@@ -596,6 +596,12 @@ table {
   color: #166534;
 }
 
+.alert--warning {
+  background: #fffbeb;
+  border-color: #fde68a;
+  color: #92400e;
+}
+
 /*=============== TABLES ===============*/
 .placed__order-table th,
 .placed__order-table td {
@@ -628,9 +634,10 @@ table {
 
 .footer__container {
   display: grid;
-  grid-template-columns: 4.5fr repeat(2, 2fr) 3.5fr;
-  gap: 1.5rem;
-  padding-block: 2.5rem;
+  grid-template-columns: 2fr 2.5fr 1.5fr;
+  gap: 5rem;
+  padding-block: 3rem 2rem;
+  align-items: start;
 }
 
 .footer__logo-img {
@@ -665,7 +672,13 @@ table {
 
 .footer__social-links {
   display: flex;
-  column-gap: 0.25rem;
+  column-gap: 1rem;
+}
+
+.payment__img {
+  max-width: 100%;
+  height: auto;
+  margin-top: 0.5rem;
 }
 
 .footer__social-icon {
@@ -674,9 +687,14 @@ table {
   filter: saturate(0) brightness(0.25);
 }
 
+.footer__logo {
+  display: inline-block;
+  margin-bottom: 0.25rem;
+}
+
 .footer__title {
   font-size: var(--large-font-size);
-  margin-block: 1rem 1.25rem;
+  margin-block: 0 1.25rem;
 }
 
 .footer__link {
@@ -1025,4 +1043,22 @@ table {
   .header__search {
     max-width: 270px;
   }
+}
+
+/*=============== ANIMATIONS ===============*/
+/* Pulse animation for count badges */
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.2);
+  }
+}
+
+.pulse {
+  animation: pulse 0.5s ease-in-out;
 }

@@ -22,6 +22,7 @@ $title = "Home";
   <title><?= htmlspecialchars($title) ?></title>
 </head>
 <?php include 'partials/header.php'; ?>
+<?php include './chatbot.html'; ?>
 
 <!--=============== MAIN ===============-->
 <main class="main">

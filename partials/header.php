@@ -35,7 +35,7 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
   <header class="header">
     <nav class="nav container">
       <a href="/index.php" class="nav__logo">
-        <img class="nav__logo-img" src="/assets/img/logo.png" alt="website logo" />
+        <img class="nav__logo-img" src="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? '/assets/img/logo_dark_theme.png' : '/assets/img/logo.png'; ?>" alt="website logo" />
       </a>
       <div class="nav__menu" id="nav-menu">
         <ul class="nav__list">
@@ -44,22 +44,20 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
           <li><a href="/pages/product/product_list.php" class="nav__link <?= $current_page === 'product_list.php' ? 'active-link' : '' ?>">Product</a></li>
           <li><a href="/feedback.php" class="nav__link <?= $current_page === 'feedback.php' ? 'active-link' : '' ?>">Feedback</a></li>
         </ul>
-        <div class="header__search">
-          <input type="text" placeholder="Search For Items..." class="form__input" />
-          <button class="search__btn">
-            <img src="/assets/img/search.png" alt="search icon" />
-          </button>
-        </div>
       </div>
 
       <div class="header__user-actions">
         <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="" />
-          <span class="count">3</span>
+          <?php if (is_logged_in()): ?>
+            <span class="count wishlist-count">0</span>
+          <?php endif; ?>
         </a>
         <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="" />
-          <span class="count">3</span>
+          <?php if (is_logged_in()): ?>
+            <span class="count cart-count">0</span>
+          <?php endif; ?>
         </a>
       </div>
 
@@ -107,3 +105,6 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
       }
     });
   </script>
+
+  <!-- Header counts management script (requires jQuery) -->
+  <script src="/assets/js/header-counts.js"></script>
