@@ -145,14 +145,18 @@ if (isset($_POST['add_address'])) {
         $validation_errors[] = "Address Line 2 must not exceed 100 characters";
     }
     
-    if (!empty($state) && strlen($state) > 50) {
+    if (empty($state)) {
+        $validation_errors[] = "State is required";
+    } elseif (strlen($state) > 50) {
         $validation_errors[] = "State must not exceed 50 characters";
+    } elseif (!preg_match('/^[A-Za-z\s\-\']+$/', $state)) {
+        $validation_errors[] = "State cannot contain numbers or special characters";
     }
     
-    if (!empty($postal_code)) {
-        if (!preg_match('/^[0-9]{5}$/', $postal_code)) {
-            $validation_errors[] = "Postal code must be exactly 5 digits";
-        }
+    if (empty($postal_code)) {
+        $validation_errors[] = "Postal code is required";
+    } elseif (!preg_match('/^[0-9]{5}$/', $postal_code)) {
+        $validation_errors[] = "Postal code must be exactly 5 digits";
     }
 
     if (!empty($validation_errors)) {
