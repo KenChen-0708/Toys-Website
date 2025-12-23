@@ -101,11 +101,31 @@ try {
                 'name' => $item['name'],
             ];
 
-            // Add product image if available
+            // Add product image if available - but skip if there are any issues
+            // Stripe is strict about image URLs and they must be valid
             if (!empty($item['main_image_path'])) {
-                // Convert relative path to absolute URL
-                $image_url = $domain . '/' . ltrim($item['main_image_path'], '/');
-                $product_data['images'] = [$image_url];
+                try {
+                    // Normalize the path - remove ../ prefix if present
+                    $clean_path = $item['main_image_path'];
+                    if (strpos($clean_path, '../') === 0) {
+                        $clean_path = substr($clean_path, 3);
+                    }
+                    $clean_path = ltrim($clean_path, '/');
+                    
+                    // Split path into segments and encode each part to handle special characters
+                    $path_parts = explode('/', $clean_path);
+                    $encoded_parts = array_map('rawurlencode', $path_parts);
+                    $encoded_path = implode('/', $encoded_parts);
+                    $image_url = $domain . '/' . $encoded_path;
+                    
+                    // Only add image if it looks like a valid URL
+                    if (filter_var($image_url, FILTER_VALIDATE_URL)) {
+                        $product_data['images'] = [$image_url];
+                    }
+                } catch (Exception $img_error) {
+                    // Skip image if there's any error - Stripe doesn't require it
+                    error_log("Image URL error for product: " . $img_error->getMessage());
+                }
             }
 
             $line_items[] = [
@@ -120,12 +140,15 @@ try {
     }
 
     // 3️⃣ Create Stripe Checkout Session
+    $success_url = $domain . '/pages/payment/payment_success.php?session_id={CHECKOUT_SESSION_ID}&order_id=' . urlencode($order_id);
+    $cancel_url = $domain . '/pages/payment/payment_cancel.php?order_id=' . urlencode($order_id);
+    
     $session = \Stripe\Checkout\Session::create([
         'payment_method_types' => ['card', 'fpx', 'grabpay'],
         'line_items' => $line_items,
         'mode' => 'payment',
-        'success_url' => $domain . '/pages/payment/payment_success.php?session_id={CHECKOUT_SESSION_ID}&order_id=' . $order_id,
-        'cancel_url'  => $domain . '/pages/payment/payment_cancel.php?order_id=' . $order_id,
+        'success_url' => $success_url,
+        'cancel_url'  => $cancel_url,
         'metadata' => [
             'member_id' => $member_id,
             'order_id' => $order_id
@@ -137,5 +160,11 @@ try {
     header("Location: " . $session->url);
     exit();
 } catch (Exception $e) {
-    die("Error: " . $e->getMessage());
+    // Log the full error for debugging
+    error_log("Stripe Payment Error: " . $e->getMessage());
+    error_log("Order ID: " . $order_id);
+    error_log("Line Items: " . print_r($line_items, true));
+    
+    // Show user-friendly error
+    die("Payment Error: " . $e->getMessage() . "<br><br><a href='../cart/cart.php'>Return to Cart</a>");
 }
