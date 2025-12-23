@@ -3,6 +3,7 @@ $title = "Register";
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
 require_guest();
+redirect_if_admin();
 
 // reCAPTCHA SITE KEY
 $recaptcha_site_key = '6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj';

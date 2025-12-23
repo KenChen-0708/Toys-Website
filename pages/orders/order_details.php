@@ -3,6 +3,7 @@ session_start();
 require_once '../../helper/pdo_connection.php';
 require_once '../../helper/auth.php';
 is_logged_in();
+redirect_if_admin();
 
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {

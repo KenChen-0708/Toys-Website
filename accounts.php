@@ -3,6 +3,7 @@ $title = 'Ecommerce Website — Account';
 require_once __DIR__ . '/helper/pdo_connection.php';
 require_once __DIR__ . '/helper/auth.php';
 require_auth();
+redirect_if_admin();
 
 // Ensure user_initials function is available
 if (!function_exists('user_initials')) {
@@ -248,7 +249,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
           <h2 class="profile-sidebar__name"><?= htmlspecialchars($member['username']) ?></h2>
           <p class="profile-sidebar__email"><?= htmlspecialchars($member['email']) ?></p>
         </div>
-        
+
         <nav class="profile-sidebar__menu">
           <button class="profile-menu__item active" data-content="dashboard">
             <i class="fi fi-rs-user"></i>
@@ -283,7 +284,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
               Quickly see your recent activity, track your orders, and jump to common actions.
             </p>
           </div>
-          
+
           <div class="content-panel__meta">
             <span>Member since <?= htmlspecialchars(date('d M Y', strtotime($member['register_date']))) ?></span>
             <span class="content-panel__points">Reward points: <?= $rewardPoints ?></span>
@@ -291,102 +292,102 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
           <div class="content-panel__body">
             <div class="account-stats grid">
-            <div class="account-stat-card stat-card--orders">
-              <div class="stat-icon stat-icon--orders">
-                <i class="fi fi-rs-shopping-bag"></i>
-              </div>
-              <div class="stat-body">
-                <p class="stat-label">Total Orders</p>
-                <p class="stat-value"><?= $stats['total_orders'] ?></p>
-              </div>
-            </div>
-
-            <div class="account-stat-card stat-card--spent">
-              <div class="stat-icon stat-icon--spent">
-                <i class="fi fi-rs-credit-card"></i>
-              </div>
-              <div class="stat-body">
-                <p class="stat-label">Total Spent</p>
-                <p class="stat-value">RM <?= number_format($stats['total_spent'], 2) ?></p>
-              </div>
-            </div>
-
-            <div class="account-stat-card stat-card--active">
-              <div class="stat-icon stat-icon--active">
-                <i class="fi fi-rs-truck-side"></i>
-              </div>
-              <div class="stat-body">
-                <p class="stat-label">Active Orders</p>
-                <p class="stat-value"><?= $stats['active_orders'] ?></p>
-              </div>
-            </div>
-
-            <div class="account-stat-card stat-card--wishlist">
-              <div class="stat-icon stat-icon--wishlist">
-                <i class="fi fi-rs-heart"></i>
-              </div>
-              <div class="stat-body">
-                <p class="stat-label">Wishlist Items</p>
-                <p class="stat-value"><?= $stats['wishlist_items'] ?></p>
-              </div>
-            </div>
-          </div>
-
-          <div class="dashboard-panel profile-panel">
-            <div class="profile-panel-left">
-              <h4 class="dashboard-panel__title">Profile completeness</h4>
-              <div class="profile-progress">
-                <div class="profile-progress-bar">
-                  <div class="profile-progress-fill" style="width: <?= $profileProgress ?>%;"></div>
+              <div class="account-stat-card stat-card--orders">
+                <div class="stat-icon stat-icon--orders">
+                  <i class="fi fi-rs-shopping-bag"></i>
                 </div>
-                <div class="profile-progress-meta">
-                  <span class="profile-progress-percent"><?= $profileProgress ?>%</span>
-                  <span class="profile-progress-hint">
-                    <?= $profileProgress === 100 ? 'Your profile is complete.' : 'Complete your profile to make checkout faster.' ?>
-                  </span>
+                <div class="stat-body">
+                  <p class="stat-label">Total Orders</p>
+                  <p class="stat-value"><?= $stats['total_orders'] ?></p>
+                </div>
+              </div>
+
+              <div class="account-stat-card stat-card--spent">
+                <div class="stat-icon stat-icon--spent">
+                  <i class="fi fi-rs-credit-card"></i>
+                </div>
+                <div class="stat-body">
+                  <p class="stat-label">Total Spent</p>
+                  <p class="stat-value">RM <?= number_format($stats['total_spent'], 2) ?></p>
+                </div>
+              </div>
+
+              <div class="account-stat-card stat-card--active">
+                <div class="stat-icon stat-icon--active">
+                  <i class="fi fi-rs-truck-side"></i>
+                </div>
+                <div class="stat-body">
+                  <p class="stat-label">Active Orders</p>
+                  <p class="stat-value"><?= $stats['active_orders'] ?></p>
+                </div>
+              </div>
+
+              <div class="account-stat-card stat-card--wishlist">
+                <div class="stat-icon stat-icon--wishlist">
+                  <i class="fi fi-rs-heart"></i>
+                </div>
+                <div class="stat-body">
+                  <p class="stat-label">Wishlist Items</p>
+                  <p class="stat-value"><?= $stats['wishlist_items'] ?></p>
                 </div>
               </div>
             </div>
-            <div class="profile-panel-right">
-              <h5 class="dashboard-panel__subtitle">Profile checklist</h5>
-              <ul class="profile-checklist">
-                <li class="profile-check-item">
-                  <span>
-                    <strong>Email</strong>
-                    <small>Your login and contact email.</small>
-                  </span>
-                  <span class="profile-check-badge profile-check-badge--done">Done</span>
-                </li>
-                <li class="profile-check-item">
-                  <span>
-                    <strong>Phone number</strong>
-                    <small><?= $member['phone_number'] ? 'Used for contact and delivery.' : 'Add a phone number in "Update Profile".' ?></small>
-                  </span>
-                  <span class="profile-check-badge <?= $member['phone_number'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                    <?= $member['phone_number'] ? 'Done' : 'Missing' ?>
-                  </span>
-                </li>
-                <li class="profile-check-item">
-                  <span>
-                    <strong>Address</strong>
-                    <small><?= $member['address'] ? 'We will use this as your default shipping address.' : 'Add your shipping address in "Update Profile".' ?></small>
-                  </span>
-                  <span class="profile-check-badge <?= $member['address'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                    <?= $member['address'] ? 'Done' : 'Missing' ?>
-                  </span>
-                </li>
-                <li class="profile-check-item">
-                  <span>
-                    <strong>Profile photo</strong>
-                    <small><?= $member['profile_photo_path'] ? 'Helps personalize your account.' : 'Upload a profile photo in "Update Profile".' ?></small>
-                  </span>
-                  <span class="profile-check-badge <?= $member['profile_photo_path'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
-                    <?= $member['profile_photo_path'] ? 'Done' : 'Missing' ?>
-                  </span>
-                </li>
-              </ul>
+
+            <div class="dashboard-panel profile-panel">
+              <div class="profile-panel-left">
+                <h4 class="dashboard-panel__title">Profile completeness</h4>
+                <div class="profile-progress">
+                  <div class="profile-progress-bar">
+                    <div class="profile-progress-fill" style="width: <?= $profileProgress ?>%;"></div>
+                  </div>
+                  <div class="profile-progress-meta">
+                    <span class="profile-progress-percent"><?= $profileProgress ?>%</span>
+                    <span class="profile-progress-hint">
+                      <?= $profileProgress === 100 ? 'Your profile is complete.' : 'Complete your profile to make checkout faster.' ?>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div class="profile-panel-right">
+                <h5 class="dashboard-panel__subtitle">Profile checklist</h5>
+                <ul class="profile-checklist">
+                  <li class="profile-check-item">
+                    <span>
+                      <strong>Email</strong>
+                      <small>Your login and contact email.</small>
+                    </span>
+                    <span class="profile-check-badge profile-check-badge--done">Done</span>
+                  </li>
+                  <li class="profile-check-item">
+                    <span>
+                      <strong>Phone number</strong>
+                      <small><?= $member['phone_number'] ? 'Used for contact and delivery.' : 'Add a phone number in "Update Profile".' ?></small>
+                    </span>
+                    <span class="profile-check-badge <?= $member['phone_number'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                      <?= $member['phone_number'] ? 'Done' : 'Missing' ?>
+                    </span>
+                  </li>
+                  <li class="profile-check-item">
+                    <span>
+                      <strong>Address</strong>
+                      <small><?= $member['address'] ? 'We will use this as your default shipping address.' : 'Add your shipping address in "Update Profile".' ?></small>
+                    </span>
+                    <span class="profile-check-badge <?= $member['address'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                      <?= $member['address'] ? 'Done' : 'Missing' ?>
+                    </span>
+                  </li>
+                  <li class="profile-check-item">
+                    <span>
+                      <strong>Profile photo</strong>
+                      <small><?= $member['profile_photo_path'] ? 'Helps personalize your account.' : 'Upload a profile photo in "Update Profile".' ?></small>
+                    </span>
+                    <span class="profile-check-badge <?= $member['profile_photo_path'] ? 'profile-check-badge--done' : 'profile-check-badge--missing' ?>">
+                      <?= $member['profile_photo_path'] ? 'Done' : 'Missing' ?>
+                    </span>
+                  </li>
+                </ul>
+              </div>
             </div>
-          </div>
           </div>
         </div>
 
@@ -835,7 +836,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
       <i class="fi fi-rs-cross"></i>
     </button>
     <h3 class="profile-photo-modal__title">Change Profile Photo</h3>
-    
+
     <form class="profile-photo-form" method="POST" action="/pages/profile/profile_photo_update_post.php" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <div class="profile-section">

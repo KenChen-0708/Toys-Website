@@ -1,6 +1,8 @@
 <?php
 session_start();
 require '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
+redirect_if_admin();
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
