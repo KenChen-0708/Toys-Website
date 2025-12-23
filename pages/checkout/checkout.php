@@ -748,6 +748,57 @@ $final_total = $cart_total - $voucher_discount;
             background-color: #e0e0e0;
         }
 
+        /* Enhanced styles for address form buttons */
+        .address-form .btn {
+            font-weight: 600;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border: 2px solid transparent;
+            width: auto;
+        }
+
+        .address-form .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .address-form .btn-secondary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: 2px solid #4CAF50;
+        }
+
+        .address-form .btn-secondary:hover {
+            background: linear-gradient(135deg, #45a049, #3d8b40);
+            border-color: #45a049;
+        }
+
+        .address-form #clearAddressBtn {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #6c757d;
+            border: 2px solid #dee2e6;
+        }
+
+        .address-form #clearAddressBtn:hover {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            color: #495057;
+            border-color: #adb5bd;
+        }
+
+        /* Button container styling */
+        .address-form .form-group.full-width > div {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 8px;
+        }
+
+        .address-form .form-group.full-width > div .btn {
+            flex: 1;
+            min-height: 44px;
+            font-size: 14px;
+        }
+
         @media (max-width: 968px) {
             .checkout-layout {
                 grid-template-columns: 1fr;
@@ -1181,41 +1232,67 @@ $final_total = $cart_total - $voucher_discount;
             if (addressForm) {
                 const inputs = addressForm.querySelectorAll('input[type="text"]');
                 inputs.forEach(input => {
-                    // Prevent numbers in city, state, and country fields
+                    // Strict input filtering for text-only fields (city, state, country)
                     if (['city', 'state', 'country'].includes(input.name)) {
+                        // Prevent any numbers or invalid characters during typing
                         input.addEventListener('keypress', function(e) {
-                            // Allow letters, spaces, hyphens, apostrophes, and control keys
                             const char = String.fromCharCode(e.which);
-                            if (!/[A-Za-z\s\-']/.test(char) && e.which !== 8 && e.which !== 0) {
+                            // Only allow letters, spaces, hyphens, apostrophes, and control keys
+                            if (!/[A-Za-z\s\-']/.test(char) && e.which !== 8 && e.which !== 0 && e.which !== 9) {
                                 e.preventDefault();
+                                return false;
                             }
                         });
                         
+                        // Handle paste events - strip out any numbers or invalid characters
                         input.addEventListener('paste', function(e) {
-                            // Handle paste events
-                            setTimeout(() => {
-                                const value = this.value;
-                                this.value = value.replace(/[^A-Za-z\s\-']/g, '');
-                            }, 0);
+                            e.preventDefault();
+                            const paste = (e.clipboardData || window.clipboardData).getData('text');
+                            const cleaned = paste.replace(/[^A-Za-z\s\-']/g, '');
+                            this.value = cleaned;
+                            // Trigger input event to clear any error styling
+                            this.dispatchEvent(new Event('input'));
+                        });
+                        
+                        // Additional sanitization on input change
+                        input.addEventListener('input', function(e) {
+                            const originalValue = this.value;
+                            const cleanedValue = originalValue.replace(/[^A-Za-z\s\-']/g, '');
+                            if (originalValue !== cleanedValue) {
+                                this.value = cleanedValue;
+                            }
                         });
                     }
                     
-                    // Only allow numbers in postal code field
+                    // Strict number-only filtering for postal code
                     if (input.name === 'postal_code') {
+                        // Prevent any non-numbers during typing
                         input.addEventListener('keypress', function(e) {
-                            // Only allow numbers and control keys
                             const char = String.fromCharCode(e.which);
-                            if (!/[0-9]/.test(char) && e.which !== 8 && e.which !== 0) {
+                            // Only allow numbers and control keys
+                            if (!/[0-9]/.test(char) && e.which !== 8 && e.which !== 0 && e.which !== 9) {
                                 e.preventDefault();
+                                return false;
                             }
                         });
                         
+                        // Handle paste events - only keep numbers
                         input.addEventListener('paste', function(e) {
-                            // Handle paste events - only keep numbers
-                            setTimeout(() => {
-                                const value = this.value;
-                                this.value = value.replace(/[^0-9]/g, '');
-                            }, 0);
+                            e.preventDefault();
+                            const paste = (e.clipboardData || window.clipboardData).getData('text');
+                            const cleaned = paste.replace(/[^0-9]/g, '');
+                            this.value = cleaned.substring(0, 5); // Limit to 5 digits
+                            // Trigger input event to clear any error styling
+                            this.dispatchEvent(new Event('input'));
+                        });
+                        
+                        // Additional sanitization on input change
+                        input.addEventListener('input', function(e) {
+                            const originalValue = this.value;
+                            const cleanedValue = originalValue.replace(/[^0-9]/g, '').substring(0, 5);
+                            if (originalValue !== cleanedValue) {
+                                this.value = cleanedValue;
+                            }
                         });
                     }
                     
