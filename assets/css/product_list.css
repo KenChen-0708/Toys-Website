@@ -157,10 +157,6 @@ body {
   gap: 2rem;
 }
 
-.nav__logo-img {
-  height: 40px;
-}
-
 .nav__menu {
   display: flex;
   align-items: center;

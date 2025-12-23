@@ -49,11 +49,15 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
       <div class="header__user-actions">
         <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="" />
-          <span class="count">3</span>
+          <?php if (is_logged_in()): ?>
+            <span class="count wishlist-count">0</span>
+          <?php endif; ?>
         </a>
         <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="" />
-          <span class="count">3</span>
+          <?php if (is_logged_in()): ?>
+            <span class="count cart-count">0</span>
+          <?php endif; ?>
         </a>
       </div>
 
@@ -101,3 +105,6 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
       }
     });
   </script>
+
+  <!-- Header counts management script (requires jQuery) -->
+  <script src="/assets/js/header-counts.js"></script>

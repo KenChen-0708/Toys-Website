@@ -10,10 +10,10 @@
           <div class="footer__social">
             <h4 class="footer__subtitle">Follow Me</h4>
             <div class="footer__social-links">
-              <a href="https://www.facebook.com/tarumtkl/"><img src="./assets/img/icon-facebook.svg" alt="" class="footer__social-icon" /></a>
-              <a href="https://x.com/KlTaruc"><img src="./assets/img/icon-twitter.svg" alt="" class="footer__social-icon" /></a>
-              <a href="https://www.instagram.com/tarumt.official/?hl=en"><img src="./assets/img/icon-instagram.svg" alt="" class="footer__social-icon" /></a>
-              <a href="https://www.youtube.com/channel/UCqjsPpVnwjCRT5mgAgFo1ng"><img src="./assets/img/icon-youtube.svg" alt="" class="footer__social-icon" /></a>
+              <a href="https://www.facebook.com/tarumtkl/"><img src="/assets/img/icon-facebook.svg" alt="" class="footer__social-icon" /></a>
+              <a href="https://x.com/KlTaruc"><img src="/assets/img/icon-twitter.svg" alt="" class="footer__social-icon" /></a>
+              <a href="https://www.instagram.com/tarumt.official/?hl=en"><img src="/assets/img/icon-instagram.svg" alt="" class="footer__social-icon" /></a>
+              <a href="https://www.youtube.com/channel/UCqjsPpVnwjCRT5mgAgFo1ng"><img src="/assets/img/icon-youtube.svg" alt="" class="footer__social-icon" /></a>
             </div>
           </div>
         </div>
@@ -26,13 +26,13 @@
 
         <div class="footer__content">
           <h3 class="footer__title">Secured Payment Gateways</h3>
-          <img src="./assets/img/payment-method.png" alt="" class="payment__img" />
+          <img src="/assets/img/payment-method.png" alt="" class="payment__img" />
         </div>
       </div>
 
       <div class="footer__bottom">
-        <p class="copyright">&copy; 2024 Evara. All right reserved</p>
-        <span class="designer">Designed by Crypticalcoder</span>
+        <p class="copyright">&copy; 2025 TOYWORLD. All right reserved</p>
+        <span class="designer">Designed by TOYWORLD</span>
       </div>
     </footer>
 
