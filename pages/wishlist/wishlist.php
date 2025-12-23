@@ -194,6 +194,7 @@ try {
   <title>Wishlist - Online Store</title>
   <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
   <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
+  <link rel="stylesheet" href="/assets/css/styles.css">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
     * {
@@ -639,6 +640,7 @@ try {
 </head>
 
 <body class="<?php echo (isset($_SESSION['member']['theme']) && $_SESSION['member']['theme'] === 'dark') ? 'dark-theme' : ''; ?>">
+  <?php include '../../partials/header.php';?>
   <div class="container">
     <div class="wishlist-header">
       <h1>My Wishlist</h1>

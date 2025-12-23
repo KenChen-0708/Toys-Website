@@ -141,6 +141,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['apply_voucher'])) {
                             $voucher_discount = $voucher['max_discount'];
                         }
                     }
+                    
+                    // Ensure discount doesn't exceed cart total
+                    if ($voucher_discount > $cart_total) {
+                        $voucher_discount = $cart_total;
+                    }
+                    
                     $voucher_applied = true;
                     $success_message = "Voucher applied successfully! You saved RM" . number_format($voucher_discount, 2);
                 }
@@ -302,6 +308,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
                             $final_discount = $voucher['max_discount'];
                         }
                     }
+                    
+                    // Ensure discount doesn't exceed cart total
+                    if ($final_discount > $cart_total) {
+                        $final_discount = $cart_total;
+                    }
+                    
                     $voucher_data = $voucher;
                 }
             }
@@ -316,6 +328,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
             }
 
             $final_amount = $cart_total - $final_discount + $shipping_fee;
+            
+            // Ensure final amount is never negative (minimum should be shipping fee if applicable)
+            if ($final_amount < 0) {
+                $final_amount = $shipping_fee;
+                // Adjust discount to prevent negative total
+                $final_discount = $cart_total;
+            }
 
             // Store checkout data in session for payment processing
             $_SESSION['checkout_data'] = [
@@ -351,6 +370,13 @@ if ($cart_total >= $free_shipping_threshold) {
 }
 
 $final_total = $cart_total - $voucher_discount + $shipping_fee;
+
+// Ensure final total is never negative (minimum should be shipping fee if applicable)
+if ($final_total < 0) {
+    $final_total = $shipping_fee;
+    // Adjust discount to prevent negative total
+    $voucher_discount = $cart_total;
+}
 ?>
 
 <!DOCTYPE html>
@@ -1547,18 +1573,29 @@ $final_total = $cart_total - $voucher_discount + $shipping_fee;
                 `;
             }
 
-            if (voucherDiscount > 0) {
+            // Ensure discount doesn't exceed cart total
+            let adjustedVoucherDiscount = voucherDiscount;
+            if (adjustedVoucherDiscount > cartTotal) {
+                adjustedVoucherDiscount = cartTotal;
+            }
+
+            if (adjustedVoucherDiscount > 0) {
                 html += `
                     <div class="price-row discount">
                         <span>Discount</span>
-                        <span>-RM${parseFloat(voucherDiscount).toFixed(2)}</span>
+                        <span>-RM${parseFloat(adjustedVoucherDiscount).toFixed(2)}</span>
                     </div>
                     <input type="hidden" name="voucher_code_hidden" value="${voucherCode}">
                 `;
             }
 
-            // Recalculate final total with shipping
-            const calculatedTotal = cartTotal + shippingFee - voucherDiscount;
+            // Recalculate final total with shipping and prevent negative values
+            let calculatedTotal = cartTotal + shippingFee - adjustedVoucherDiscount;
+            
+            // Ensure final total is never negative (minimum should be shipping fee if applicable)
+            if (calculatedTotal < 0) {
+                calculatedTotal = shippingFee;
+            }
 
             html += `
                 <div class="price-row total">

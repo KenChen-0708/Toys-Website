@@ -867,6 +867,11 @@ try {
                 
                 // Calculate any discount applied
                 $discount_amount = $subtotal + $shipping_fee - $order['total_amount'];
+                
+                // Ensure discount amount is not negative (in case of calculation errors)
+                if ($discount_amount < 0) {
+                    $discount_amount = 0;
+                }
                 ?>
                 
                 <div class="order-row">
