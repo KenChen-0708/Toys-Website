@@ -486,9 +486,9 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                 <p class="address-empty__description">
                   Add a shipping address to make checkout faster and ensure your orders are delivered to the right place.
                 </p>
-                <a href="#update-profile" class="btn btn--md btn--primary" onclick="document.querySelector('[data-target=\'#update-profile\']').click(); return false;">
+                <button type="button" class="btn btn--md btn--primary" id="addAddressBtn">
                   <i class="fi fi-rs-plus"></i> Add Address
-                </a>
+                </button>
               </div>
             <?php endif; ?>
           </div>
@@ -851,7 +851,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
     <button class="address-edit-modal__close" id="closeAddressModal">
       <i class="fi fi-rs-cross"></i>
     </button>
-    <h3 class="address-edit-modal__title">Edit Shipping Address</h3>
+    <h3 class="address-edit-modal__title" id="addressModalTitle">Edit Shipping Address</h3>
     
     <form class="address-edit-form" method="POST" action="/pages/profile/profile_update_post.php" id="addressEditForm">
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
