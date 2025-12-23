@@ -1487,11 +1487,16 @@
   align-items: center;
   gap: 0.75rem;
   transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, border-color 0.15s ease-out;
+  cursor: pointer;
 }
 
 .account-stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.15);
+}
+
+.account-stat-card:active {
+  transform: translateY(-1px);
 }
 
 /* Forest‑inspired fills for each stat card – higher contrast green palette */
@@ -1552,22 +1557,19 @@
   font-weight: var(--weight-700);
 }
 
-.dashboard-panel {
-  background: #f9fafb;
-  border-radius: 0.75rem;
-  padding: 1rem 1.25rem;
-  border: 1px solid var(--border-color-alt);
-}
 
 .dashboard-panel__title {
-  font-size: var(--normal-font-size);
-  margin-bottom: 0.75rem;
+  font-size: var(--small-font-size);
+  margin-bottom: 0.5rem;
+  font-weight: var(--weight-600);
+  color: #1e293b;
 }
 
 .dashboard-panel__subtitle {
   font-size: var(--small-font-size);
-  margin: 0.75rem 0 0.4rem;
-  color: var(--text-color-light);
+  margin: 0.5rem 0 0.5rem;
+  color: #1e293b;
+  font-weight: var(--weight-600);
 }
 
 .profile-panel {
@@ -1607,16 +1609,23 @@
   color: var(--first-color);
 }
 
+.profile-completeness {
+  width: 100%;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+}
+
 .profile-progress {
-  margin-bottom: 0.75rem;
+  margin-bottom: 0;
 }
 
 .profile-progress-bar {
   width: 100%;
-  height: 8px;
+  height: 9px;
   border-radius: 999px;
   background: #e5e7eb;
   overflow: hidden;
+  margin-bottom: 0.5rem;
 }
 
 .profile-progress-fill {
@@ -1630,17 +1639,18 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 0.25rem;
+  margin-top: 0;
 }
 
 .profile-progress-percent {
   font-size: var(--small-font-size);
   font-weight: var(--weight-600);
+  color: var(--first-color);
 }
 
 .profile-progress-hint {
   font-size: var(--tiny-font-size);
-  color: var(--text-color-light);
+  color: #64748b;
 }
 
 .account-info-list {
@@ -1668,21 +1678,32 @@
 
 .profile-checklist {
   list-style: none;
-  margin: 0.5rem 0 0;
-  padding: 0.75rem 0.75rem 0.5rem;
+  margin: 0.75rem 0 1.5rem 0;
+  padding: 0;
   display: grid;
-  gap: 0.75rem;
-  background-color: #f9fafb;
-  border-radius: 0.75rem;
+  gap: 0;
+  background-color: transparent;
+  border-radius: 0;
 }
 
 .profile-check-item {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px dashed #e5e7eb;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  transition: background-color 0.2s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+
+.profile-check-item:hover {
+  background-color: #f1f5f9;
+  transform: translateX(2px);
+}
+
+.profile-check-item:active {
+  transform: translateX(1px);
 }
 
 .profile-check-item:last-child {
@@ -1693,33 +1714,35 @@
 .profile-check-item strong {
   font-size: var(--small-font-size);
   display: block;
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
   letter-spacing: 0.01em;
+  font-weight: var(--weight-600);
+  color: #1e293b;
 }
 
 .profile-check-item small {
   display: block;
   font-size: var(--tiny-font-size);
-  color: var(--text-color-light);
-  line-height: 1.5;
+  color: #64748b;
+  line-height: 1.4;
 }
 
 .profile-check-badge {
   border-radius: 999px;
-  padding: 0.18rem 0.75rem;
+  padding: 0.25rem 0.75rem;
   font-size: var(--tiny-font-size);
   font-weight: var(--weight-600);
   white-space: nowrap;
 }
 
 .profile-check-badge--done {
-  background: #dcfce7;
-  color: #166534;
+  background: #10b981;
+  color: #ffffff;
 }
 
 .profile-check-badge--missing {
-  background: #fee2e2;
-  color: #b91c1c;
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .dashboard-link {
@@ -2027,6 +2050,147 @@
   line-height: 1.6;
 }
 
+/* Address Edit Modal Styles */
+.address-edit-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10000;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+.address-edit-modal.active {
+  display: flex;
+}
+
+.address-edit-modal__content {
+  background: #ffffff;
+  border-radius: 1rem;
+  padding: 2rem;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.address-edit-modal__close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background 0.2s ease;
+}
+
+.address-edit-modal__close:hover {
+  background: #f1f5f9;
+}
+
+.address-edit-modal__title {
+  font-size: 1.5rem;
+  font-weight: var(--weight-700);
+  color: var(--title-color);
+  margin: 0 0 1.5rem 0;
+}
+
+.address-edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.address-edit-fields .form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.address-edit-fields .form__label {
+  display: flex;
+  flex-direction: column;
+}
+
+.address-edit-fields .form__label span {
+  margin-bottom: 0.5rem;
+  font-weight: var(--weight-600);
+  font-size: var(--small-font-size);
+  color: var(--title-color);
+}
+
+.address-edit-fields .form__input {
+  width: 100%;
+  border: 1px solid var(--border-color-alt);
+  padding: 0.875rem 1rem;
+  height: 45px;
+  font-size: var(--small-font-size);
+  border-radius: 0.5rem;
+  background: #fff;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.address-edit-fields .form__input:focus {
+  border-color: var(--first-color);
+  box-shadow: 0 0 0 4px rgba(168, 230, 207, 0.15);
+  outline: none;
+}
+
+.address-edit-fields .form__input[readonly] {
+  background: #f9fafb;
+  cursor: not-allowed;
+}
+
+.address-edit-modal__actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color-alt);
+  margin-top: 1.5rem;
+}
+
+.address-edit-modal__actions .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 1.75rem;
+  font-size: var(--small-font-size);
+  font-weight: var(--weight-500);
+  border-radius: 0.5rem;
+}
+
+@media (max-width: 768px) {
+  .address-edit-fields .form-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .address-edit-actions {
+    flex-direction: column;
+  }
+  
+  .address-edit-actions .btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Password Change Styles */
 .password-change-card {
   background: #ffffff;
@@ -2097,6 +2261,18 @@
   width: 100%;
 }
 
+/* Hide browser default password reveal button */
+.password-input-wrapper .password-input::-ms-reveal,
+.password-input-wrapper .password-input::-ms-clear {
+  display: none;
+}
+
+.password-input-wrapper input[type="password"]::-webkit-credentials-auto-fill-button {
+  display: none !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .password-toggle {
   position: absolute;
   right: 0.75rem;
@@ -2109,7 +2285,9 @@
   align-items: center;
   justify-content: center;
   transition: color 0.2s ease;
-  z-index: 1;
+  z-index: 10;
+  visibility: visible;
+  opacity: 1;
 }
 
 .password-toggle:hover {
@@ -2117,7 +2295,33 @@
 }
 
 .password-toggle i {
-  font-size: 1.125rem;
+  font-size: 1.125rem !important;
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: none !important; /* Allow clicks to pass through to button */
+}
+
+/* Ensure icon is ALWAYS visible - use multiple selectors */
+.password-toggle i,
+.password-toggle i.fi-rs-eye,
+.password-toggle[data-password-visible="true"] i,
+.password-toggle[data-password-visible="false"] i,
+.password-toggle.password-showing i {
+  display: inline-block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  font-size: 1.125rem !important;
+}
+
+/* Ensure toggle button is ALWAYS visible */
+.password-toggle,
+.password-toggle[data-password-visible="true"],
+.password-toggle[data-password-visible="false"],
+.password-toggle.password-showing {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .password-strength {
