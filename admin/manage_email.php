@@ -200,6 +200,7 @@ $unsubscribed_count = $stmt->fetchColumn();
         .enhanced-checkbox {
             width: 18px;
             height: 18px;
+            transform: scale(1.2);
             cursor: pointer;
         }
 
@@ -217,7 +218,32 @@ $unsubscribed_count = $stmt->fetchColumn();
         }
 
         .selectable-row.row-selected {
-            background-color: #fef3c7;
+            background-color: #fef3c7 !important;
+        }
+
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* Always show a neutral up/down icon by default */
+        th.sortable::after {
+            content: '▲▼';
+            margin-left: 4px;
+            font-size: 0.7rem;
+            opacity: 0.5;
+        }
+
+        /* When sorted ascending – override with single arrow */
+        th.sortable[data-order="asc"]::after {
+            content: '▲';
+            opacity: 1;
+        }
+
+        /* When sorted descending – override with single arrow */
+        th.sortable[data-order="desc"]::after {
+            content: '▼';
+            opacity: 1;
         }
     </style>
 
@@ -271,46 +297,48 @@ $unsubscribed_count = $stmt->fetchColumn();
                 <h3>Subscribed Users</h3>
             </div>
 
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 40px;"><input type="checkbox" id="selectAll" class="enhanced-checkbox"></th>
-                            <th style="width: 50px;">ID</th>
-                            <th style="width: 80px;">Photo</th>
-                            <th>Username</th>
-                            <th>Email</th>
-                            <th>Last Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (count($subscribers) > 0): ?>
-                            <?php foreach ($subscribers as $s): ?>
-                                <?php $checkboxId = 'user_check_' . $s['member_id']; ?>
-                                <tr class="selectable-row" data-checkbox-id="<?php echo $checkboxId; ?>">
-                                    <td>
-                                        <input type="checkbox" id="<?php echo $checkboxId; ?>" class="enhanced-checkbox row-checkbox" value="<?php echo $s['member_id']; ?>">
-                                    </td>
-                                    <td><?php echo $s['member_id']; ?></td>
-                                    <td>
-                                        <?php
-                                        $photo = !empty($s['profile_photo_path']) ? $s['profile_photo_path'] : '/assets/img/profile_photo/test.jpg';
-                                        ?>
-                                        <img src="<?php echo htmlspecialchars($photo); ?>" alt="Profile" class="profile-photo-thumb">
-                                    </td>
-                                    <td><?php echo htmlspecialchars($s['username']); ?></td>
-                                    <td><?php echo htmlspecialchars($s['email']); ?></td>
-                                    <td><?php echo $s['updated_at']; ?></td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
+            <form id="emailBulkForm">
+                <div class="table-container">
+                    <table>
+                        <thead>
                             <tr>
-                                <td colspan="5" style="text-align:center; padding: 2rem;">No subscribed users found.</td>
+                                <th style="width: 40px;"><input type="checkbox" id="selectAll" class="enhanced-checkbox"></th>
+                                <th class="sortable" data-column="1" data-type="number" style="width: 50px;">ID</th>
+                                <th style="width: 80px;">Photo</th>
+                                <th class="sortable" data-column="3" data-type="string">Username</th>
+                                <th class="sortable" data-column="4" data-type="string">Email</th>
+                                <th class="sortable" data-column="5" data-type="string">Last Updated</th>
                             </tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
+                        </thead>
+                        <tbody>
+                            <?php if (count($subscribers) > 0): ?>
+                                <?php foreach ($subscribers as $s): ?>
+                                    <?php $checkboxId = 'user_check_' . $s['member_id']; ?>
+                                    <tr class="selectable-row" data-checkbox-id="<?php echo $checkboxId; ?>">
+                                        <td>
+                                            <input type="checkbox" name="selected_users[]" id="<?php echo $checkboxId; ?>" class="enhanced-checkbox row-checkbox" value="<?php echo $s['member_id']; ?>">
+                                        </td>
+                                        <td><?php echo $s['member_id']; ?></td>
+                                        <td>
+                                            <?php
+                                            $photo = !empty($s['profile_photo_path']) ? $s['profile_photo_path'] : '/assets/img/profile_photo/test.jpg';
+                                            ?>
+                                            <img src="<?php echo htmlspecialchars($photo); ?>" alt="Profile" class="profile-photo-thumb">
+                                        </td>
+                                        <td><?php echo htmlspecialchars($s['username']); ?></td>
+                                        <td><?php echo htmlspecialchars($s['email']); ?></td>
+                                        <td><?php echo $s['updated_at']; ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding: 2rem;">No subscribed users found.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -343,84 +371,154 @@ $unsubscribed_count = $stmt->fetchColumn();
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const modal = document.getElementById('emailModal');
-            const selectAllCheckbox = document.getElementById('selectAll');
-            const rowCheckboxes = document.querySelectorAll('.row-checkbox');
             const recipientIdsInput = document.getElementById('recipientIds');
             const modalMessage = document.getElementById('modalMessage');
             const totalSubscribers = <?php echo $total_subscribers; ?>;
 
-            function updateRowHighlights() {
-                rowCheckboxes.forEach(cb => {
-                    const row = cb.closest('tr');
-                    if (row) {
-                        if (cb.checked) {
-                            row.classList.add('row-selected');
+            /* ===== TABLE SORTING (CLIENT-SIDE) ===== */
+            const headers = document.querySelectorAll('th.sortable');
+            headers.forEach(function(header) {
+                header.addEventListener('click', function() {
+                    const table = header.closest('table');
+                    const tbody = table.querySelector('tbody');
+                    const colIdx = parseInt(header.getAttribute('data-column'), 10);
+                    const type = header.getAttribute('data-type') || 'string';
+
+                    // toggle sort direction
+                    const currentOrder = header.getAttribute('data-order') || 'asc';
+                    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+                    header.setAttribute('data-order', newOrder);
+
+                    // clear order on other headers
+                    headers.forEach(h => {
+                        if (h !== header) h.removeAttribute('data-order');
+                    });
+
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    rows.sort(function(rowA, rowB) {
+                        const cellA = rowA.children[colIdx].innerText.trim();
+                        const cellB = rowB.children[colIdx].innerText.trim();
+
+                        let valA = cellA;
+                        let valB = cellB;
+
+                        if (type === 'number') {
+                            valA = parseFloat(cellA) || 0;
+                            valB = parseFloat(cellB) || 0;
                         } else {
-                            row.classList.remove('row-selected');
+                            valA = cellA.toLowerCase();
+                            valB = cellB.toLowerCase();
                         }
-                    }
-                });
-            }
 
-            function updateSelectAllState() {
-                if (!selectAllCheckbox) return;
-                const allChecked = Array.from(rowCheckboxes).every(c => c.checked);
-                const anyChecked = Array.from(rowCheckboxes).some(c => c.checked);
+                        if (valA < valB) return newOrder === 'asc' ? -1 : 1;
+                        if (valA > valB) return newOrder === 'asc' ? 1 : -1;
+                        return 0;
+                    });
 
-                if (rowCheckboxes.length === 0) {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = false;
-                } else if (allChecked) {
-                    selectAllCheckbox.checked = true;
-                    selectAllCheckbox.indeterminate = false;
-                } else if (anyChecked) {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = true;
-                } else {
-                    selectAllCheckbox.checked = false;
-                    selectAllCheckbox.indeterminate = false;
-                }
-            }
-
-            // Select All Logic
-            if (selectAllCheckbox) {
-                selectAllCheckbox.addEventListener('change', function() {
-                    const isChecked = this.checked;
-                    rowCheckboxes.forEach(cb => cb.checked = isChecked);
-                    updateRowHighlights();
-                });
-            }
-
-            // Row checkbox logic
-            rowCheckboxes.forEach(cb => {
-                cb.addEventListener('change', function() {
-                    updateSelectAllState();
-                    updateRowHighlights();
+                    // re-attach sorted rows
+                    rows.forEach(row => tbody.appendChild(row));
                 });
             });
 
-            // Row Click Logic
-            document.querySelectorAll('.selectable-row').forEach(row => {
-                row.addEventListener('click', function(e) {
-                    // Prevent triggering if clicked directly on the checkbox or other interactive elements
-                    if (e.target.type === 'checkbox' || e.target.tagName === 'A' || e.target.tagName === 'BUTTON') {
+            function setupBulkSelect(config) {
+                const form = document.getElementById(config.formId);
+                if (!form) return;
+
+                const selectAll = document.getElementById(config.selectAllId);
+                const checkboxSelector = `input[name="${config.checkboxName}"]`;
+
+                const getRowCheckboxes = () =>
+                    Array.from(form.querySelectorAll(checkboxSelector)).filter(cb => !cb.disabled);
+
+                function updateRowHighlights() {
+                    getRowCheckboxes().forEach(cb => {
+                        const row = cb.closest('.selectable-row');
+                        if (row) {
+                            if (cb.checked) {
+                                row.classList.add('row-selected');
+                            } else {
+                                row.classList.remove('row-selected');
+                            }
+                        }
+                    });
+                }
+
+                function syncSelectAll() {
+                    if (!selectAll) return;
+                    const checkboxes = getRowCheckboxes();
+                    if (checkboxes.length === 0) {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = false;
                         return;
                     }
+                    const checkedCount = checkboxes.filter(cb => cb.checked).length;
+                    if (checkedCount === 0) {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = false;
+                    } else if (checkedCount === checkboxes.length) {
+                        selectAll.checked = true;
+                        selectAll.indeterminate = false;
+                    } else {
+                        selectAll.checked = false;
+                        selectAll.indeterminate = true;
+                    }
+                }
 
-                    const checkboxId = this.getAttribute('data-checkbox-id');
-                    const checkbox = document.getElementById(checkboxId);
-                    if (checkbox) {
-                        checkbox.checked = !checkbox.checked;
-                        // Trigger change event manually
-                        checkbox.dispatchEvent(new Event('change'));
+                selectAll?.addEventListener('change', () => {
+                    const checkboxes = getRowCheckboxes();
+                    checkboxes.forEach(cb => {
+                        cb.checked = selectAll.checked;
+                    });
+                    updateRowHighlights();
+                });
+
+                form.addEventListener('change', (event) => {
+                    if (event.target.matches(checkboxSelector)) {
+                        syncSelectAll();
+                        updateRowHighlights();
                     }
                 });
+
+                // Initial Sync
+                updateRowHighlights();
+                syncSelectAll();
+            }
+
+            function setupRowClickSelection(rowSelector) {
+                document.querySelectorAll(rowSelector).forEach(row => {
+                    const checkboxId = row.getAttribute('data-checkbox-id');
+                    if (!checkboxId) return;
+                    const checkbox = document.getElementById(checkboxId);
+                    if (!checkbox) return;
+
+                    row.addEventListener('click', (event) => {
+                        if (event.target === checkbox) return;
+                        const interactive = event.target.closest('a, button, input, label, select, textarea');
+                        if (interactive) return;
+
+                        checkbox.checked = !checkbox.checked;
+                        checkbox.dispatchEvent(new Event('change', {
+                            bubbles: true
+                        }));
+                    });
+                });
+            }
+
+            // Initialize Selection
+            setupBulkSelect({
+                formId: 'emailBulkForm',
+                checkboxName: 'selected_users[]',
+                selectAllId: 'selectAll'
             });
+
+            setupRowClickSelection('.selectable-row');
 
             // Modal Open Logic
             window.openEmailModal = function() {
-                // Calculate selected
-                const selected = Array.from(rowCheckboxes).filter(cb => cb.checked).map(cb => cb.value);
+                // Get selected from the form
+                const checkboxes = document.querySelectorAll('input[name="selected_users[]"]:checked');
+                const selected = Array.from(checkboxes).map(cb => cb.value);
 
                 if (selected.length > 0) {
                     recipientIdsInput.value = selected.join(',');
@@ -442,10 +540,6 @@ $unsubscribed_count = $stmt->fetchColumn();
                     closeEmailModal();
                 }
             }
-
-            // Initial Sync
-            updateSelectAllState();
-            updateRowHighlights();
         });
     </script>
 </body>

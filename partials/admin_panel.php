@@ -93,6 +93,15 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
             </a>
         <?php endif; ?>
 
+        <?php if (can_access_page('manage_voucher.php')): ?>
+            <a href="manage_voucher.php"
+                class="nav-item <?= ($current_page == 'manage_voucher.php') ? 'active' : '' ?>"
+                title="Vouchers">
+                <span class="icon">🎟️</span>
+                <span class="nav-text">Vouchers</span>
+            </a>
+        <?php endif; ?>
+
         <?php if (can_access_page('manage_product.php')): ?>
             <a href="manage_product.php"
                 class="nav-item <?= ($current_page == 'manage_product.php') ? 'active' : '' ?>"
