@@ -25,10 +25,13 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
 
     /* Icon specific fixes */
     .toggle-icon {
-        display: inline-block; /* Required for transform to work correctly */
+        display: inline-block;
+        /* Required for transform to work correctly */
         font-size: 14px;
-        line-height: 1; /* Fixes "wobbly" rotation by removing line-height offset */
-        width: 1em;    /* Ensures a square rotation axis */
+        line-height: 1;
+        /* Fixes "wobbly" rotation by removing line-height offset */
+        width: 1em;
+        /* Ensures a square rotation axis */
         height: 1em;
         text-align: center;
         transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
@@ -90,6 +93,15 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
             </a>
         <?php endif; ?>
 
+        <?php if (can_access_page('manage_voucher.php')): ?>
+            <a href="manage_voucher.php"
+                class="nav-item <?= ($current_page == 'manage_voucher.php') ? 'active' : '' ?>"
+                title="Vouchers">
+                <span class="icon">🎟️</span>
+                <span class="nav-text">Vouchers</span>
+            </a>
+        <?php endif; ?>
+
         <?php if (can_access_page('manage_product.php')): ?>
             <a href="manage_product.php"
                 class="nav-item <?= ($current_page == 'manage_product.php') ? 'active' : '' ?>"
@@ -113,6 +125,15 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
                 title="Reviews">
                 <span class="icon">⭐</span>
                 <span class="nav-text">Reviews</span>
+            </a>
+        <?php endif; ?>
+
+        <?php if (can_access_page('manage_email.php')): ?>
+            <a href="manage_email.php"
+                class="nav-item <?= ($current_page == 'manage_email.php') ? 'active' : '' ?>"
+                title="Email Notifications">
+                <span class="icon">📧</span>
+                <span class="nav-text">Email</span>
             </a>
         <?php endif; ?>
 
@@ -187,7 +208,7 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
     function toggleSidebarCollapse() {
         const sidebar = document.getElementById('sidebar');
         // We no longer select toggleIcon to change text. CSS handles the rotation.
-        
+
         const isCollapsed = sidebar.classList.toggle('collapsed');
 
         // Save state to localStorage

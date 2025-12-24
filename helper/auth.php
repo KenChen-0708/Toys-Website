@@ -198,6 +198,9 @@ function can_access_page($page)
     'order_details.php' => ['resource' => 'orders', 'action' => 'view'],
     'manage_product.php' => ['resource' => 'products', 'action' => 'view'],
     'feedback_management.php' => ['resource' => 'feedback', 'action' => 'view'],
+    'review_management.php' => ['resource' => 'feedback', 'action' => 'view'],
+    'manage_email.php' => ['resource' => 'members', 'action' => 'view'],
+    'manage_voucher.php' => ['resource' => 'orders', 'action' => 'view'],
     'analytics.php' => ['resource' => 'analytics', 'action' => 'view'],
   ];
 
