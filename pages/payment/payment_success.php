@@ -2,6 +2,7 @@
 session_start();
 require '../../stripe-php-master/init.php';
 require '../../helper/pdo_connection.php';
+require '../../helper/email_receipt.php';
 
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
@@ -166,6 +167,18 @@ try {
 
         // Commit transaction
         $pdo->commit();
+        
+        // Send order receipt email after successful order creation
+        try {
+            $email_sent = send_order_receipt_email($order, $order_items, $_SESSION['member'], $checkout_data);
+            if (!$email_sent) {
+                // Log email failure but don't break the flow
+                error_log("Failed to send order receipt email for order ID: " . $order_id . " to member: " . $_SESSION['member']['email']);
+            }
+        } catch (Exception $email_error) {
+            // Log email error but don't break the flow
+            error_log("Email error for order ID: " . $order_id . " - " . $email_error->getMessage());
+        }
     } else {
         header('Location: payment_cancel.php');
         exit();
@@ -203,6 +216,7 @@ try {
         <h1>Payment Successful!</h1>
         <p class="message">
             Thank you for your purchase. Your order has been confirmed and will be shipped soon.
+            <br><strong>A receipt has been sent to your email address.</strong>
         </p>
 
         <div class="order-details">

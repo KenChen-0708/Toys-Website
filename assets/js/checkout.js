@@ -335,7 +335,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     body: formData
                 })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     // Remove existing alerts
                     document.querySelectorAll('.alert').forEach(a => a.remove());
@@ -356,7 +361,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     applyVoucherBtn.innerHTML = 'Apply';
                 })
                 .catch(error => {
-                    console.error('Error:', error);
+                    console.error('Voucher fetch error:', error);
                     showAlert('An error occurred. Please try again.', 'error');
                     applyVoucherBtn.disabled = false;
                     applyVoucherBtn.innerHTML = 'Apply';

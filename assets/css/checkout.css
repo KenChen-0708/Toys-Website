@@ -28,7 +28,8 @@
     gap: 25px;
 }
 
-.checkout-page .alert {
+.checkout-page .alert,
+.alert {
     padding: 15px 20px;
     margin-bottom: 20px;
     border-radius: 8px;
@@ -54,13 +55,27 @@
     }
 }
 
-.checkout-page .alert-error {
+@keyframes slideOut {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.checkout-page .alert-error,
+.alert-error {
     background-color: #fee;
     color: #c33;
     border-left: 4px solid #c33;
 }
 
-.checkout-page .alert-success {
+.checkout-page .alert-success,
+.alert-success {
     background-color: #d4edda;
     color: #155724;
     border-left: 4px solid #28a745;
