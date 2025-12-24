@@ -50,13 +50,13 @@ if (is_logged_in() && isset($_SESSION['member']['id'])) {
         <a href="/pages/wishlist/wishlist.php" class="header__action-btn" title="Wishlist">
           <img src="/assets/img/icon-heart.svg" alt="" />
           <?php if (is_logged_in()): ?>
-            <span class="count wishlist-count">0</span>
+            <span class="count wishlist-count"></span>
           <?php endif; ?>
         </a>
         <a href="/pages/cart/cart.php" class="header__action-btn" title="Cart">
           <img src="/assets/img/icon-cart.svg" alt="" />
           <?php if (is_logged_in()): ?>
-            <span class="count cart-count">0</span>
+            <span class="count cart-count"></span>
           <?php endif; ?>
         </a>
       </div>
