@@ -4,10 +4,16 @@ require_once '../../helper/pdo_connection.php';
 
 header('Content-Type: application/json');
 
+// Error handling function
+function sendJsonResponse($success, $message, $data = []) {
+    $response = array_merge(['success' => $success, 'message' => $message], $data);
+    echo json_encode($response);
+    exit();
+}
+
 // Check if user is logged in
 if (!isset($_SESSION['member'])) {
-    echo json_encode(['success' => false, 'message' => 'Please log in to continue.']);
-    exit();
+    sendJsonResponse(false, 'Please log in to continue.');
 }
 
 $member_id = $_SESSION['member']['id'];
@@ -17,8 +23,7 @@ if (isset($_POST['apply_voucher'])) {
     $voucher_code = trim($_POST['voucher_code']);
     
     if (empty($voucher_code)) {
-        echo json_encode(['success' => false, 'message' => 'Please enter a voucher code.']);
-        exit();
+        sendJsonResponse(false, 'Please enter a voucher code.');
     }
     
     try {
@@ -61,21 +66,15 @@ if (isset($_POST['apply_voucher'])) {
         $voucher = $stmt->fetch();
         
         if (!$voucher) {
-            echo json_encode(['success' => false, 'message' => 'Invalid voucher code.']);
-            exit();
+            sendJsonResponse(false, 'Invalid or expired voucher code.');
         }
         
         if ($voucher['times_used_by_user'] >= $voucher['usage_per_user']) {
-            echo json_encode(['success' => false, 'message' => 'You have already used this voucher the maximum number of times.']);
-            exit();
+            sendJsonResponse(false, 'You have already used this voucher the maximum number of times.');
         }
         
         if ($cart_total < $voucher['min_spend']) {
-            echo json_encode([
-                'success' => false, 
-                'message' => 'Minimum spend of RM' . number_format($voucher['min_spend'], 2) . ' required for this voucher.'
-            ]);
-            exit();
+            sendJsonResponse(false, 'Minimum spend of RM' . number_format($voucher['min_spend'], 2) . ' required for this voucher.');
         }
         
         // Calculate discount
@@ -112,9 +111,7 @@ if (isset($_POST['apply_voucher'])) {
             $voucher_discount = $cart_total;
         }
         
-        echo json_encode([
-            'success' => true,
-            'message' => 'Voucher applied successfully! You saved RM' . number_format($voucher_discount, 2),
+        sendJsonResponse(true, 'Voucher applied successfully! You saved RM' . number_format($voucher_discount, 2), [
             'cart_total' => $cart_total,
             'shipping_fee' => $shipping_fee,
             'voucher_discount' => $voucher_discount,
@@ -122,9 +119,9 @@ if (isset($_POST['apply_voucher'])) {
         ]);
         
     } catch (PDOException $e) {
-        echo json_encode(['success' => false, 'message' => 'Error validating voucher: ' . $e->getMessage()]);
+        error_log("Voucher validation error: " . $e->getMessage());
+        sendJsonResponse(false, 'Error validating voucher. Please try again.');
     }
-    exit();
 }
 
 // Handle add new address
@@ -182,11 +179,7 @@ if (isset($_POST['add_address'])) {
     }
 
     if (!empty($validation_errors)) {
-        echo json_encode([
-            'success' => false, 
-            'message' => implode('. ', $validation_errors) . '.'
-        ]);
-        exit();
+        sendJsonResponse(false, implode('. ', $validation_errors) . '.');
     }
     
     try {
@@ -203,15 +196,13 @@ if (isset($_POST['add_address'])) {
         ]);
         
         if (!$result) {
-            echo json_encode(['success' => false, 'message' => 'Failed to insert address into database.']);
-            exit();
+            sendJsonResponse(false, 'Failed to insert address into database.');
         }
         
         $new_address_id = $pdo->lastInsertId();
         
         if (!$new_address_id) {
-            echo json_encode(['success' => false, 'message' => 'Failed to get new address ID.']);
-            exit();
+            sendJsonResponse(false, 'Failed to get new address ID.');
         }
         
         // Fetch the newly added address
@@ -220,25 +211,16 @@ if (isset($_POST['add_address'])) {
         $address = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$address) {
-            echo json_encode(['success' => false, 'message' => 'Failed to retrieve newly added address.']);
-            exit();
+            sendJsonResponse(false, 'Failed to retrieve newly added address.');
         }
         
-        echo json_encode([
-            'success' => true,
-            'message' => 'Address added successfully!',
-            'address' => $address
-        ]);
+        sendJsonResponse(true, 'Address added successfully!', ['address' => $address]);
         
     } catch (PDOException $e) {
         error_log("Address addition error: " . $e->getMessage());
-        echo json_encode([
-            'success' => false, 
-            'message' => 'Database error occurred while adding address. Please try again.'
-        ]);
+        sendJsonResponse(false, 'Database error occurred while adding address. Please try again.');
     }
-    exit();
 }
 
-echo json_encode(['success' => false, 'message' => 'Invalid request.']);
+sendJsonResponse(false, 'Invalid request.');
 ?>
