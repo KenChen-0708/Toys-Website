@@ -75,6 +75,10 @@ if (!$errors) {
             $cart = $pdo->prepare("INSERT INTO Cart (member_id) VALUES (?)");
             $cart->execute([$member_id]);
 
+            // Create default settings
+            $settings = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
+            $settings->execute([$member_id]);
+
             unset($_SESSION['old']);
             $_SESSION['member'] = [
                 'id' => $member_id,

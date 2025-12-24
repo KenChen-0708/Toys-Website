@@ -158,6 +158,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date)
                                         VALUES (?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([$username, $email, $phone, $address, $password]);
+
+                    $member_id = $pdo->lastInsertId();
+
+                    // Create default settings
+                    $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
+                    $settingsStmt->execute([$member_id]);
+
                     $message = "Member created successfully!";
                     $message_type = "success";
                 } catch (PDOException $e) {
@@ -397,6 +404,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date) VALUES (?, ?, ?, ?, ?, NOW())");
                             $stmt->execute([$username, $email, $phone, $address, $password_hash]);
+
+                            $member_id = $pdo->lastInsertId();
+                            $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
+                            $settingsStmt->execute([$member_id]);
                             $successCount++;
                         } else {
                             $errorCount++;
