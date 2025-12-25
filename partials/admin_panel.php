@@ -146,7 +146,7 @@ $adminInitial = strtoupper(substr($adminName, 0, 1));
             </a>
         <?php endif; ?>
 
-        <?php if (get_admin_role() === 'super admin'): ?>
+        <?php if (can_access_page('manage_permissions.php')): ?>
             <a href="manage_permissions.php"
                 class="nav-item <?= ($current_page == 'manage_permissions.php') ? 'active' : '' ?>"
                 title="Permissions">
