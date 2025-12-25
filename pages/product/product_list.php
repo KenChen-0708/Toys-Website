@@ -25,6 +25,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="../../assets/css/product_list.css" />
   <link rel="stylesheet" href="/assets/css/styles.css">
+  <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
   <title><?= htmlspecialchars($title) ?></title>
 </head>
 
