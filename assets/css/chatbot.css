@@ -142,6 +142,37 @@ body {
   border-bottom: 8px solid transparent;
 }
 
+/* CHAT LINKS */
+.chat-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #a8e6a3 0%, #7ed97e 100%);
+  color: white !important;
+  text-decoration: none;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(126, 217, 126, 0.3);
+}
+
+.chat-link:hover {
+  background: linear-gradient(135deg, #8fd98b 0%, #68cc68 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(126, 217, 126, 0.4);
+}
+
+.chat-link:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 6px rgba(126, 217, 126, 0.3);
+}
+
+/* Make bot messages with links slightly larger */
+.bot:has(.chat-link) {
+  max-width: 85%;
+}
+
 /* INPUT AREA */
 .chat-input-area {
   display: flex;

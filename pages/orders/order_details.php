@@ -62,9 +62,7 @@ if ($order['status'] === 'Shipped') {
 }
 
 ?>
-<?php
-$title = "Order Details";
-?>
+
 
 <!doctype html>
 <html>
@@ -73,168 +71,16 @@ $title = "Order Details";
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>Order #<?php echo $order_id; ?></title>
-    <link rel="stylesheet" href="assets/css/orders.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <style>
-        .detail-container {
-            max-width: 1000px;
-            margin: 40px auto;
-            padding: 30px;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-        }
+    <link rel="stylesheet" href="../../assets/css/member_order_details.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
 
-        .detail-container h1 {
-            color: #2c3e50;
-            margin-bottom: 25px;
-            border-bottom: 3px solid #a8e6cf;
-            padding-bottom: 15px;
-        }
-
-        .order-meta {
-            background: #f8fffe;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 25px 0;
-            border-left: 4px solid #a8e6cf;
-        }
-
-        .order-meta p {
-            margin: 12px 0;
-            font-size: 15px;
-            color: #555;
-        }
-
-        .order-meta strong {
-            display: inline-block;
-            width: 180px;
-            color: #2c3e50;
-        }
-
-        .status {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .status.Pending {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .status.Shipped {
-            background: #cce5ff;
-            color: #004085;
-        }
-
-        .status.Delivered {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        .status.Cancelled {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        h3 {
-            color: #2c3e50;
-            margin: 30px 0 20px;
-            font-size: 22px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 10px;
-        }
-
-        .items-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-            gap: 20px;
-            margin: 20px 0;
-        }
-
-        .item-card {
-            background: #fafafa;
-            border: 1px solid #e0e0e0;
-            border-radius: 8px;
-            padding: 15px;
-            text-align: center;
-            transition: all 0.3s ease;
-        }
-
-        .item-card:hover {
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .item-card img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 6px;
-            margin-bottom: 12px;
-        }
-
-        .it-name {
-            font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 8px;
-            font-size: 15px;
-        }
-
-        .item-card>div {
-            margin: 5px 0;
-            color: #666;
-            font-size: 14px;
-        }
-
-        .payment-info {
-            background: #f8fffe;
-            padding: 20px;
-            border-radius: 8px;
-            border-left: 4px solid #a8e6cf;
-        }
-
-        .payment-info p {
-            margin: 10px 0;
-            color: #555;
-        }
-
-        .payment-info strong {
-            display: inline-block;
-            width: 120px;
-            color: #2c3e50;
-        }
-
-        .btn {
-            display: inline-block;
-            padding: 10px 20px;
-            background: #a8e6cf;
-            color: #2c3e50;
-            text-decoration: none;
-            border-radius: 6px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn:hover {
-            background: #8dd4b3;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-        }
-
-        .back-btn {
-            margin-bottom: 20px;
-        }
-    </style>
 </head>
 
-<?php include 'partials/header.php'; ?>
+<?php
+$title = "Home";
+include '../../partials/header.php';
+
+?>
 <div class="detail-container">
     <div class="back-btn">
         <a href="orders.php" class="btn">← Back to Orders</a>
@@ -301,4 +147,4 @@ $title = "Order Details";
 
 </html>
 
-<?php include 'partials/footer.php'; ?>
+<?php include '../../partials/footer.php'; ?>
