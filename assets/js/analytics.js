@@ -1,552 +1,279 @@
-// Analytics Page JavaScript
+// Analytics Page JavaScript for Deep Insights - Custom Implementation (No Framework)
 
-// Chart instances
-let revenueChart = null;
-let orderStatusChart = null;
-let categoryChart = null;
-let paymentChart = null;
-
-// Initialize charts when DOM is loaded
 document.addEventListener('DOMContentLoaded', function () {
-    initializeCharts();
-    setupChartControls();
+    if (typeof analyticsData === 'undefined') return;
+
+    renderRevenueChart();
+    renderCustomerSegmentChart();
+    renderCategoryDistributionChart();
+    renderOrderPipelineChart();
+    setupTooltipEvents();
 });
 
-// Initialize all charts
-function initializeCharts() {
-    if (typeof analyticsData === 'undefined') {
-        console.error('Analytics data not found');
-        return;
-    }
+function setupTooltipEvents() {
+    const tooltip = document.getElementById('chartTooltip');
+    if (!tooltip) return;
 
-    initRevenueChart();
-    initOrderStatusChart();
-    initCategoryChart();
-    initPaymentChart();
+    window.showTooltip = (e, title, value) => {
+        tooltip.style.display = 'flex';
+        // Force reflow for transition
+        tooltip.offsetHeight;
+
+        tooltip.querySelector('.tooltip-title').textContent = title;
+        tooltip.querySelector('.tooltip-value').textContent = value;
+
+        const x = e.clientX + 15;
+        const y = e.clientY + 15;
+
+        // Overflow check
+        const width = tooltip.offsetWidth;
+        const height = tooltip.offsetHeight;
+        const finalX = (x + width > window.innerWidth) ? x - width - 30 : x;
+        const finalY = (y + height > window.innerHeight) ? y - height - 30 : y;
+
+        tooltip.style.left = finalX + 'px';
+        tooltip.style.top = finalY + 'px';
+        tooltip.style.opacity = '1';
+        tooltip.style.transform = 'translateY(0) scale(1)';
+    };
+
+    window.hideTooltip = () => {
+        tooltip.style.opacity = '0';
+        tooltip.style.transform = 'translateY(10px) scale(0.95)';
+        setTimeout(() => {
+            if (tooltip.style.opacity === '0') {
+                tooltip.style.display = 'none';
+            }
+        }, 300);
+    };
 }
 
-// Revenue Trend Chart
-function initRevenueChart() {
-    const ctx = document.getElementById('revenueChart');
-    if (!ctx) return;
+function renderRevenueChart() {
+    const container = document.getElementById('revenueChartContainer');
+    if (!container || !analyticsData.dailyRevenue.length) return;
 
-    const dates = analyticsData.dailyRevenue.map(item => {
-        const date = new Date(item.date);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    });
-    const revenues = analyticsData.dailyRevenue.map(item => parseFloat(item.revenue));
-    const orders = analyticsData.dailyRevenue.map(item => parseInt(item.orders));
+    const data = analyticsData.dailyRevenue.map(d => parseFloat(d.revenue));
+    const labels = analyticsData.dailyRevenue.map(d => d.date);
+    const max = Math.max(...data, 1);
 
-    revenueChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Revenue (RM)',
-                data: revenues,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderWidth: 3,
-                fill: true,
-                tension: 0.4,
-                pointRadius: 5,
-                pointHoverRadius: 7,
-                pointBackgroundColor: '#3b82f6',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: {
-                        font: {
-                            size: 14,
-                            weight: '600'
-                        },
-                        padding: 15,
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    callbacks: {
-                        label: function (context) {
-                            return 'Revenue: RM ' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function (value) {
-                            return 'RM ' + value.toLocaleString();
-                        },
-                        font: {
-                            size: 12
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            size: 12
-                        }
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
+    const width = 1000;
+    const height = 400; // Increased height to room for labels
+    const paddingLeft = 80; // More room for Y labels
+    const paddingRight = 40;
+    const paddingTop = 40;
+    const paddingBottom = 60; // Room for X labels
+
+    const innerWidth = width - paddingLeft - paddingRight;
+    const innerHeight = height - paddingTop - paddingBottom;
+
+    let points = "";
+    let markers = "";
+    let xLabels = "";
+    const step = innerWidth / (Math.max(data.length - 1, 1));
+
+    // Determine label frequency (don't show every date if there are many)
+    const labelStep = Math.ceil(data.length / 10);
+
+    data.forEach((val, i) => {
+        const x = paddingLeft + (i * step);
+        const y = paddingTop + innerHeight - (val / max * innerHeight);
+        points += `${x},${y} `;
+
+        markers += `
+            <circle cx="${x}" cy="${y}" r="6" fill="white" stroke="var(--primary)" stroke-width="3" 
+                    class="chart-point" 
+                    onmouseover="showTooltip(event, '${labels[i]}', 'RM ${val.toLocaleString(undefined, { minimumFractionDigits: 2 })}')"
+                    onmouseout="hideTooltip()"
+                    style="animation: popIn 0.5s ease-out forwards ${i * 0.05}s; opacity: 0; cursor: pointer;">
+            </circle>`;
+
+        // Add X-axis label
+        if (i % labelStep === 0 || i === data.length - 1) {
+            const date = new Date(labels[i]);
+            const formattedDate = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            xLabels += `<text x="${x}" y="${height - 20}" text-anchor="middle" class="chart-label">${formattedDate}</text>`;
         }
     });
 
-    // Store orders data for switching
-    revenueChart.ordersData = orders;
+    // Y-axis labels (3 markers)
+    const yLabels = `
+        <text x="${paddingLeft - 15}" y="${paddingTop + innerHeight}" text-anchor="end" class="chart-label">0</text>
+        <text x="${paddingLeft - 15}" y="${paddingTop + (innerHeight / 2)}" text-anchor="end" class="chart-label">RM ${(max / 2 / 1000).toFixed(1)}k</text>
+        <text x="${paddingLeft - 15}" y="${paddingTop}" text-anchor="end" class="chart-label">RM ${(max / 1000).toFixed(1)}k</text>
+    `;
+
+    const svg = `
+        <svg viewBox="0 0 ${width} ${height}" class="svg-chart">
+            <defs>
+                <linearGradient id="chartGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="var(--primary)" stop-opacity="0.3"/>
+                    <stop offset="100%" stop-color="var(--primary)" stop-opacity="0.01"/>
+                </linearGradient>
+                <style>
+                    @keyframes popIn { from { transform: scale(0); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+                    .chart-point { transition: all 0.2s; }
+                    .chart-point:hover { r: 9; stroke-width: 4; fill: var(--primary); }
+                    .chart-label { font-size: 13px; fill: var(--text-muted); font-weight: 500; font-family: inherit; }
+                </style>
+            </defs>
+            <!-- Grid Lines -->
+            <line x1="${paddingLeft}" y1="${paddingTop}" x2="${width - paddingRight}" y2="${paddingTop}" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="${paddingLeft}" y1="${paddingTop + (innerHeight / 2)}" x2="${width - paddingRight}" y2="${paddingTop + (innerHeight / 2)}" stroke="#f1f5f9" stroke-width="1" />
+            <line x1="${paddingLeft}" y1="${paddingTop + innerHeight}" x2="${width - paddingRight}" y2="${paddingTop + innerHeight}" stroke="#e2e8f0" stroke-width="1" />
+            
+            <path d="M ${paddingLeft},${paddingTop + innerHeight} ${points} L ${width - paddingRight},${paddingTop + innerHeight} Z" fill="url(#chartGradient)" />
+            <polyline points="${points}" class="chart-path" />
+            ${markers}
+            ${xLabels}
+            ${yLabels}
+        </svg>
+    `;
+
+    container.innerHTML = svg;
 }
 
-// Order Status Chart
-function initOrderStatusChart() {
-    const ctx = document.getElementById('orderStatusChart');
-    if (!ctx) return;
+function renderCustomerSegmentChart() {
+    const container = document.getElementById('segmentChartContainer');
+    if (!container || !analyticsData.customerSegments.length) return;
 
-    const labels = analyticsData.orderStatus.map(item => item.status);
-    const data = analyticsData.orderStatus.map(item => parseInt(item.count));
+    const total = analyticsData.customerSegments.reduce((acc, curr) => acc + parseInt(curr.customer_count), 0);
+    const colors = ['var(--primary)', 'var(--indigo)', 'var(--violet)', 'var(--primary-light)'];
 
-    const colors = {
+    let segments = "";
+    let legendItems = "";
+    let currentOffset = 0;
+    const radius = 60;
+    const circ = 2 * Math.PI * radius;
+
+    analyticsData.customerSegments.forEach((s, i) => {
+        const percent = (s.customer_count / total);
+        const dashArray = `${percent * circ} ${circ}`;
+        const color = colors[i % colors.length];
+
+        segments += `
+            <circle class="pie-segment segment-pie-only" cx="125" cy="125" r="${radius}" 
+                    stroke="${color}" stroke-dasharray="${dashArray}" 
+                    stroke-dashoffset="-${currentOffset * circ}"
+                    stroke-width="120"
+                    onmouseover="showTooltip(event, '${s.segment}', '${s.customer_count} Customers (${(percent * 100).toFixed(1)}%)')"
+                    onmouseout="hideTooltip()"></circle>
+        `;
+
+        legendItems += `
+            <div class="legend-item" onmouseover="showTooltip(event, '${s.segment}', '${s.customer_count} Customers (${(percent * 100).toFixed(1)}%)')" onmouseout="hideTooltip()" style="cursor: pointer;">
+                <span class="legend-color" style="background: ${color}"></span>
+                <span>${s.segment}: <strong>${s.customer_count}</strong></span>
+            </div>
+        `;
+        currentOffset += percent;
+    });
+
+    const pieHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <div class="pie-wrapper">
+                <svg viewBox="0 0 250 250" class="pie-chart-svg">
+                    ${segments}
+                </svg>
+            </div>
+            <div class="chart-legend">
+                ${legendItems}
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = pieHtml;
+}
+
+function renderCategoryDistributionChart() {
+    const container = document.getElementById('categoryChartContainer');
+    if (!container || !analyticsData.categoryStats.length) return;
+
+    const max = Math.max(...analyticsData.categoryStats.map(s => parseFloat(s.revenue)), 1);
+
+    let html = '<div class="vertical-bar-chart">';
+    analyticsData.categoryStats.slice(0, 6).forEach(s => {
+        const percent = (s.revenue / max) * 100;
+        const label = s.category.charAt(0).toUpperCase() + s.category.slice(1);
+        const revenue = parseFloat(s.revenue);
+
+        let formattedRev = "RM " + (revenue >= 1000 ? (revenue / 1000).toFixed(1) + "k" : revenue.toFixed(0));
+
+        html += `
+            <div class="vertical-bar-item" 
+                 onmouseover="showTooltip(event, '${label}', 'Revenue: RM ${revenue.toLocaleString(undefined, { minimumFractionDigits: 2 })}')" 
+                 onmouseout="hideTooltip()">
+                <div class="v-bar-value">${formattedRev}</div>
+                <div class="v-bar-track">
+                    <div class="v-bar-fill" style="--final-height: ${percent}%"></div>
+                </div>
+                <div class="v-bar-label">${label}</div>
+            </div>
+        `;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+}
+
+function renderOrderPipelineChart() {
+    const container = document.getElementById('pipelineChartContainer');
+    if (!container || !analyticsData.orderStatus.length) return;
+
+    const total = analyticsData.orderStatus.reduce((acc, curr) => acc + parseInt(curr.count), 0);
+    const statusColors = {
         'Pending': '#f59e0b',
+        'Processing': '#6366f1',
         'Shipped': '#3b82f6',
         'Delivered': '#10b981',
-        'Cancelled': '#ef4444',
-        'Processing': '#8b5cf6'
+        'Cancelled': '#ef4444'
     };
 
-    const backgroundColors = labels.map(label => colors[label] || '#6b7280');
+    let segments = "";
+    let currentOffset = 0;
+    const radius = 70;
+    const circ = 2 * Math.PI * radius;
 
-    orderStatusChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: backgroundColors,
-                borderWidth: 3,
-                borderColor: '#fff',
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 15,
-                        font: {
-                            size: 13,
-                            weight: '600'
-                        },
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    callbacks: {
-                        label: function (context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
+    analyticsData.orderStatus.forEach((s) => {
+        const percent = (s.count / total);
+        const dashArray = `${percent * circ} ${circ}`;
+        const color = statusColors[s.status] || '#cbd5e1';
 
-// Category Revenue Chart
-function initCategoryChart() {
-    const ctx = document.getElementById('categoryChart');
-    if (!ctx) return;
-
-    const labels = analyticsData.categoryRevenue.map(item => {
-        const category = item.category || 'Uncategorized';
-        return category.charAt(0).toUpperCase() + category.slice(1).replace(/_/g, ' ');
-    });
-    const data = analyticsData.categoryRevenue.map(item => parseFloat(item.revenue));
-
-    const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 300);
-    gradient.addColorStop(0, 'rgba(139, 92, 246, 0.8)');
-    gradient.addColorStop(1, 'rgba(139, 92, 246, 0.2)');
-
-    categoryChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Revenue (RM)',
-                data: data,
-                backgroundColor: gradient,
-                borderColor: '#8b5cf6',
-                borderWidth: 2,
-                borderRadius: 8,
-                barThickness: 40
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    callbacks: {
-                        label: function (context) {
-                            return 'Revenue: RM ' + context.parsed.y.toFixed(2);
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function (value) {
-                            return 'RM ' + value.toLocaleString();
-                        },
-                        font: {
-                            size: 12
-                        }
-                    },
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
-                    }
-                },
-                x: {
-                    ticks: {
-                        font: {
-                            size: 11
-                        }
-                    },
-                    grid: {
-                        display: false
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Payment Methods Chart
-function initPaymentChart() {
-    const ctx = document.getElementById('paymentChart');
-    if (!ctx) return;
-
-    const labels = analyticsData.paymentMethods.map(item => item.payment_method);
-    const data = analyticsData.paymentMethods.map(item => parseInt(item.count));
-
-    const colors = [
-        '#3b82f6',
-        '#10b981',
-        '#f59e0b',
-        '#ef4444',
-        '#8b5cf6',
-        '#ec4899',
-        '#14b8a6'
-    ];
-
-    paymentChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: labels,
-            datasets: [{
-                data: data,
-                backgroundColor: colors,
-                borderWidth: 3,
-                borderColor: '#fff',
-                hoverOffset: 10
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                    labels: {
-                        padding: 15,
-                        font: {
-                            size: 12,
-                            weight: '600'
-                        },
-                        usePointStyle: true
-                    }
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    padding: 12,
-                    titleFont: {
-                        size: 14,
-                        weight: 'bold'
-                    },
-                    bodyFont: {
-                        size: 13
-                    },
-                    callbacks: {
-                        label: function (context) {
-                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                            const percentage = ((context.parsed / total) * 100).toFixed(1);
-                            return context.label + ': ' + context.parsed + ' (' + percentage + '%)';
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-// Setup chart control buttons
-function setupChartControls() {
-    const chartBtns = document.querySelectorAll('.chart-btn');
-
-    chartBtns.forEach(btn => {
-        btn.addEventListener('click', function () {
-            const chartType = this.getAttribute('data-chart');
-
-            // Update active state
-            chartBtns.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-
-            // Switch chart data
-            if (chartType === 'revenue') {
-                switchToRevenue();
-            } else if (chartType === 'orders') {
-                switchToOrders();
-            }
-        });
-    });
-}
-
-// Switch to revenue view
-function switchToRevenue() {
-    if (!revenueChart) return;
-
-    const revenues = analyticsData.dailyRevenue.map(item => parseFloat(item.revenue));
-
-    revenueChart.data.datasets[0].label = 'Revenue (RM)';
-    revenueChart.data.datasets[0].data = revenues;
-    revenueChart.data.datasets[0].borderColor = '#3b82f6';
-    revenueChart.data.datasets[0].backgroundColor = 'rgba(59, 130, 246, 0.1)';
-    revenueChart.data.datasets[0].pointBackgroundColor = '#3b82f6';
-
-    revenueChart.options.plugins.tooltip.callbacks.label = function (context) {
-        return 'Revenue: RM ' + context.parsed.y.toFixed(2);
-    };
-
-    revenueChart.options.scales.y.ticks.callback = function (value) {
-        return 'RM ' + value.toLocaleString();
-    };
-
-    revenueChart.update();
-}
-
-// Switch to orders view
-function switchToOrders() {
-    if (!revenueChart || !revenueChart.ordersData) return;
-
-    revenueChart.data.datasets[0].label = 'Orders';
-    revenueChart.data.datasets[0].data = revenueChart.ordersData;
-    revenueChart.data.datasets[0].borderColor = '#10b981';
-    revenueChart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.1)';
-    revenueChart.data.datasets[0].pointBackgroundColor = '#10b981';
-
-    revenueChart.options.plugins.tooltip.callbacks.label = function (context) {
-        return 'Orders: ' + context.parsed.y;
-    };
-
-    revenueChart.options.scales.y.ticks.callback = function (value) {
-        return value;
-    };
-
-    revenueChart.update();
-}
-
-// Date range quick filters
-function setDateRange(range) {
-    const today = new Date();
-    let startDate, endDate;
-
-    endDate = today.toISOString().split('T')[0];
-
-    switch (range) {
-        case 'today':
-            startDate = endDate;
-            break;
-        case 'week':
-            const weekAgo = new Date(today);
-            weekAgo.setDate(today.getDate() - 7);
-            startDate = weekAgo.toISOString().split('T')[0];
-            break;
-        case 'month':
-            startDate = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-            break;
-        case 'year':
-            startDate = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0];
-            break;
-        default:
-            return;
-    }
-
-    document.getElementById('start_date').value = startDate;
-    document.getElementById('end_date').value = endDate;
-    document.querySelector('.date-filter-form').submit();
-}
-
-// Reset date filter
-function resetDateFilter() {
-    const today = new Date();
-    const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-
-    document.getElementById('start_date').value = firstDayOfMonth.toISOString().split('T')[0];
-    document.getElementById('end_date').value = today.toISOString().split('T')[0];
-    document.querySelector('.date-filter-form').submit();
-}
-
-// Export report functionality
-function exportReport() {
-    // Prepare data for export
-    const reportData = {
-        dateRange: {
-            start: document.getElementById('start_date').value,
-            end: document.getElementById('end_date').value
-        },
-        metrics: extractMetrics(),
-        dailyRevenue: analyticsData.dailyRevenue,
-        orderStatus: analyticsData.orderStatus,
-        categoryRevenue: analyticsData.categoryRevenue,
-        paymentMethods: analyticsData.paymentMethods
-    };
-
-    // Convert to CSV
-    const csv = convertToCSV(reportData);
-
-    // Download CSV file
-    downloadCSV(csv, 'analytics_report_' + new Date().toISOString().split('T')[0] + '.csv');
-}
-
-// Extract metrics from the page
-function extractMetrics() {
-    const metrics = {};
-    const metricCards = document.querySelectorAll('.metric-card');
-
-    metricCards.forEach(card => {
-        const title = card.querySelector('h3').textContent;
-        const value = card.querySelector('.metric-value').textContent;
-        metrics[title] = value;
+        segments += `
+            <circle class="pie-segment" cx="125" cy="125" r="${radius}" 
+                    stroke="${color}" stroke-dasharray="${dashArray}" 
+                    stroke-dashoffset="-${currentOffset * circ}"
+                    onmouseover="showTooltip(event, '${s.status}', '${s.count} Orders (${(percent * 100).toFixed(1)}%)')"
+                    onmouseout="hideTooltip()"></circle>
+        `;
+        currentOffset += percent;
     });
 
-    return metrics;
+    const doughnutHtml = `
+        <div style="display: flex; flex-direction: column; align-items: center; width: 100%;">
+            <div class="pie-wrapper">
+                <svg viewBox="0 0 250 250" class="pie-chart-svg">
+                    ${segments}
+                </svg>
+                <div class="doughnut-hole" onmouseover="showTooltip(event, 'Order Volume', 'Grand Total: ${total}')" onmouseout="hideTooltip()">
+                    <span class="doughnut-label">Total Orders</span>
+                    <span class="doughnut-value">${total}</span>
+                </div>
+            </div>
+            <div class="chart-legend">
+                ${analyticsData.orderStatus.map(s => `
+                    <div class="legend-item" onmouseover="showTooltip(event, '${s.status}', '${s.count} Orders')" onmouseout="hideTooltip()">
+                        <span class="legend-color" style="background: ${statusColors[s.status] || '#cbd5e1'}"></span>
+                        <span>${s.status}: <strong>${s.count}</strong></span>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = doughnutHtml;
 }
 
-// Convert data to CSV format
-function convertToCSV(data) {
-    let csv = 'Analytics Report\n\n';
-
-    // Date Range
-    csv += 'Date Range\n';
-    csv += 'Start Date,' + data.dateRange.start + '\n';
-    csv += 'End Date,' + data.dateRange.end + '\n\n';
-
-    // Metrics
-    csv += 'Key Metrics\n';
-    for (const [key, value] of Object.entries(data.metrics)) {
-        csv += key + ',' + value.replace(/,/g, '') + '\n';
-    }
-    csv += '\n';
-
-    // Daily Revenue
-    csv += 'Daily Revenue\n';
-    csv += 'Date,Revenue,Orders\n';
-    data.dailyRevenue.forEach(item => {
-        csv += item.date + ',' + item.revenue + ',' + item.orders + '\n';
-    });
-    csv += '\n';
-
-    // Order Status
-    csv += 'Order Status\n';
-    csv += 'Status,Count\n';
-    data.orderStatus.forEach(item => {
-        csv += item.status + ',' + item.count + '\n';
-    });
-    csv += '\n';
-
-    // Category Revenue
-    csv += 'Revenue by Category\n';
-    csv += 'Category,Revenue,Items Sold\n';
-    data.categoryRevenue.forEach(item => {
-        csv += item.category + ',' + item.revenue + ',' + item.items_sold + '\n';
-    });
-    csv += '\n';
-
-    // Payment Methods
-    csv += 'Payment Methods\n';
-    csv += 'Method,Count,Total Amount\n';
-    data.paymentMethods.forEach(item => {
-        csv += item.payment_method + ',' + item.count + ',' + item.total_amount + '\n';
-    });
-
-    return csv;
-}
-
-// Download CSV file
-function downloadCSV(csv, filename) {
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-
-    if (navigator.msSaveBlob) { // IE 10+
-        navigator.msSaveBlob(blob, filename);
-    } else {
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
+function exportDeepData() {
+    alert("Exporting deep analytics data to CSV...");
+    window.location.href = 'export_analytics.php' + window.location.search;
 }
