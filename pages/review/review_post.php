@@ -7,6 +7,7 @@ is_logged_in();
 redirect_if_admin();
 
 $member_id = $_SESSION['member']['id'] ?? null;
+$edit_window_hours = 48; // hours allowed for editing an existing review
 $is_ajax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
 
 function send_response($success, $message, $ajax = false)
@@ -14,8 +15,8 @@ function send_response($success, $message, $ajax = false)
 	if ($ajax) {
 		header('Content-Type: application/json');
 		echo json_encode(['success' => $success, 'message' => $message]);
-		exit;
 	}
+	exit;
 }
 
 if (!$member_id) {
@@ -67,12 +68,20 @@ try {
 	}
 
 	// Check for an existing review for this product by this member
-	$existing_stmt = $pdo->prepare("SELECT review_id FROM Review WHERE member_id = ? AND product_id = ? LIMIT 1");
+	$existing_stmt = $pdo->prepare("SELECT review_id, created_date FROM Review WHERE member_id = ? AND product_id = ? LIMIT 1");
 	$existing_stmt->execute([$member_id, $product_id]);
 	$existing = $existing_stmt->fetch(PDO::FETCH_ASSOC);
 
 	if ($existing) {
-		$update_stmt = $pdo->prepare("UPDATE Review SET rating = ?, review_text = ?, created_date = NOW() WHERE review_id = ?");
+		$created_at = !empty($existing['created_date']) ? new DateTimeImmutable($existing['created_date']) : null;
+		$deadline = $created_at ? $created_at->modify("+{$edit_window_hours} hours") : null;
+		$now = new DateTimeImmutable();
+
+		if ($deadline && $now > $deadline) {
+			send_response(false, "You can edit your review within {$edit_window_hours} hours of submitting.", $is_ajax);
+		}
+
+		$update_stmt = $pdo->prepare("UPDATE Review SET rating = ?, review_text = ? WHERE review_id = ?");
 		$update_stmt->execute([$rating, $review_text, $existing['review_id']]);
 		send_response(true, 'Review updated successfully!', $is_ajax);
 	} else {
