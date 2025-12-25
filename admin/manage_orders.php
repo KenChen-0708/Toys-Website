@@ -235,7 +235,7 @@ try {
     <title>Manage Orders - Admin Panel</title>
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
     <link rel="stylesheet" href="../assets/css/manage_orders.css">
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
 </head>
 
 <body>
