@@ -16,86 +16,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
         // Update status
         if (isset($_POST['update_status']) && isset($_POST['order_id']) && isset($_POST['status'])) {
-            $order_id = (int)$_POST['order_id'];
-            $status = $_POST['status'];
-            // Validate allowed statuses
-            $allowed = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
-            if (in_array($status, $allowed)) {
-                $stmt = $pdo->prepare("UPDATE `Order` SET status = ? WHERE order_id = ?");
-                if ($stmt->execute([$status, $order_id])) {
-                    $message = 'Order status updated.';
-                    $message_type = 'success';
+            if (!has_permission('orders', 'update')) {
+                $message = "You don't have permission to update order status.";
+                $message_type = 'error';
+            } else {
+                $order_id = (int)$_POST['order_id'];
+                $status = $_POST['status'];
+                // Validate allowed statuses
+                $allowed = ['Pending', 'Shipped', 'Delivered', 'Cancelled'];
+                if (in_array($status, $allowed)) {
+                    $stmt = $pdo->prepare("UPDATE `Order` SET status = ? WHERE order_id = ?");
+                    if ($stmt->execute([$status, $order_id])) {
+                        $message = 'Order status updated.';
+                        $message_type = 'success';
+                    } else {
+                        $message = 'Error updating status.';
+                        $message_type = 'error';
+                    }
                 } else {
-                    $message = 'Error updating status.';
+                    $message = 'Invalid status value.';
                     $message_type = 'error';
                 }
-            } else {
-                $message = 'Invalid status value.';
-                $message_type = 'error';
             }
         }
 
         // Edit shipping address
         if (isset($_POST['edit_address']) && isset($_POST['order_id'])) {
-            $order_id = (int)$_POST['order_id'];
-
-            // Get all the address fields
-            $address_line1 = $_POST['address_line1'] ?? '';
-            $address_line2 = $_POST['address_line2'] ?? '';
-            $city = $_POST['city'] ?? '';
-            $state = $_POST['state'] ?? '';
-            $postal_code = $_POST['postal_code'] ?? '';
-            $country = $_POST['country'] ?? '';
-
-            // Validate required fields
-            if (empty($address_line1) || empty($city) || empty($country)) {
-                $message = 'Address Line 1, City, and Country are required.';
+            if (!has_permission('orders', 'update')) {
+                $message = "You don't have permission to edit order address.";
                 $message_type = 'error';
             } else {
-                // Update address directly in Order table
-                $stmt = $pdo->prepare("UPDATE `Order` SET 
-                    shipping_address_line1 = ?, shipping_address_line2 = ?, shipping_city = ?, 
-                    shipping_state = ?, shipping_postal_code = ?, shipping_country = ?
-                    WHERE order_id = ?");
-                if ($stmt->execute([$address_line1, $address_line2, $city, $state, $postal_code, $country, $order_id])) {
-                    $message = 'Shipping address updated.';
-                    $message_type = 'success';
-                } else {
-                    $message = 'Error updating address.';
+                $order_id = (int)$_POST['order_id'];
+
+                // Get all the address fields
+                $address_line1 = $_POST['address_line1'] ?? '';
+                $address_line2 = $_POST['address_line2'] ?? '';
+                $city = $_POST['city'] ?? '';
+                $state = $_POST['state'] ?? '';
+                $postal_code = $_POST['postal_code'] ?? '';
+                $country = $_POST['country'] ?? '';
+
+                // Validate required fields
+                if (empty($address_line1) || empty($city) || empty($country)) {
+                    $message = 'Address Line 1, City, and Country are required.';
                     $message_type = 'error';
+                } else {
+                    // Update address directly in Order table
+                    $stmt = $pdo->prepare("UPDATE `Order` SET 
+                        shipping_address_line1 = ?, shipping_address_line2 = ?, shipping_city = ?, 
+                        shipping_state = ?, shipping_postal_code = ?, shipping_country = ?
+                        WHERE order_id = ?");
+                    if ($stmt->execute([$address_line1, $address_line2, $city, $state, $postal_code, $country, $order_id])) {
+                        $message = 'Shipping address updated.';
+                        $message_type = 'success';
+                    } else {
+                        $message = 'Error updating address.';
+                        $message_type = 'error';
+                    }
                 }
             }
         }
 
         // Optional: Delete order
         if (isset($_POST['delete_order']) && isset($_POST['order_id'])) {
-            $order_id = (int)$_POST['order_id'];
-
-            try {
-                // Start transaction
-                $pdo->beginTransaction();
-
-                // 1. Delete child records first
-                $stmt = $pdo->prepare("DELETE FROM Order_Item WHERE order_id = ?");
-                $stmt->execute([$order_id]);
-
-                // 2. (Optional) delete payments if you have a Payment table
-                // $stmt = $pdo->prepare("DELETE FROM Payment WHERE order_id = ?");
-                // $stmt->execute([$order_id]);
-
-                // 3. Delete the order
-                $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
-                $stmt->execute([$order_id]);
-
-                // Commit if everything succeeded
-                $pdo->commit();
-
-                $message = 'Order deleted successfully.';
-                $message_type = 'success';
-            } catch (PDOException $e) {
-                $pdo->rollBack();
-                $message = 'Cannot delete order. It may still be linked to other records.';
+            if (!has_permission('orders', 'delete')) {
+                $message = "You don't have permission to delete orders.";
                 $message_type = 'error';
+            } else {
+                $order_id = (int)$_POST['order_id'];
+
+                try {
+                    // Start transaction
+                    $pdo->beginTransaction();
+
+                    // 1. Delete child records first
+                    $stmt = $pdo->prepare("DELETE FROM Order_Item WHERE order_id = ?");
+                    $stmt->execute([$order_id]);
+
+                    // 2. (Optional) delete payments if you have a Payment table
+                    // $stmt = $pdo->prepare("DELETE FROM Payment WHERE order_id = ?");
+                    // $stmt->execute([$order_id]);
+
+                    // 3. Delete the order
+                    $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
+                    $stmt->execute([$order_id]);
+
+                    // Commit if everything succeeded
+                    $pdo->commit();
+
+                    $message = 'Order deleted successfully.';
+                    $message_type = 'success';
+                } catch (PDOException $e) {
+                    $pdo->rollBack();
+                    $message = 'Cannot delete order. It may still be linked to other records.';
+                    $message_type = 'error';
+                }
             }
         }
     } catch (PDOException $e) {
@@ -375,16 +390,22 @@ try {
                                     </td>
                                     <td><strong>RM <?= number_format($row['total_amount'], 2) ?></strong></td>
                                     <td>
-                                        <form method="POST" class="inline-form">
-                                            <input type="hidden" name="order_id" value="<?= $row['order_id'] ?>">
-                                            <select name="status">
-                                                <option value="Pending" <?php if ($row['status'] == 'Pending') echo 'selected'; ?>>Pending</option>
-                                                <option value="Shipped" <?php if ($row['status'] == 'Shipped') echo 'selected'; ?>>Shipped</option>
-                                                <option value="Delivered" <?php if ($row['status'] == 'Delivered') echo 'selected'; ?>>Delivered</option>
-                                                <option value="Cancelled" <?php if ($row['status'] == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
-                                            </select>
-                                            <button type="submit" name="update_status" class="btn btn-sm btn-primary">Update</button>
-                                        </form>
+                                        <?php if (has_permission('orders', 'update')): ?>
+                                            <form method="POST" class="inline-form">
+                                                <input type="hidden" name="order_id" value="<?= $row['order_id'] ?>">
+                                                <select name="status">
+                                                    <option value="Pending" <?php if ($row['status'] == 'Pending') echo 'selected'; ?>>Pending</option>
+                                                    <option value="Shipped" <?php if ($row['status'] == 'Shipped') echo 'selected'; ?>>Shipped</option>
+                                                    <option value="Delivered" <?php if ($row['status'] == 'Delivered') echo 'selected'; ?>>Delivered</option>
+                                                    <option value="Cancelled" <?php if ($row['status'] == 'Cancelled') echo 'selected'; ?>>Cancelled</option>
+                                                </select>
+                                                <button type="submit" name="update_status" class="btn btn-sm btn-primary">Update</button>
+                                            </form>
+                                        <?php else: ?>
+                                            <span class="status-badge status-<?= strtolower($row['status']) ?>">
+                                                <?= $row['status'] ?>
+                                            </span>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="address-display">
@@ -396,7 +417,9 @@ try {
                                                 <?= htmlspecialchars($row['shipping_city']) ?>, <?= htmlspecialchars($row['shipping_state']) ?> <?= htmlspecialchars($row['shipping_postal_code']) ?><br>
                                                 <?= htmlspecialchars($row['shipping_country']) ?>
                                             </div>
-                                            <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAddressForm(<?= $row['order_id'] ?>)">Edit</button>
+                                            <?php if (has_permission('orders', 'update')): ?>
+                                                <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAddressForm(<?= $row['order_id'] ?>)">Edit</button>
+                                            <?php endif; ?>
                                         </div>
                                         <form method="POST" class="address-form" id="address-form-<?= $row['order_id'] ?>" style="display:none;">
                                             <input type="hidden" name="order_id" value="<?= $row['order_id'] ?>">
@@ -428,7 +451,9 @@ try {
                                     </td>
                                     <td>
                                         <a class="btn" href="order_details.php?order_id=<?= $row['order_id'] ?>">View</a>
-                                        <button class="btn btn-danger" onclick="confirmDelete(<?= $row['order_id'] ?>)">Delete</button>
+                                        <?php if (has_permission('orders', 'delete')): ?>
+                                            <button class="btn btn-danger" onclick="confirmDelete(<?= $row['order_id'] ?>)">Delete</button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

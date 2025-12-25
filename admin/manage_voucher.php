@@ -300,7 +300,9 @@ $active_vouchers = $pdo->query("SELECT COUNT(*) FROM Voucher WHERE status='activ
 
             <div class="header">
                 <h1>Manage Vouchers</h1>
-                <button class="btn btn-primary" onclick="openCreateModal()">+ Add Voucher</button>
+                <?php if (has_permission('vouchers', 'create')): ?>
+                    <button class="btn btn-primary" onclick="openCreateModal()">+ Add Voucher</button>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($message)): ?>
@@ -341,7 +343,9 @@ $active_vouchers = $pdo->query("SELECT COUNT(*) FROM Voucher WHERE status='activ
                 <div class="bulk-actions">
                     <!-- Checkbox moved to header -->
                     <div></div>
-                    <button type="submit" name="batch_delete_vouchers" id="deleteSelectedVouchersBtn" class="btn btn-danger" disabled data-confirm="Delete selected vouchers?">Delete Selected</button>
+                    <?php if (has_permission('vouchers', 'delete')): ?>
+                        <button type="submit" name="batch_delete_vouchers" id="deleteSelectedVouchersBtn" class="btn btn-danger" disabled data-confirm="Delete selected vouchers?">Delete Selected</button>
+                    <?php endif; ?>
                 </div>
 
                 <div class="table-container">
@@ -400,8 +404,12 @@ $active_vouchers = $pdo->query("SELECT COUNT(*) FROM Voucher WHERE status='activ
                                         </td>
                                         <td>
                                             <div style="display:flex; gap:5px;">
-                                                <button type="button" class="btn btn-warning btn-sm" onclick='mvOpenEdit(<?= json_encode($v) ?>)'>Edit</button>
-                                                <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteVoucher(<?= $v['voucher_id'] ?>)">Delete</button>
+                                                <?php if (has_permission('vouchers', 'update')): ?>
+                                                    <button type="button" class="btn btn-warning btn-sm" onclick='mvOpenEdit(<?= json_encode($v) ?>)'>Edit</button>
+                                                <?php endif; ?>
+                                                <?php if (has_permission('vouchers', 'delete')): ?>
+                                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmDeleteVoucher(<?= $v['voucher_id'] ?>)">Delete</button>
+                                                <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>

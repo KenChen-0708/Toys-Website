@@ -57,51 +57,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** BATCH DELETE ADMINS **/
     if (isset($_POST['batch_delete_admins'])) {
-        $selectedIds = $sanitizeIds($_POST['selected_admins'] ?? []);
+        if (!has_permission('admins', 'delete')) {
+            $message = "You don't have permission to delete admins.";
+            $message_type = 'error';
+        } else {
+            $selectedIds = $sanitizeIds($_POST['selected_admins'] ?? []);
 
-        if (!empty($selectedIds)) {
-            try {
-                // Fetch target admins to check roles
-                $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
-                $stmt = $pdo->prepare("SELECT admin_id, role FROM Admin WHERE admin_id IN ($placeholders)");
-                $stmt->execute($selectedIds);
-                $targets = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            if (!empty($selectedIds)) {
+                try {
+                    // Fetch target admins to check roles
+                    $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+                    $stmt = $pdo->prepare("SELECT admin_id, role FROM Admin WHERE admin_id IN ($placeholders)");
+                    $stmt->execute($selectedIds);
+                    $targets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                $toDelete = [];
-                $skippedSuper = false;
-                $skippedSelf = false;
+                    $toDelete = [];
+                    $skippedSuper = false;
+                    $skippedSelf = false;
 
-                foreach ($targets as $target) {
-                    if ($target['role'] === 'super admin') {
-                        $skippedSuper = true;
-                        continue;
+                    foreach ($targets as $target) {
+                        if ($target['role'] === 'super admin') {
+                            $skippedSuper = true;
+                            continue;
+                        }
+                        if ((int)$target['admin_id'] === (int)$currentAdminId) {
+                            $skippedSelf = true;
+                            continue;
+                        }
+                        $toDelete[] = (int)$target['admin_id'];
                     }
-                    if ((int)$target['admin_id'] === (int)$currentAdminId) {
-                        $skippedSelf = true;
-                        continue;
+
+                    if (!empty($toDelete)) {
+                        $delPlaceholders = implode(',', array_fill(0, count($toDelete), '?'));
+                        $delStmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id IN ($delPlaceholders)");
+                        $delStmt->execute($toDelete);
+
+                        $message = count($toDelete) . " admin(s) deleted successfully!";
+                        if ($skippedSuper) $message .= " Super admin accounts were skipped.";
+                        if ($skippedSelf) $message .= " Your own account was skipped.";
+                        $message_type = "success";
+                    } else {
+                        $message = "No eligible admins selected for deletion.";
+                        if ($skippedSuper) $message = "Super admin accounts cannot be deleted.";
+                        if ($skippedSelf) $message = "You cannot delete your own account.";
+                        $message_type = "error";
                     }
-                    $toDelete[] = (int)$target['admin_id'];
-                }
-
-                if (!empty($toDelete)) {
-                    $delPlaceholders = implode(',', array_fill(0, count($toDelete), '?'));
-                    $delStmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id IN ($delPlaceholders)");
-                    $delStmt->execute($toDelete);
-
-                    $message = count($toDelete) . " admin(s) deleted successfully!";
-                    if ($skippedSuper) $message .= " Super admin accounts were skipped.";
-                    if ($skippedSelf) $message .= " Your own account was skipped.";
-                    $message_type = "success";
-                } else {
-                    $message = "No eligible admins selected for deletion.";
-                    if ($skippedSuper) $message = "Super admin accounts cannot be deleted.";
-                    if ($skippedSelf) $message = "You cannot delete your own account.";
+                } catch (PDOException $e) {
+                    $message = "Error deleting selected admins: " . $e->getMessage();
                     $message_type = "error";
                 }
-            } catch (PDOException $e) {
-                $message = "Error deleting selected admins: " . $e->getMessage();
-                $message_type = "error";
-            }
         } else {
             $message = "Please select at least one admin before deleting.";
             $message_type = "error";
@@ -137,197 +141,216 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** CREATE ADMIN **/
     if (isset($_POST['create_admin'])) {
-        $username         = trim($_POST['username'] ?? '');
-        $email        = trim($_POST['email'] ?? '');
-        $password_raw = $_POST['password'] ?? '';
-        $role         = trim($_POST['role'] ?? 'user admin');
-
-        // Only super admin can create a super admin
-        if ($role === 'super admin' && $currentAdminRole !== 'super admin') {
-            $errors[] = 'Only super admins can create other super admins.';
-        }
-
-        // SERVER-SIDE VALIDATION (username/email/password)
-        // Name – same style as member register
-        if (strlen($username) < 3) {
-            $errors[] = 'Admin username must be at least 3 characters.';
-        } elseif (preg_match('/\s/', $username)) {
-            $errors[] = 'Admin username cannot contain spaces. Use "_" instead.';
-        } elseif (!preg_match('/^[A-Za-z0-9_]+$/', $username)) {
-            $errors[] = 'Admin username can only contain letters, numbers, and underscores.';
-        }
-
-        // Email
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Please enter a valid admin email.';
-        }
-
-        // Password – strong rule like reset/register
-        if (!preg_match($passwordPattern, $password_raw)) {
-            $errors[] = 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
-        }
-
-        // Uniqueness checks (username + email) if no basic errors
-        if (!$errors) {
-            // Check username uniqueness
-            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
-            $checkName->execute([$username]);
-            if ($checkName->fetch()) {
-                $errors[] = 'This admin username is already taken.';
-            }
-
-            // Check email uniqueness
-            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ?");
-            $checkEmail->execute([$email]);
-            if ($checkEmail->fetch()) {
-                $errors[] = 'This admin email is already registered.';
-            }
-        }
-
-        if ($errors) {
-            $message = implode(' ', $errors);
+        if (!has_permission('admins', 'create')) {
+            $message = "You don't have permission to create admins.";
             $message_type = 'error';
         } else {
-            $password = password_hash($password_raw, PASSWORD_BCRYPT);
+            $username         = trim($_POST['username'] ?? '');
+            $email        = trim($_POST['email'] ?? '');
+            $password_raw = $_POST['password'] ?? '';
+            $role         = trim($_POST['role'] ?? 'user admin');
 
-            try {
-                $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password, role) VALUES (?, ?, ?, ?)");
-                $stmt->execute([$username, $email, $password, $role]);
-                $message = "Admin created successfully!";
-                $message_type = "success";
-            } catch (PDOException $e) {
-                if ($e->getCode() == 23000) {
-                    // Fallback if DB has UNIQUE constraints
-                    $message = "Admin username or email already exists.";
-                } else {
-                    $message = "Error creating admin: " . $e->getMessage();
+            // Only super admin can create a super admin
+            if ($role === 'super admin' && $currentAdminRole !== 'super admin') {
+                $errors[] = 'Only super admins can create other super admins.';
+            }
+
+            // SERVER-SIDE VALIDATION (username/email/password)
+            // Name – same style as member register
+            if (strlen($username) < 3) {
+                $errors[] = 'Admin username must be at least 3 characters.';
+            } elseif (preg_match('/\s/', $username)) {
+                $errors[] = 'Admin username cannot contain spaces. Use "_" instead.';
+            } elseif (!preg_match('/^[A-Za-z0-9_]+$/', $username)) {
+                $errors[] = 'Admin username can only contain letters, numbers, and underscores.';
+            }
+
+            // Email
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'Please enter a valid admin email.';
+            }
+
+            // Password – strong rule like reset/register
+            if (!preg_match($passwordPattern, $password_raw)) {
+                $errors[] = 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
+            }
+
+            // Uniqueness checks (username + email) if no basic errors
+            if (!$errors) {
+                // Check username uniqueness
+                $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ?");
+                $checkName->execute([$username]);
+                if ($checkName->fetch()) {
+                    $errors[] = 'This admin username is already taken.';
                 }
-                $message_type = "error";
+
+                // Check email uniqueness
+                $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ?");
+                $checkEmail->execute([$email]);
+                if ($checkEmail->fetch()) {
+                    $errors[] = 'This admin email is already registered.';
+                }
+            }
+
+            if ($errors) {
+                $message = implode(' ', $errors);
+                $message_type = 'error';
+            } else {
+                $password = password_hash($password_raw, PASSWORD_BCRYPT);
+
+                try {
+                    $stmt = $pdo->prepare("INSERT INTO Admin (username, email, password, role) VALUES (?, ?, ?, ?)");
+                    $stmt->execute([$username, $email, $password, $role]);
+                    $message = "Admin created successfully!";
+                    $message_type = "success";
+                } catch (PDOException $e) {
+                    if ($e->getCode() == 23000) {
+                        // Fallback if DB has UNIQUE constraints
+                        $message = "Admin username or email already exists.";
+                    } else {
+                        $message = "Error creating admin: " . $e->getMessage();
+                    }
+                    $message_type = "error";
+                }
             }
         }
+    }
     }
 
     /** UPDATE ADMIN **/
     if (isset($_POST['update_admin'])) {
-        $id              = (int)($_POST['admin_id'] ?? 0);
-        $username            = trim($_POST['username'] ?? '');
-        $email           = trim($_POST['email'] ?? '');
-        $new_password_raw = $_POST['new_password'] ?? '';
-        $role            = trim($_POST['role'] ?? 'user admin');
-
-        // Fetch current role of the admin being updated
-        $targetStmt = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
-        $targetStmt->execute([$id]);
-        $targetAdmin = $targetStmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($targetAdmin) {
-            // If role is not provided (because select was disabled), keep current role
-            if (!isset($_POST['role'])) {
-                $role = $targetAdmin['role'];
-            }
-
-            // Requirement: cannot change the role for super admin
-            if ($targetAdmin['role'] === 'super admin' && $role !== 'super admin') {
-                $errors[] = 'You cannot change the role for a super admin.';
-            }
-            // Requirement: Only super admin can change role to super admin
-            if ($role === 'super admin' && $targetAdmin['role'] !== 'super admin' && $currentAdminRole !== 'super admin') {
-                $errors[] = 'Only super admins can promote an admin to super admin.';
-            }
-        }
-
-        // SERVER-SIDE VALIDATION (username/email)
-        if (strlen($username) < 3) {
-            $errors[] = 'Admin username must be at least 3 characters.';
-        } elseif (preg_match('/\s/', $username)) {
-            $errors[] = 'Admin username cannot contain spaces. Use "_" instead.';
-        } elseif (!preg_match('/^[A-Za-z0-9_]+$/', $username)) {
-            $errors[] = 'Admin username can only contain letters, numbers, and underscores.';
-        }
-
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            $errors[] = 'Please enter a valid admin email.';
-        }
-
-        // Optional password update
-        if (!empty($new_password_raw) && !preg_match($passwordPattern, $new_password_raw)) {
-            $errors[] = 'New password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
-        }
-
-        // Uniqueness check for username/email among other admins
-        if (!$errors) {
-            // Name must be unique excluding current admin
-            $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
-            $checkName->execute([$username, $id]);
-            if ($checkName->fetch()) {
-                $errors[] = 'This admin username is already taken.';
-            }
-
-            // Email must be unique excluding current admin
-            $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
-            $checkEmail->execute([$email, $id]);
-            if ($checkEmail->fetch()) {
-                $errors[] = 'This admin email is already registered.';
-            }
-        }
-
-        if ($errors) {
-            $message = implode(' ', $errors);
+        if (!has_permission('admins', 'update')) {
+            $message = "You don't have permission to update admins.";
             $message_type = 'error';
         } else {
-            try {
-                $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ?, role = ? WHERE admin_id = ?");
-                $stmt->execute([$username, $email, $role, $id]);
+            $id              = (int)($_POST['admin_id'] ?? 0);
+            $username            = trim($_POST['username'] ?? '');
+            $email           = trim($_POST['email'] ?? '');
+            $new_password_raw = $_POST['new_password'] ?? '';
+            $role            = trim($_POST['role'] ?? 'user admin');
 
-                // Update password if provided
-                if (!empty($new_password_raw)) {
-                    $new_password = password_hash($new_password_raw, PASSWORD_BCRYPT);
-                    $passStmt = $pdo->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
-                    $passStmt->execute([$new_password, $id]);
+            // Fetch current role of the admin being updated
+            $targetStmt = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
+            $targetStmt->execute([$id]);
+            $targetAdmin = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($targetAdmin) {
+                // If role is not provided (because select was disabled), keep current role
+                if (!isset($_POST['role'])) {
+                    $role = $targetAdmin['role'];
                 }
 
-                $message = "Admin updated successfully!";
-                $message_type = "success";
-            } catch (PDOException $e) {
-                $message = "Error updating admin: " . $e->getMessage();
-                $message_type = "error";
+                // Requirement: cannot change the role for super admin
+                if ($targetAdmin['role'] === 'super admin' && $role !== 'super admin') {
+                    $errors[] = 'You cannot change the role for a super admin.';
+                }
+                // Requirement: Only super admin can change role to super admin
+                if ($role === 'super admin' && $targetAdmin['role'] !== 'super admin' && $currentAdminRole !== 'super admin') {
+                    $errors[] = 'Only super admins can promote an admin to super admin.';
+                }
+            }
+
+            // SERVER-SIDE VALIDATION (username/email)
+            if (strlen($username) < 3) {
+                $errors[] = 'Admin username must be at least 3 characters.';
+            } elseif (preg_match('/\s/', $username)) {
+                $errors[] = 'Admin username cannot contain spaces. Use "_" instead.';
+            } elseif (!preg_match('/^[A-Za-z0-9_]+$/', $username)) {
+                $errors[] = 'Admin username can only contain letters, numbers, and underscores.';
+            }
+
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                $errors[] = 'Please enter a valid admin email.';
+            }
+
+            // Optional password update
+            if (!empty($new_password_raw) && !preg_match($passwordPattern, $new_password_raw)) {
+                $errors[] = 'New password must be at least 8 characters and include uppercase, lowercase, number and symbol.';
+            }
+
+            // Uniqueness check for username/email among other admins
+            if (!$errors) {
+                // Name must be unique excluding current admin
+                $checkName = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? AND admin_id <> ?");
+                $checkName->execute([$username, $id]);
+                if ($checkName->fetch()) {
+                    $errors[] = 'This admin username is already taken.';
+                }
+
+                // Email must be unique excluding current admin
+                $checkEmail = $pdo->prepare("SELECT 1 FROM Admin WHERE email = ? AND admin_id <> ?");
+                $checkEmail->execute([$email, $id]);
+                if ($checkEmail->fetch()) {
+                    $errors[] = 'This admin email is already registered.';
+                }
+            }
+
+            if ($errors) {
+                $message = implode(' ', $errors);
+                $message_type = 'error';
+            } else {
+                try {
+                    $stmt = $pdo->prepare("UPDATE Admin SET username = ?, email = ?, role = ? WHERE admin_id = ?");
+                    $stmt->execute([$username, $email, $role, $id]);
+
+                    // Update password if provided
+                    if (!empty($new_password_raw)) {
+                        $new_password = password_hash($new_password_raw, PASSWORD_BCRYPT);
+                        $passStmt = $pdo->prepare("UPDATE Admin SET password = ? WHERE admin_id = ?");
+                        $passStmt->execute([$new_password, $id]);
+                    }
+
+                    $message = "Admin updated successfully!";
+                    $message_type = "success";
+                } catch (PDOException $e) {
+                    $message = "Error updating admin: " . $e->getMessage();
+                    $message_type = "error";
+                }
             }
         }
     }
 
     /** DELETE ADMIN **/
     if (isset($_POST['delete_admin'])) {
-        $id = (int)($_POST['admin_id'] ?? 0);
-
-        if ($id === $currentAdminId) {
-            $message = "You cannot delete your own admin account!";
-            $message_type = "error";
+        if (!has_permission('admins', 'delete')) {
+            $message = "You don't have permission to delete admins.";
+            $message_type = 'error';
         } else {
-            try {
-                // Check if target is super admin
-                $checkRole = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
-                $checkRole->execute([$id]);
-                $targetRole = $checkRole->fetchColumn();
+            $id = (int)($_POST['admin_id'] ?? 0);
 
-                if ($targetRole === 'super admin') {
-                    $message = "Super admin accounts cannot be deleted.";
-                    $message_type = "error";
-                } else {
-                    $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
-                    $stmt->execute([$id]);
-                    $message = "Admin deleted successfully!";
-                    $message_type = "success";
-                }
-            } catch (PDOException $e) {
-                $message = "Error deleting admin: " . $e->getMessage();
+            if ($id === $currentAdminId) {
+                $message = "You cannot delete your own admin account!";
                 $message_type = "error";
+            } else {
+                try {
+                    // Check if target is super admin
+                    $checkRole = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
+                    $checkRole->execute([$id]);
+                    $targetRole = $checkRole->fetchColumn();
+
+                    if ($targetRole === 'super admin') {
+                        $message = "Super admin accounts cannot be deleted.";
+                        $message_type = "error";
+                    } else {
+                        $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
+                        $stmt->execute([$id]);
+                        $message = "Admin deleted successfully!";
+                        $message_type = "success";
+                    }
+                } catch (PDOException $e) {
+                    $message = "Error deleting admin: " . $e->getMessage();
+                    $message_type = "error";
+                }
             }
         }
     }
 
     /** IMPORT ADMINS FROM CSV **/
     if (isset($_POST['upload_admin_csv']) && isset($_FILES['admin_csv_file'])) {
-        if ($_FILES['admin_csv_file']['error'] == 0) {
+        if (!has_permission('admins', 'create')) {
+            $message = "You don't have permission to import admins.";
+            $message_type = 'error';
+        } elseif ($_FILES['admin_csv_file']['error'] == 0) {
             $file = $_FILES['admin_csv_file']['tmp_name'];
             $handle = fopen($file, 'r');
 
@@ -583,8 +606,10 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             <div class="header">
                 <h1>Manage Admin Accounts</h1>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
-                    <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
+                    <?php if (has_permission('admins', 'create')): ?>
+                        <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+                        <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -619,7 +644,9 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             <form method="POST" id="adminBulkForm">
                 <div class="bulk-actions">
                     <div style="display:flex; gap:10px; flex-wrap:wrap; margin-left: auto;">
-                        <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php if (has_permission('admins', 'delete')): ?>
+                            <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php endif; ?>
                         <button type="submit" name="export_selected_admins" id="exportSelectedAdminsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
                     </div>
                 </div>
@@ -655,13 +682,17 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
                                         <td><?= htmlspecialchars($a['email']) ?></td>
                                         <td><?= htmlspecialchars($a['role'] ?? 'user admin') ?></td>
                                         <td>
-                                            <button type="button" class="btn btn-warning btn-sm"
-                                                onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
+                                            <?php if (has_permission('admins', 'update')): ?>
+                                                <button type="button" class="btn btn-warning btn-sm"
+                                                    onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
+                                            <?php endif; ?>
                                             <?php if ($a['role'] === 'super admin'): ?>
                                                 <span style="color:#777; font-size:0.85rem;"><?= (int)$a['admin_id'] === (int)$currentAdminId ? '(You)' : '(Super Admin)' ?></span>
                                             <?php elseif ((int)$a['admin_id'] !== (int)$currentAdminId): ?>
-                                                <button type="button" class="btn btn-danger btn-sm"
-                                                    onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
+                                                <?php if (has_permission('admins', 'delete')): ?>
+                                                    <button type="button" class="btn btn-danger btn-sm"
+                                                        onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
+                                                <?php endif; ?>
                                             <?php else: ?>
                                                 <span style="color:#777; font-size:0.85rem;">(You)</span>
                                             <?php endif; ?>

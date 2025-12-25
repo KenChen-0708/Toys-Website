@@ -392,7 +392,9 @@ try {
         <div class="main-content">
             <div class="header">
                 <h1>Manage Email Notifications</h1>
-                <button class="btn btn-primary" onclick="openEmailModal()">+ Send Notification</button>
+                <?php if (has_permission('emails', 'create')): ?>
+                    <button class="btn btn-primary" onclick="openEmailModal()">+ Send Notification</button>
+                <?php endif; ?>
             </div>
 
             <?php if (!empty($message)): ?>

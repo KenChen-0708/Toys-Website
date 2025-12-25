@@ -31,23 +31,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** BATCH DELETE REVIEWS **/
     if (isset($_POST['batch_delete_reviews'])) {
-        $selectedIds = $sanitizeIds($_POST['selected_reviews'] ?? []);
+        if (!has_permission('reviews', 'delete')) {
+            $message = "You don't have permission to delete reviews.";
+            $message_type = 'error';
+        } else {
+            $selectedIds = $sanitizeIds($_POST['selected_reviews'] ?? []);
 
-        if (!empty($selectedIds)) {
-            try {
-                $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
-                $stmt = $pdo->prepare("DELETE FROM Review WHERE review_id IN ($placeholders)");
-                $stmt->execute($selectedIds);
+            if (!empty($selectedIds)) {
+                try {
+                    $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+                    $stmt = $pdo->prepare("DELETE FROM Review WHERE review_id IN ($placeholders)");
+                    $stmt->execute($selectedIds);
 
-                $message = count($selectedIds) . " review(s) deleted successfully!";
-                $message_type = "success";
-            } catch (PDOException $e) {
-                $message = "Error deleting selected reviews: " . $e->getMessage();
+                    $message = count($selectedIds) . " review(s) deleted successfully!";
+                    $message_type = "success";
+                } catch (PDOException $e) {
+                    $message = "Error deleting selected reviews: " . $e->getMessage();
+                    $message_type = "error";
+                }
+            } else {
+                $message = "Please select at least one review before deleting.";
                 $message_type = "error";
             }
-        } else {
-            $message = "Please select at least one review before deleting.";
-            $message_type = "error";
         }
     }
 
@@ -290,7 +295,9 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
             <div class="header">
                 <h1>Review Management</h1>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <a href="?export=reviews" class="btn btn-success">📁 Export All CSV</a>
+                    <?php if (has_permission('reviews', 'view')): ?>
+                        <a href="?export=reviews" class="btn btn-success">📁 Export All CSV</a>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -346,7 +353,9 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
             <form method="POST" id="reviewBulkForm">
                 <div class="bulk-actions" style="justify-content: flex-end;">
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button type="submit" name="batch_delete_reviews" id="deleteSelectedReviewsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php if (has_permission('reviews', 'delete')): ?>
+                            <button type="submit" name="batch_delete_reviews" id="deleteSelectedReviewsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php endif; ?>
                         <button type="submit" name="export_selected_reviews" id="exportSelectedReviewsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
                     </div>
                 </div>
@@ -394,10 +403,12 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                                                 onclick='openViewModal(<?= json_encode($r) ?>)'>
                                                 View
                                             </button>
-                                            <button type="button" class="btn btn-danger btn-sm"
-                                                onclick="confirmDelete(<?= $r['review_id'] ?>)">
-                                                Delete
-                                            </button>
+                                            <?php if (has_permission('reviews', 'delete')): ?>
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="confirmDelete(<?= $r['review_id'] ?>)">
+                                                    Delete
+                                                </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -34,23 +34,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** BATCH DELETE MEMBERS **/
     if (isset($_POST['batch_delete_members'])) {
-        $selectedIds = $sanitizeIds($_POST['selected_members'] ?? []);
+        if (!has_permission('members', 'delete')) {
+            $message = "You don't have permission to delete members.";
+            $message_type = 'error';
+        } else {
+            $selectedIds = $sanitizeIds($_POST['selected_members'] ?? []);
 
-        if (!empty($selectedIds)) {
-            try {
-                $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
-                $stmt = $pdo->prepare("DELETE FROM Member WHERE member_id IN ($placeholders)");
-                $stmt->execute($selectedIds);
+            if (!empty($selectedIds)) {
+                try {
+                    $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+                    $stmt = $pdo->prepare("DELETE FROM Member WHERE member_id IN ($placeholders)");
+                    $stmt->execute($selectedIds);
 
-                $message = count($selectedIds) . " member(s) deleted successfully!";
-                $message_type = "success";
-            } catch (PDOException $e) {
-                $message = "Error deleting selected members: " . $e->getMessage();
+                    $message = count($selectedIds) . " member(s) deleted successfully!";
+                    $message_type = "success";
+                } catch (PDOException $e) {
+                    $message = "Error deleting selected members: " . $e->getMessage();
+                    $message_type = "error";
+                }
+            } else {
+                $message = "Please select at least one member before deleting.";
                 $message_type = "error";
             }
-        } else {
-            $message = "Please select at least one member before deleting.";
-            $message_type = "error";
         }
     }
 
@@ -368,7 +373,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** IMPORT MEMBERS FROM CSV **/
     if (isset($_POST['upload_member_csv']) && isset($_FILES['member_csv_file'])) {
-        if ($_FILES['member_csv_file']['error'] == 0) {
+        if (!has_permission('members', 'create')) {
+            $message = "You don't have permission to create members.";
+            $message_type = 'error';
+        } elseif ($_FILES['member_csv_file']['error'] == 0) {
             $file = $_FILES['member_csv_file']['tmp_name'];
             $handle = fopen($file, 'r');
 
@@ -682,8 +690,10 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
             <div class="header">
                 <h1>Manage Members</h1>
                 <div style="display:flex; gap:10px; align-items:center;">
-                    <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
-                    <button class="btn btn-success" onclick="openCSVModalMember()">📁 Import CSV</button>
+                    <?php if (has_permission('members', 'create')): ?>
+                        <button class="btn btn-primary" onclick="openCreateModal()">+ Add Member</button>
+                        <button class="btn btn-success" onclick="openCSVModalMember()">📁 Import CSV</button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -733,7 +743,9 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
                 <div class="bulk-actions">
                     <div></div> <!-- Spacer to keep buttons on the right if needed, or just let them stay left -->
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                        <button type="submit" name="batch_delete_members" id="deleteSelectedMembersBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php if (has_permission('members', 'delete')): ?>
+                            <button type="submit" name="batch_delete_members" id="deleteSelectedMembersBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <?php endif; ?>
                         <button type="submit" name="export_selected_members" id="exportSelectedMembersBtn" class="btn btn-info" disabled>Export Selected CSV</button>
                     </div>
                 </div>
@@ -800,10 +812,13 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
                                             $adminRole = get_admin_role();
                                             $canBlock = ($adminRole === 'super admin' || $adminRole === 'user admin');
                                             ?>
-                                            <button type="button" class="btn btn-warning btn-sm"
-                                                onclick='openEditModal(<?= json_encode($m) ?>)'>
-                                                Edit
-                                            </button>
+                                            <?php if (has_permission('members', 'update')): ?>
+                                                <button type="button" class="btn btn-warning btn-sm"
+                                                    onclick='openEditModal(<?= json_encode($m) ?>)'>
+                                                    Edit
+                                                </button>
+                                            <?php endif; ?>
+
                                             <?php if ($canBlock): ?>
                                                 <?php
                                                 $blockBtnClass = $isBlocked ? 'btn-success' : 'btn-secondary';
@@ -814,10 +829,13 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
                                                     <?= $blockBtnText ?>
                                                 </button>
                                             <?php endif; ?>
-                                            <button type="button" class="btn btn-danger btn-sm"
-                                                onclick="confirmDelete(<?= $m['member_id'] ?>)">
-                                                Delete
-                                            </button>
+
+                                            <?php if (has_permission('members', 'delete')): ?>
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="confirmDelete(<?= $m['member_id'] ?>)">
+                                                    Delete
+                                                </button>
+                                            <?php endif; ?>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

@@ -15,10 +15,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH DELETE (Soft Delete)
     if (isset($_POST['batch_delete'])) {
-        if (!empty($_POST['selected_products'])) {
+        if (!has_permission('products', 'delete')) {
+            $message = "You don't have permission to delete products.";
+            $message_type = 'error';
+        } elseif (!empty($_POST['selected_products'])) {
             try {
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
-                
+
                 // Instead of deleting, change status to 'Deleted'
                 $stmt = $pdo->prepare("UPDATE Product SET status = 'Deleted' WHERE product_id IN ($placeholders)");
                 $stmt->execute($_POST['selected_products']);
@@ -37,10 +40,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH RESTORE
     if (isset($_POST['batch_restore'])) {
-        if (!empty($_POST['selected_products'])) {
+        if (!has_permission('products', 'delete')) { // Restoring is related to delete permission
+            $message = "You don't have permission to restore products.";
+            $message_type = 'error';
+        } elseif (!empty($_POST['selected_products'])) {
             try {
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
-                
+
                 // Restore products by changing status to 'Available'
                 $stmt = $pdo->prepare("UPDATE Product SET status = 'Available' WHERE product_id IN ($placeholders)");
                 $stmt->execute($_POST['selected_products']);
@@ -59,10 +65,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH PERMANENT DELETE
     if (isset($_POST['batch_permanent_delete'])) {
-        if (!empty($_POST['selected_products'])) {
+        if (!has_permission('products', 'delete')) {
+            $message = "You don't have permission to delete products.";
+            $message_type = 'error';
+        } elseif (!empty($_POST['selected_products'])) {
             try {
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
-                
+
                 // First, check which products have orders
                 $stmt = $pdo->prepare("
                     SELECT p.product_id, p.name, COUNT(oi.order_item_id) as order_count
@@ -76,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
                 $can_delete = [];
                 $cannot_delete = [];
-                
+
                 foreach ($products_check as $product) {
                     if ($product['order_count'] > 0) {
                         $cannot_delete[] = $product['name'] . ' (' . $product['order_count'] . ' orders)';
@@ -100,7 +109,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 if (!empty($can_delete)) {
                     // Delete images first
                     $placeholders_delete = str_repeat('?,', count($can_delete) - 1) . '?';
-                    
+
                     $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id IN ($placeholders_delete)");
                     $stmt->execute($can_delete);
                     $products = $stmt->fetchAll();
@@ -127,7 +136,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id IN ($placeholders_delete)");
                     $stmt->execute($can_delete);
                 }
-
             } catch (Exception $e) {
                 $message = "Error permanently deleting products: " . $e->getMessage();
                 $message_type = "error";
@@ -140,7 +148,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH UPDATE STATUS
     if (isset($_POST['batch_update_status'])) {
-        if (!empty($_POST['selected_products']) && !empty($_POST['batch_status'])) {
+        if (!has_permission('products', 'update')) {
+            $message = "You don't have permission to update products.";
+            $message_type = 'error';
+        } elseif (!empty($_POST['selected_products']) && !empty($_POST['batch_status'])) {
             try {
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
                 $stmt = $pdo->prepare("UPDATE Product SET status = ? WHERE product_id IN ($placeholders)");
@@ -161,7 +172,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // BATCH UPDATE CATEGORY
     if (isset($_POST['batch_update_category'])) {
-        if (!empty($_POST['selected_products'])) {
+        if (!has_permission('products', 'update')) {
+            $message = "You don't have permission to update products.";
+            $message_type = 'error';
+        } elseif (!empty($_POST['selected_products'])) {
             try {
                 $category = !empty(trim($_POST['batch_category'])) ? trim($_POST['batch_category']) : '-';
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
@@ -182,7 +196,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     }
 
     if (isset($_POST['upload_csv']) && isset($_FILES['csv_file'])) {
-        if ($_FILES['csv_file']['error'] == 0) {
+        if (!has_permission('products', 'create')) {
+            $message = "You don't have permission to import products.";
+            $message_type = 'error';
+        } elseif ($_FILES['csv_file']['error'] == 0) {
             $file = $_FILES['csv_file']['tmp_name'];
             $handle = fopen($file, 'r');
 
@@ -236,239 +253,269 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     // CREATE PRODUCT
     if (isset($_POST['create_product'])) {
-        $errors = validateProduct($_POST);
+        if (!has_permission('products', 'create')) {
+            $message = "You don't have permission to create products.";
+            $message_type = 'error';
+        } else {
+            $errors = validateProduct($_POST);
 
-        if (empty($errors)) {
-            try {
-                $main_image_path = '../assets/img/default.jpg';
-                $target_dir = "../assets/img/";
-                
-                if (!file_exists($target_dir)) {
-                    mkdir($target_dir, 0777, true);
-                }
+            if (empty($errors)) {
+                try {
+                    $main_image_path = '../assets/img/default.jpg';
+                    $target_dir = "../assets/img/";
 
-                if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
-                    $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
-                    $new_filename = 'product_' . uniqid() . '.' . $file_extension;
-                    $target_file = $target_dir . $new_filename;
-
-                    if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
-                        $main_image_path = $target_file;
+                    if (!file_exists($target_dir)) {
+                        mkdir($target_dir, 0777, true);
                     }
-                }
 
-                $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
-                
-                $stmt = $pdo->prepare("INSERT INTO Product (name, price, description, category, stock, status, main_image_path) 
+                    if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
+                        $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+                        $new_filename = 'product_' . uniqid() . '.' . $file_extension;
+                        $target_file = $target_dir . $new_filename;
+
+                        if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
+                            $main_image_path = $target_file;
+                        }
+                    }
+
+                    $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
+
+                    $stmt = $pdo->prepare("INSERT INTO Product (name, price, description, category, stock, status, main_image_path) 
                                        VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->execute([
-                    $_POST['name'],
-                    $_POST['price'],
-                    $_POST['description'],
-                    $category,
-                    $_POST['stock'],
-                    $_POST['status'],
-                    $main_image_path
-                ]);
+                    $stmt->execute([
+                        $_POST['name'],
+                        $_POST['price'],
+                        $_POST['description'],
+                        $category,
+                        $_POST['stock'],
+                        $_POST['status'],
+                        $main_image_path
+                    ]);
 
-                $product_id = $pdo->lastInsertId();
+                    $product_id = $pdo->lastInsertId();
 
-                // Handle sub images
-                if (isset($_FILES['sub_images'])) {
-                    $total_files = count($_FILES['sub_images']['name']);
-                    for ($i = 0; $i < $total_files; $i++) {
-                        if ($_FILES['sub_images']['error'][$i] == 0) {
-                            $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
-                            $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
-                            $target_file = $target_dir . $new_filename;
+                    // Handle sub images
+                    if (isset($_FILES['sub_images'])) {
+                        $total_files = count($_FILES['sub_images']['name']);
+                        for ($i = 0; $i < $total_files; $i++) {
+                            if ($_FILES['sub_images']['error'][$i] == 0) {
+                                $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
+                                $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
+                                $target_file = $target_dir . $new_filename;
 
-                            if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
-                                $stmt = $pdo->prepare("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES (?, ?)");
-                                $stmt->execute([$product_id, $target_file]);
+                                if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
+                                    $stmt = $pdo->prepare("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES (?, ?)");
+                                    $stmt->execute([$product_id, $target_file]);
+                                }
                             }
                         }
                     }
-                }
 
-                $message = "Product added successfully!";
-                $message_type = "success";
-            } catch (Exception $e) {
-                $message = "Error: " . $e->getMessage();
+                    $message = "Product added successfully!";
+                    $message_type = "success";
+                } catch (Exception $e) {
+                    $message = "Error: " . $e->getMessage();
+                    $message_type = "error";
+                }
+            } else {
+                $message = "Please fix the validation errors";
                 $message_type = "error";
             }
-        } else {
-            $message = "Please fix the validation errors";
-            $message_type = "error";
         }
     }
 
     // UPDATE PRODUCT
     if (isset($_POST['update_product'])) {
-        $errors = validateProduct($_POST, true);
+        if (!has_permission('products', 'update')) {
+            $message = "You don't have permission to update products.";
+            $message_type = 'error';
+        } else {
+            $errors = validateProduct($_POST, true);
 
-        if (empty($errors)) {
-            try {
-                $main_image_path = !empty($_POST['existing_main_image']) ? $_POST['existing_main_image'] : '../assets/img/default.jpg';
-                $target_dir = "../assets/img/";
-                
-                if (!file_exists($target_dir)) {
-                    mkdir($target_dir, 0777, true);
-                }
+            if (empty($errors)) {
+                try {
+                    $main_image_path = !empty($_POST['existing_main_image']) ? $_POST['existing_main_image'] : '../assets/img/default.jpg';
+                    $target_dir = "../assets/img/";
 
-                if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
-                    $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
-                    $new_filename = 'product_' . uniqid() . '.' . $file_extension;
-                    $target_file = $target_dir . $new_filename;
-
-                    if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
-                        if (
-                            !empty($main_image_path) && file_exists($main_image_path) &&
-                            $main_image_path != '../assets/img/default.jpg'
-                        ) {
-                            @unlink($main_image_path);
-                        }
-                        $main_image_path = $target_file;
+                    if (!file_exists($target_dir)) {
+                        mkdir($target_dir, 0777, true);
                     }
-                }
 
-                $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
-                
-                $stmt = $pdo->prepare("UPDATE Product SET name=?, price=?, description=?, category=?, stock=?, status=?, main_image_path=? 
+                    if (isset($_FILES['main_image']) && $_FILES['main_image']['error'] == 0) {
+                        $file_extension = pathinfo($_FILES['main_image']['name'], PATHINFO_EXTENSION);
+                        $new_filename = 'product_' . uniqid() . '.' . $file_extension;
+                        $target_file = $target_dir . $new_filename;
+
+                        if (move_uploaded_file($_FILES['main_image']['tmp_name'], $target_file)) {
+                            if (
+                                !empty($main_image_path) && file_exists($main_image_path) &&
+                                $main_image_path != '../assets/img/default.jpg'
+                            ) {
+                                @unlink($main_image_path);
+                            }
+                            $main_image_path = $target_file;
+                        }
+                    }
+
+                    $category = !empty(trim($_POST['category'])) ? trim($_POST['category']) : '-';
+
+                    $stmt = $pdo->prepare("UPDATE Product SET name=?, price=?, description=?, category=?, stock=?, status=?, main_image_path=? 
                                        WHERE product_id=?");
-                $stmt->execute([
-                    $_POST['name'],
-                    $_POST['price'],
-                    $_POST['description'],
-                    $category,
-                    $_POST['stock'],
-                    $_POST['status'],
-                    $main_image_path,
-                    $_POST['product_id']
-                ]);
+                    $stmt->execute([
+                        $_POST['name'],
+                        $_POST['price'],
+                        $_POST['description'],
+                        $category,
+                        $_POST['stock'],
+                        $_POST['status'],
+                        $main_image_path,
+                        $_POST['product_id']
+                    ]);
 
-                // Handle new sub images
-                if (isset($_FILES['sub_images'])) {
-                    $total_files = count($_FILES['sub_images']['name']);
-                    for ($i = 0; $i < $total_files; $i++) {
-                        if ($_FILES['sub_images']['error'][$i] == 0) {
-                            $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
-                            $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
-                            $target_file = $target_dir . $new_filename;
+                    // Handle new sub images
+                    if (isset($_FILES['sub_images'])) {
+                        $total_files = count($_FILES['sub_images']['name']);
+                        for ($i = 0; $i < $total_files; $i++) {
+                            if ($_FILES['sub_images']['error'][$i] == 0) {
+                                $file_extension = pathinfo($_FILES['sub_images']['name'][$i], PATHINFO_EXTENSION);
+                                $new_filename = 'product_sub_' . uniqid() . '.' . $file_extension;
+                                $target_file = $target_dir . $new_filename;
 
-                            if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
-                                $stmt = $pdo->prepare("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES (?, ?)");
-                                $stmt->execute([$_POST['product_id'], $target_file]);
+                                if (move_uploaded_file($_FILES['sub_images']['tmp_name'][$i], $target_file)) {
+                                    $stmt = $pdo->prepare("INSERT INTO Product_Sub_Image (product_id, sub_image_path) VALUES (?, ?)");
+                                    $stmt->execute([$_POST['product_id'], $target_file]);
+                                }
                             }
                         }
                     }
-                }
 
-                $message = "Product updated successfully!";
-                $message_type = "success";
-            } catch (Exception $e) {
-                $message = "Error: " . $e->getMessage();
+                    $message = "Product updated successfully!";
+                    $message_type = "success";
+                } catch (Exception $e) {
+                    $message = "Error: " . $e->getMessage();
+                    $message_type = "error";
+                }
+            } else {
+                $message = "Please fix the validation errors";
                 $message_type = "error";
             }
-        } else {
-            $message = "Please fix the validation errors";
-            $message_type = "error";
         }
     }
 
     // DELETE PRODUCT (Soft Delete)
     if (isset($_POST['delete_product'])) {
-        try {
-            // Instead of deleting, change status to 'Deleted'
-            $stmt = $pdo->prepare("UPDATE Product SET status = 'Deleted' WHERE product_id = ?");
-            $stmt->execute([$_POST['product_id']]);
+        if (!has_permission('products', 'delete')) {
+            $message = "You don't have permission to delete products.";
+            $message_type = 'error';
+        } else {
+            try {
+                // Instead of deleting, change status to 'Deleted'
+                $stmt = $pdo->prepare("UPDATE Product SET status = 'Deleted' WHERE product_id = ?");
+                $stmt->execute([$_POST['product_id']]);
 
-            $message = "Product marked as deleted successfully!";
-            $message_type = "success";
-        } catch (Exception $e) {
-            $message = "Error: " . $e->getMessage();
-            $message_type = "error";
+                $message = "Product marked as deleted successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error: " . $e->getMessage();
+                $message_type = "error";
+            }
         }
     }
 
     // RESTORE PRODUCT
     if (isset($_POST['restore_product'])) {
-        try {
-            // Restore product by changing status back to 'Available'
-            $stmt = $pdo->prepare("UPDATE Product SET status = 'Available' WHERE product_id = ?");
-            $stmt->execute([$_POST['product_id']]);
+        if (!has_permission('products', 'delete')) {
+            $message = "You don't have permission to restore products.";
+            $message_type = 'error';
+        } else {
+            try {
+                // Restore product by changing status back to 'Available'
+                $stmt = $pdo->prepare("UPDATE Product SET status = 'Available' WHERE product_id = ?");
+                $stmt->execute([$_POST['product_id']]);
 
-            $message = "Product restored successfully!";
-            $message_type = "success";
-        } catch (Exception $e) {
-            $message = "Error: " . $e->getMessage();
-            $message_type = "error";
+                $message = "Product restored successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error: " . $e->getMessage();
+                $message_type = "error";
+            }
         }
     }
 
     // PERMANENT DELETE PRODUCT
     if (isset($_POST['permanent_delete_product'])) {
-        try {
-            // First check if product has been ordered
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
-            $stmt->execute([$_POST['product_id']]);
-            $order_count = $stmt->fetchColumn();
-
-            if ($order_count > 0) {
-                $message = "Cannot permanently delete this product because it has been ordered " . $order_count . " time(s). Products with order history can only be soft deleted.";
-                $message_type = "error";
-            } else {
-                // Safe to permanently delete - no order history
-                $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id=?");
+        if (!has_permission('products', 'delete')) {
+            $message = "You don't have permission to delete products.";
+            $message_type = 'error';
+        } else {
+            try {
+                // First check if product has been ordered
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
                 $stmt->execute([$_POST['product_id']]);
-                $product = $stmt->fetch();
+                $order_count = $stmt->fetchColumn();
 
-                if (
-                    $product && !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
-                    $product['main_image_path'] != '../assets/img/default.jpg'
-                ) {
-                    @unlink($product['main_image_path']);
-                }
+                if ($order_count > 0) {
+                    $message = "Cannot permanently delete this product because it has been ordered " . $order_count . " time(s). Products with order history can only be soft deleted.";
+                    $message_type = "error";
+                } else {
+                    // Safe to permanently delete - no order history
+                    $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id=?");
+                    $stmt->execute([$_POST['product_id']]);
+                    $product = $stmt->fetch();
 
-                $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id=?");
-                $stmt->execute([$_POST['product_id']]);
-                $subImages = $stmt->fetchAll();
-                foreach ($subImages as $img) {
-                    if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
-                        @unlink($img['sub_image_path']);
+                    if (
+                        $product && !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
+                        $product['main_image_path'] != '../assets/img/default.jpg'
+                    ) {
+                        @unlink($product['main_image_path']);
                     }
+
+                    $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id=?");
+                    $stmt->execute([$_POST['product_id']]);
+                    $subImages = $stmt->fetchAll();
+                    foreach ($subImages as $img) {
+                        if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
+                            @unlink($img['sub_image_path']);
+                        }
+                    }
+
+                    $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id=?");
+                    $stmt->execute([$_POST['product_id']]);
+
+                    $message = "Product permanently deleted successfully!";
+                    $message_type = "success";
                 }
-
-                $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id=?");
-                $stmt->execute([$_POST['product_id']]);
-
-                $message = "Product permanently deleted successfully!";
-                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error: " . $e->getMessage();
+                $message_type = "error";
             }
-        } catch (Exception $e) {
-            $message = "Error: " . $e->getMessage();
-            $message_type = "error";
         }
     }
 
     // DELETE SUB IMAGE
     if (isset($_POST['delete_sub_image'])) {
-        try {
-            $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE sub_image_id=?");
-            $stmt->execute([$_POST['sub_image_id']]);
-            $img = $stmt->fetch();
+        if (!has_permission('products', 'update')) {
+            $message = "You don't have permission to update products.";
+            $message_type = 'error';
+        } else {
+            try {
+                $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE sub_image_id=?");
+                $stmt->execute([$_POST['sub_image_id']]);
+                $img = $stmt->fetch();
 
-            if ($img && !empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
-                @unlink($img['sub_image_path']);
+                if ($img && !empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
+                    @unlink($img['sub_image_path']);
+                }
+
+                $stmt = $pdo->prepare("DELETE FROM Product_Sub_Image WHERE sub_image_id=?");
+                $stmt->execute([$_POST['sub_image_id']]);
+
+                $message = "Sub image deleted successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error: " . $e->getMessage();
+                $message_type = "error";
             }
-
-            $stmt = $pdo->prepare("DELETE FROM Product_Sub_Image WHERE sub_image_id=?");
-            $stmt->execute([$_POST['sub_image_id']]);
-
-            $message = "Sub image deleted successfully!";
-            $message_type = "success";
-        } catch (Exception $e) {
-            $message = "Error: " . $e->getMessage();
-            $message_type = "error";
         }
     }
 }
@@ -579,8 +626,10 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
             <div class="header">
                 <h1>Manage Products</h1>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="openCreateModal()">+ Add Product</button>
-                    <button class="btn btn-success" onclick="openCSVModal()">📁 Import CSV</button>
+                    <?php if (has_permission('products', 'create')): ?>
+                        <button class="btn btn-primary" onclick="openCreateModal()">+ Add Product</button>
+                        <button class="btn btn-success" onclick="openCSVModal()">📁 Import CSV</button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -592,8 +641,8 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
 
             <?php if ($status_filter == 'Deleted'): ?>
                 <div class="alert alert-info">
-                    <strong>ℹ️ Permanent Delete Information:</strong> 
-                    Products that have been ordered cannot be permanently deleted to preserve order history and data integrity. 
+                    <strong>ℹ️ Permanent Delete Information:</strong>
+                    Products that have been ordered cannot be permanently deleted to preserve order history and data integrity.
                     Only products with no order history can be permanently removed from the database.
                 </div>
             <?php endif; ?>
@@ -677,13 +726,17 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
             <!-- Batch Actions -->
             <div class="batch-actions" id="batchActions" style="display: none;">
                 <span class="selected-count">0 selected</span>
-                <button type="button" class="btn btn-sm btn-success" onclick="openBatchStatusModal()">Update Status</button>
-                <button type="button" class="btn btn-sm btn-info" onclick="openBatchCategoryModal()">Change Category</button>
-                <?php if ($status_filter == 'Deleted'): ?>
-                    <button type="button" class="btn btn-sm btn-success" onclick="batchRestore()">Restore Selected</button>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="batchPermanentDelete()">Permanent Delete</button>
-                <?php else: ?>
-                    <button type="button" class="btn btn-sm btn-danger" onclick="batchDelete()">Delete Selected</button>
+                <?php if (has_permission('products', 'update')): ?>
+                    <button type="button" class="btn btn-sm btn-success" onclick="openBatchStatusModal()">Update Status</button>
+                    <button type="button" class="btn btn-sm btn-info" onclick="openBatchCategoryModal()">Change Category</button>
+                <?php endif; ?>
+                <?php if (has_permission('products', 'delete')): ?>
+                    <?php if ($status_filter == 'Deleted'): ?>
+                        <button type="button" class="btn btn-sm btn-success" onclick="batchRestore()">Restore Selected</button>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="batchPermanentDelete()">Permanent Delete</button>
+                    <?php else: ?>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="batchDelete()">Delete Selected</button>
+                    <?php endif; ?>
                 <?php endif; ?>
             </div>
 
@@ -773,10 +826,12 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
                                     <?php endif; ?>
                                     <td>
                                         <?php if ($product['status'] == 'Deleted'): ?>
-                                            <button class="btn btn-success btn-sm"
-                                                onclick="restoreProduct(<?php echo $product['product_id']; ?>)">
-                                                Restore
-                                            </button>
+                                            <?php if (has_permission('products', 'delete')): ?>
+                                                <button class="btn btn-success btn-sm"
+                                                    onclick="restoreProduct(<?php echo $product['product_id']; ?>)">
+                                                    Restore
+                                                </button>
+                                            <?php endif; ?>
                                             <?php
                                             // Check if product has been ordered
                                             $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
@@ -788,32 +843,38 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
                                                     🔒 Has Orders (<?php echo $order_count; ?>)
                                                 </button>
                                             <?php else: ?>
-                                                <button class="btn btn-danger btn-sm"
-                                                    onclick="permanentDelete(<?php echo $product['product_id']; ?>)">
-                                                    Permanent Delete
-                                                </button>
+                                                <?php if (has_permission('products', 'delete')): ?>
+                                                    <button class="btn btn-danger btn-sm"
+                                                        onclick="permanentDelete(<?php echo $product['product_id']; ?>)">
+                                                        Permanent Delete
+                                                    </button>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         <?php else: ?>
-                                            <button class="btn btn-warning btn-sm"
-                                                onclick='openEditModal(<?php echo json_encode($product); ?>)'>
-                                                Edit
-                                            </button>
-                                            <button class="btn btn-danger btn-sm"
-                                                onclick="confirmDelete(<?php echo $product['product_id']; ?>)">
-                                                Delete
-                                            </button>
+                                            <?php if (has_permission('products', 'update')): ?>
+                                                <button class="btn btn-warning btn-sm"
+                                                    onclick='openEditModal(<?php echo json_encode($product); ?>)'>
+                                                    Edit
+                                                </button>
+                                            <?php endif; ?>
+                                            <?php if (has_permission('products', 'delete')): ?>
+                                                <button class="btn btn-danger btn-sm"
+                                                    onclick="confirmDelete(<?php echo $product['product_id']; ?>)">
+                                                    Delete
+                                                </button>
+                                            <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="<?php 
-                                    $colspan = 9; // base columns
-                                    if ($sort_by == 'top_selling') $colspan++;
-                                    if ($status_filter == 'Deleted') $colspan++;
-                                    echo $colspan;
-                                ?>" style="text-align: center; padding: 40px;">
+                                <td colspan="<?php
+                                                $colspan = 9; // base columns
+                                                if ($sort_by == 'top_selling') $colspan++;
+                                                if ($status_filter == 'Deleted') $colspan++;
+                                                echo $colspan;
+                                                ?>" style="text-align: center; padding: 40px;">
                                     No products found. Add your first product!
                                 </td>
                             </tr>
@@ -1015,5 +1076,4 @@ $stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'De
     <script src="../assets/js/manage_product.js"></script>
 </body>
 
-</html>l>
-l>
+</html>
