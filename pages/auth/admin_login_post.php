@@ -12,14 +12,8 @@ if (!verify_csrf($_POST['csrf_token'] ?? '')) {
     die('Invalid CSRF token');
 }
 
-// ---- reCAPTCHA CONFIG ----
-// Reuse the same SECRET key as the member login
-$recaptcha_secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
-
 // current failed attempts & whether captcha is required
-$failedAttempts  = $_SESSION['admin_failed_login_count'] ?? 0;
-// Require CAPTCHA after 3 failed attempts (starting from the 4th try)
-$requireCaptcha  = $failedAttempts >= 3;
+$requireCaptcha = is_recaptcha_required('admin_failed_login_count', 3);
 
 $username = trim($_POST['username'] ?? '');
 $password = $_POST['password'] ?? '';
@@ -44,42 +38,8 @@ if (!empty($_POST['remember'])) {
 
 // -------- reCAPTCHA SERVER VALIDATION --------
 if ($requireCaptcha) {
-    $captchaResponse = $_POST['g-recaptcha-response'] ?? '';
-
-    if (!$captchaResponse) {
-        // Generic error; you can make this generic like the user/pass errors if you prefer
+    if (!verify_recaptcha($_POST['g-recaptcha-response'] ?? '')) {
         $errors[] = 'CAPTCHA verification failed. Please try again.';
-    } else {
-        // verify with Google
-        $verifyUrl = 'https://www.google.com/recaptcha/api/siteverify';
-
-        $postData = http_build_query([
-            'secret'   => $recaptcha_secret,
-            'response' => $captchaResponse,
-            'remoteip' => $_SERVER['REMOTE_ADDR'] ?? null,
-        ]);
-
-        $options = [
-            'http' => [
-                'header'  => "Content-type: application/x-www-form-urlencoded\r\n",
-                'method'  => 'POST',
-                'content' => $postData,
-                'timeout' => 10,
-            ],
-        ];
-
-        $context  = stream_context_create($options);
-        $result   = @file_get_contents($verifyUrl, false, $context);
-
-        if ($result === false) {
-            // If Google cannot be reached, treat as failure but with generic error
-            $errors[] = 'CAPTCHA verification failed. Please try again.';
-        } else {
-            $decoded = json_decode($result, true);
-            if (empty($decoded['success'])) {
-                $errors[] = 'CAPTCHA verification failed. Please try again.';
-            }
-        }
     }
 }
 

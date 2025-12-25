@@ -6,14 +6,9 @@ redirect_if_admin();
 // For now, reuse require_guest() so logged-in users can't hit admin login.
 require_guest();
 
-// ===== reCAPTCHA CONFIG (ADMIN) =====
-// Reuse the same site key as the member login:
-$recaptcha_site_key = '6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj';
-
-// How many failed admin attempts so far
-$failedAttempts  = $_SESSION['admin_failed_login_count'] ?? 0;
-// Require CAPTCHA after 3 failed attempts (starting from the 4th try)
-$requireCaptcha  = $failedAttempts >= 3;
+// reCAPTCHA configuration
+$recaptcha_site_key = get_recaptcha_site_key();
+$requireCaptcha = is_recaptcha_required('admin_failed_login_count', 3);
 ?>
 <!DOCTYPE html>
 <html lang="en">
