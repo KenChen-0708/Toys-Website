@@ -30,6 +30,12 @@ DROP DATABASE IF EXISTS online_store;
 CREATE DATABASE online_store;
 USE online_store;
 
+-- ROLE TABLE
+CREATE TABLE Role (
+    role_id INT AUTO_INCREMENT PRIMARY KEY,
+    role_name VARCHAR(50) NOT NULL UNIQUE
+);
+
 -- ADMIN TABLE
 CREATE TABLE Admin (
     admin_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -335,6 +341,16 @@ INSERT INTO `member` (`member_id`, `username`, `password`, `email`, `phone_numbe
 (10, 'Quan', '$2y$10$lFsQiKXW3LA9YB8Wk7QKleI2wwUXkhJiKw00Sg7xxzA6VglelQ6GS', 'q@example.com', '011-8887766', '444 Jalan J, Selangor', '/assets/img/profile_photo/member_10_1763525042.png', '2023-04-12 15:45:00'),
 (11, 'ChaoZe', '$2y$10$28p0m4HDn4y7EiVU66t65OoGnCEcZx3E8h6Uhgglv60ZgbF061O1S', 'cz@example.com', '012-8887766', '444 Jalan J, Selangor', '/assets/img/profile_photo/member_11_1763525011.png', '2023-04-12 15:45:00');
 
+-- ROLE DATA
+INSERT INTO Role (role_name) VALUES 
+('super admin'),
+('admin manager'),
+('user admin'),
+('product admin'),
+('order admin'),
+('support admin'),
+('analyst');
+
 -- password: Password123!
 INSERT INTO admin (admin_id, username, password, email, role) VALUES
 (1, 'admin', '$2y$10$EmAKnZxA7KETDmLPgvsFa.zSkd/1RgJwfa9SLZ.qptPOXhDuclVHy', 'admin@example.com', 'super admin'),
@@ -361,6 +377,8 @@ INSERT INTO Role_Permission (role, resource, action) VALUES
 ('user admin', 'members', 'update'),
 ('user admin', 'members', 'delete'),
 ('user admin', 'feedback', 'view'),
+('user admin', 'emails', 'view'),
+('user admin', 'emails', 'create'),
 ('user admin', 'dashboard', 'view');
 
 -- Product Admin
@@ -379,6 +397,10 @@ INSERT INTO Role_Permission (role, resource, action) VALUES
 ('order admin', 'orders', 'create'),
 ('order admin', 'orders', 'update'),
 ('order admin', 'orders', 'delete'),
+('order admin', 'vouchers', 'view'),
+('order admin', 'vouchers', 'create'),
+('order admin', 'vouchers', 'update'),
+('order admin', 'vouchers', 'delete'),
 ('order admin', 'members', 'view'),
 ('order admin', 'products', 'view'),
 ('order admin', 'analytics', 'view'),
@@ -393,6 +415,7 @@ INSERT INTO Role_Permission (role, resource, action) VALUES
 ('support admin', 'feedback', 'delete'),
 ('support admin', 'members', 'view'),
 ('support admin', 'orders', 'view'),
+('support admin', 'emails', 'view'),
 ('support admin', 'dashboard', 'view');
 
 -- Analyst

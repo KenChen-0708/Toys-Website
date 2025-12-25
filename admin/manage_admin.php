@@ -7,8 +7,17 @@ require_permission('admins', 'view');
 $message = '';
 $message_type = '';
 
-// Current admin ID from session (fix: key is 'id', not 'admin_id')
+// Current admin ID and role from session
 $currentAdminId = $_SESSION['admin']['id'] ?? 0;
+$currentAdminRole = $_SESSION['admin']['role'] ?? '';
+
+// Fetch all roles from the database
+try {
+    $rolesStmt = $pdo->query("SELECT role_name FROM Role ORDER BY role_id ASC");
+    $allRoles = $rolesStmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (PDOException $e) {
+    $allRoles = ['super admin', 'user admin', 'admin manager', 'product admin', 'order admin', 'support admin', 'analyst'];
+}
 
 // Common password pattern (same style as register/reset)
 $passwordPattern = '/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/';
@@ -49,31 +58,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     /** BATCH DELETE ADMINS **/
     if (isset($_POST['batch_delete_admins'])) {
         $selectedIds = $sanitizeIds($_POST['selected_admins'] ?? []);
-        $initialCount = count($selectedIds);
-        $selectedIds = array_values(array_filter($selectedIds, function ($id) use ($currentAdminId) {
-            return $id !== (int)$currentAdminId;
-        }));
-        $skippedSelf = $initialCount !== count($selectedIds);
 
         if (!empty($selectedIds)) {
             try {
+                // Fetch target admins to check roles
                 $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
-                $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id IN ($placeholders)");
+                $stmt = $pdo->prepare("SELECT admin_id, role FROM Admin WHERE admin_id IN ($placeholders)");
                 $stmt->execute($selectedIds);
+                $targets = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-                $message = count($selectedIds) . " admin(s) deleted successfully!";
-                if ($skippedSelf) {
-                    $message .= " Your own admin account was skipped.";
+                $toDelete = [];
+                $skippedSuper = false;
+                $skippedSelf = false;
+
+                foreach ($targets as $target) {
+                    if ($target['role'] === 'super admin') {
+                        $skippedSuper = true;
+                        continue;
+                    }
+                    if ((int)$target['admin_id'] === (int)$currentAdminId) {
+                        $skippedSelf = true;
+                        continue;
+                    }
+                    $toDelete[] = (int)$target['admin_id'];
                 }
-                $message_type = "success";
+
+                if (!empty($toDelete)) {
+                    $delPlaceholders = implode(',', array_fill(0, count($toDelete), '?'));
+                    $delStmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id IN ($delPlaceholders)");
+                    $delStmt->execute($toDelete);
+
+                    $message = count($toDelete) . " admin(s) deleted successfully!";
+                    if ($skippedSuper) $message .= " Super admin accounts were skipped.";
+                    if ($skippedSelf) $message .= " Your own account was skipped.";
+                    $message_type = "success";
+                } else {
+                    $message = "No eligible admins selected for deletion.";
+                    if ($skippedSuper) $message = "Super admin accounts cannot be deleted.";
+                    if ($skippedSelf) $message = "You cannot delete your own account.";
+                    $message_type = "error";
+                }
             } catch (PDOException $e) {
                 $message = "Error deleting selected admins: " . $e->getMessage();
                 $message_type = "error";
             }
         } else {
-            $message = $skippedSelf
-                ? "You cannot delete your own admin account."
-                : "Please select at least one admin before deleting.";
+            $message = "Please select at least one admin before deleting.";
             $message_type = "error";
         }
     }
@@ -111,6 +141,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $email        = trim($_POST['email'] ?? '');
         $password_raw = $_POST['password'] ?? '';
         $role         = trim($_POST['role'] ?? 'user admin');
+
+        // Only super admin can create a super admin
+        if ($role === 'super admin' && $currentAdminRole !== 'super admin') {
+            $errors[] = 'Only super admins can create other super admins.';
+        }
 
         // SERVER-SIDE VALIDATION (username/email/password)
         // Name – same style as member register
@@ -180,6 +215,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $new_password_raw = $_POST['new_password'] ?? '';
         $role            = trim($_POST['role'] ?? 'user admin');
 
+        // Fetch current role of the admin being updated
+        $targetStmt = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
+        $targetStmt->execute([$id]);
+        $targetAdmin = $targetStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($targetAdmin) {
+            // If role is not provided (because select was disabled), keep current role
+            if (!isset($_POST['role'])) {
+                $role = $targetAdmin['role'];
+            }
+
+            // Requirement: cannot change the role for super admin
+            if ($targetAdmin['role'] === 'super admin' && $role !== 'super admin') {
+                $errors[] = 'You cannot change the role for a super admin.';
+            }
+            // Requirement: Only super admin can change role to super admin
+            if ($role === 'super admin' && $targetAdmin['role'] !== 'super admin' && $currentAdminRole !== 'super admin') {
+                $errors[] = 'Only super admins can promote an admin to super admin.';
+            }
+        }
+
         // SERVER-SIDE VALIDATION (username/email)
         if (strlen($username) < 3) {
             $errors[] = 'Admin username must be at least 3 characters.';
@@ -248,10 +304,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message_type = "error";
         } else {
             try {
-                $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
-                $stmt->execute([$id]);
-                $message = "Admin deleted successfully!";
-                $message_type = "success";
+                // Check if target is super admin
+                $checkRole = $pdo->prepare("SELECT role FROM Admin WHERE admin_id = ?");
+                $checkRole->execute([$id]);
+                $targetRole = $checkRole->fetchColumn();
+
+                if ($targetRole === 'super admin') {
+                    $message = "Super admin accounts cannot be deleted.";
+                    $message_type = "error";
+                } else {
+                    $stmt = $pdo->prepare("DELETE FROM Admin WHERE admin_id = ?");
+                    $stmt->execute([$id]);
+                    $message = "Admin deleted successfully!";
+                    $message_type = "success";
+                }
             } catch (PDOException $e) {
                 $message = "Error deleting admin: " . $e->getMessage();
                 $message_type = "error";
@@ -287,6 +353,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 continue;
                             }
 
+                            // Restriction: Only super admin can create super admin
+                            if ($role === 'super admin' && $currentAdminRole !== 'super admin') {
+                                $errorCount++;
+                                continue;
+                            }
+
                             // Skip if username or email already exists
                             $check = $pdo->prepare("SELECT 1 FROM Admin WHERE BINARY username = ? OR email = ?");
                             $check->execute([$username, $email]);
@@ -307,7 +379,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->commit();
                     $message = "$successCount admin(s) imported successfully!";
-                    if ($errorCount > 0) $message .= " ($errorCount row(s) skipped).";
+                    if ($errorCount > 0) $message .= " ($errorCount row(s) skipped due to errors or permission issues).";
                     $message_type = 'success';
                 } catch (Exception $e) {
                     $pdo->rollBack();
@@ -366,6 +438,7 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -381,10 +454,12 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
 
         /* Always show a neutral up/down icon by default */
         th.sortable::after {
-            content: '▲▼';        /* or '⇅' / '↕' if you prefer a single icon */
+            content: '▲▼';
+            /* or '⇅' / '↕' if you prefer a single icon */
             margin-left: 4px;
             font-size: 0.7rem;
-            opacity: 0.5;          /* slightly lighter when not active */
+            opacity: 0.5;
+            /* slightly lighter when not active */
         }
 
         /* When sorted ascending – override with single arrow */
@@ -426,6 +501,7 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             margin-bottom: 10px;
             flex-wrap: wrap;
         }
+
         .bulk-actions label {
             display: flex;
             align-items: center;
@@ -433,9 +509,11 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             font-weight: 500;
             color: #374151;
         }
+
         .bulk-actions .btn {
             min-width: 160px;
         }
+
         .bulk-actions .btn:disabled {
             opacity: 0.55;
             cursor: not-allowed;
@@ -448,16 +526,20 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             transform-origin: center;
             cursor: pointer;
         }
+
         .row-checkbox {
             accent-color: #2563eb;
         }
+
         .selectable-row {
             cursor: pointer;
             transition: background-color 0.18s ease;
         }
+
         .selectable-row:hover {
             background-color: #f3f4f6;
         }
+
         .selectable-row.row-selected {
             background-color: #fef3c7;
         }
@@ -473,14 +555,17 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             transform: translateY(-2px);
             transition: opacity 0.18s ease, max-height 0.18s ease, transform 0.18s ease;
         }
+
         .field-hint--visible {
             opacity: 1;
             max-height: 80px;
             transform: translateY(0);
         }
+
         .hint--error {
             color: #b91c1c;
         }
+
         .modal .form-group input.input--error,
         .modal .form-group textarea.input--error {
             border-color: #b91c1c;
@@ -488,670 +573,681 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
         }
     </style>
 </head>
+
 <body>
-<button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
-<div class="admin-container">
-    <?php include '../partials/admin_panel.php'; ?>
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
+    <div class="admin-container">
+        <?php include '../partials/admin_panel.php'; ?>
 
-    <div class="main-content">
-        <div class="header">
-            <h1>Manage Admin Accounts</h1>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
-                <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
-            </div>
-        </div>
-
-        <?php if (!empty($message)): ?>
-            <div class="alert alert-<?php echo htmlspecialchars($message_type); ?>">
-                <?php echo htmlspecialchars($message); ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Statistics Cards -->
-        <div class="stats-container" style="margin-bottom:12px;">
-            <div class="stat-card">
-                <div class="stat-icon">👤</div>
-                <div class="stat-info">
-                    <h3><?php echo $admin_stats['total_admins']; ?></h3>
-                    <p>Total Admins</p>
+        <div class="main-content">
+            <div class="header">
+                <h1>Manage Admin Accounts</h1>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <button class="btn btn-primary" onclick="openCreateModal()">+ Add Admin</button>
+                    <button class="btn btn-success" onclick="openCSVModalAdmin()">📁 Import CSV</button>
                 </div>
             </div>
-        </div>
 
-        <!-- Search Bar -->
-        <div class="filter-bar">
-            <form method="GET" style="display:flex; gap:15px; flex:1;">
-                <input type="text" name="search" placeholder="Search admins..." 
-                       value="<?php echo htmlspecialchars($search); ?>">
-                <button type="submit" class="btn btn-primary">Search</button>
-                <a href="manage_admin.php" class="btn" style="background:#cbd5e0;">Clear</a>
+            <?php if (!empty($message)): ?>
+                <div class="alert alert-<?php echo htmlspecialchars($message_type); ?>">
+                    <?php echo htmlspecialchars($message); ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Statistics Cards -->
+            <div class="stats-container" style="margin-bottom:12px;">
+                <div class="stat-card">
+                    <div class="stat-icon">👤</div>
+                    <div class="stat-info">
+                        <h3><?php echo $admin_stats['total_admins']; ?></h3>
+                        <p>Total Admins</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="filter-bar">
+                <form method="GET" style="display:flex; gap:15px; flex:1;">
+                    <input type="text" name="search" placeholder="Search admins..."
+                        value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit" class="btn btn-primary">Search</button>
+                    <a href="manage_admin.php" class="btn" style="background:#cbd5e0;">Clear</a>
+                </form>
+            </div>
+
+            <!-- Admins Table -->
+            <form method="POST" id="adminBulkForm">
+                <div class="bulk-actions">
+                    <label>
+                        <input type="checkbox" id="select_all_admins" class="enhanced-checkbox">
+                        Select All
+                    </label>
+                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                        <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
+                        <button type="submit" name="export_selected_admins" id="exportSelectedAdminsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
+                    </div>
+                </div>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"></th>
+                                <th class="sortable" data-column="1" data-type="number">ID</th>
+                                <th class="sortable" data-column="2" data-type="string">Name</th>
+                                <th class="sortable" data-column="3" data-type="string">Email</th>
+                                <th class="sortable" data-column="4" data-type="string">Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <?php if ($admins && count($admins) > 0): ?>
+                                <?php foreach ($admins as $a): ?>
+                                    <?php $adminCheckboxId = 'admin-select-' . $a['admin_id']; ?>
+                                    <tr class="selectable-row" data-checkbox-id="<?= $adminCheckboxId ?>">
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                name="selected_admins[]"
+                                                value="<?= $a['admin_id'] ?>"
+                                                class="row-checkbox enhanced-checkbox"
+                                                id="<?= $adminCheckboxId ?>"
+                                                <?= (int)$a['admin_id'] === (int)$currentAdminId ? 'disabled title="You cannot delete your own account."' : ($a['role'] === 'super admin' ? 'disabled title="Super admin accounts cannot be deleted."' : '') ?>>
+                                        </td>
+                                        <td><?= $a['admin_id'] ?></td>
+                                        <td><?= htmlspecialchars($a['username']) ?></td>
+                                        <td><?= htmlspecialchars($a['email']) ?></td>
+                                        <td><?= htmlspecialchars($a['role'] ?? 'user admin') ?></td>
+                                        <td>
+                                            <button type="button" class="btn btn-warning btn-sm"
+                                                onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
+                                            <?php if ($a['role'] === 'super admin'): ?>
+                                                <span style="color:#777; font-size:0.85rem;"><?= (int)$a['admin_id'] === (int)$currentAdminId ? '(You)' : '(Super Admin)' ?></span>
+                                            <?php elseif ((int)$a['admin_id'] !== (int)$currentAdminId): ?>
+                                                <button type="button" class="btn btn-danger btn-sm"
+                                                    onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
+                                            <?php else: ?>
+                                                <span style="color:#777; font-size:0.85rem;">(You)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="6" style="text-align:center;padding:40px;">No admins found.</td>
+                                </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </form>
         </div>
-
-        <!-- Admins Table -->
-        <form method="POST" id="adminBulkForm">
-            <div class="bulk-actions">
-                <label>
-                    <input type="checkbox" id="select_all_admins" class="enhanced-checkbox">
-                    Select All
-                </label>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                    <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
-                    <button type="submit" name="export_selected_admins" id="exportSelectedAdminsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
-                </div>
-            </div>
-            <div class="table-container">
-                <table>
-                   <thead>
-                        <tr>
-                            <th style="width:40px;"></th>
-                            <th class="sortable" data-column="1" data-type="number">ID</th>
-                            <th class="sortable" data-column="2" data-type="string">Name</th>
-                            <th class="sortable" data-column="3" data-type="string">Email</th>
-                            <th class="sortable" data-column="4" data-type="string">Role</th>
-                            <th>Actions</th>
-                        </tr>
-                   </thead>
-
-                    <tbody>
-                        <?php if ($admins && count($admins) > 0): ?>
-                            <?php foreach ($admins as $a): ?>
-                            <?php $adminCheckboxId = 'admin-select-' . $a['admin_id']; ?>
-                            <tr class="selectable-row" data-checkbox-id="<?= $adminCheckboxId ?>">
-                                <td>
-                                    <input
-                                        type="checkbox"
-                                        name="selected_admins[]"
-                                        value="<?= $a['admin_id'] ?>"
-                                        class="row-checkbox enhanced-checkbox"
-                                        id="<?= $adminCheckboxId ?>"
-                                        <?= (int)$a['admin_id'] === (int)$currentAdminId ? 'disabled title="You cannot delete your own account."' : '' ?>
-                                    >
-                                </td>
-                                <td><?= $a['admin_id'] ?></td>
-                                <td><?= htmlspecialchars($a['username']) ?></td>
-                                <td><?= htmlspecialchars($a['email']) ?></td>
-                                <td><?= htmlspecialchars($a['role'] ?? 'user admin') ?></td>
-                                <td>
-                                    <button type="button" class="btn btn-warning btn-sm"
-                                        onclick='openEditModal(<?= json_encode($a) ?>)'>Edit</button>
-                                    <?php if ((int)$a['admin_id'] !== (int)$currentAdminId): ?>
-                                        <button type="button" class="btn btn-danger btn-sm"
-                                            onclick="confirmDelete(<?= (int)$a['admin_id'] ?>)">Delete</button>
-                                    <?php else: ?>
-                                        <span style="color:#777; font-size:0.85rem;">(You)</span>
-                                    <?php endif; ?>
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="6" style="text-align:center;padding:40px;">No admins found.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </form>
     </div>
-</div>
 
-<!-- CREATE ADMIN MODAL -->
-<!-- CSV Upload Modal -->
-<div id="csvModalAdmin" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Import Admins from CSV</h2>
-            <button class="close" onclick="closeModal('csvModalAdmin')">&times;</button>
-        </div>
-        <div class="csv-instructions" style="border:1px solid #e5e7eb;background:#f8fafc;padding:12px;border-radius:6px;">
-            <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
-            <ul style="margin:0 0 8px 18px;color:#374151;">
-                <li><strong>Required columns:</strong> <code>username,email,password</code></li>
-                <li><strong>Optional column:</strong> <code>role</code> (defaults to 'user admin' if not provided)</li>
-                <li><strong>Available roles:</strong> super admin, user admin, admin manager, product admin, order admin, support admin, analyst</li>
-                <li>Rows with existing usernames or emails will be skipped (they are not overwritten).</li>
-            </ul>
+    <!-- CREATE ADMIN MODAL -->
+    <!-- CSV Upload Modal -->
+    <div id="csvModalAdmin" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Import Admins from CSV</h2>
+                <button class="close" onclick="closeModal('csvModalAdmin')">&times;</button>
+            </div>
+            <div class="csv-instructions" style="border:1px solid #e5e7eb;background:#f8fafc;padding:12px;border-radius:6px;">
+                <h3 style="margin:0 0 8px 0;font-size:1rem;">CSV Import - Instructions</h3>
+                <ul style="margin:0 0 8px 18px;color:#374151;">
+                    <li><strong>Required columns:</strong> <code>username,email,password</code></li>
+                    <li><strong>Optional column:</strong> <code>role</code> (defaults to 'user admin' if not provided)</li>
+                    <li><strong>Available roles:</strong> super admin, user admin, admin manager, product admin, order admin, support admin, analyst</li>
+                    <li>Rows with existing usernames or emails will be skipped (they are not overwritten).</li>
+                </ul>
 
                 <div style="display:flex;gap:10px;align-items:center;margin-top:8px;">
-                <a href="sample_csv/sample_admins.csv" download class="btn btn-sm btn-info" style="padding:6px 10px;">📥 Download Sample CSV</a>
-                <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
-            </div>
+                    <a href="sample_csv/sample_admins.csv" download class="btn btn-sm btn-info" style="padding:6px 10px;">📥 Download Sample CSV</a>
+                    <span style="color:#6b7280;font-size:0.9rem;">Example rows (header + 2 sample lines):</span>
+                </div>
 
-            <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password,role
+                <pre style="background:#0f172a;color:#e6eef8;padding:8px;border-radius:4px;margin-top:8px;overflow:auto;font-size:0.9rem;">username,email,password,role
 admin2,admin2@example.com,Secret123!,user admin
 jane_admin,jane@example.com,Password!234,super admin
 </pre>
-        </div>
-        <form method="POST" enctype="multipart/form-data">
-            <div class="form-group">
-                <label>Select CSV File <span class="required">*</span></label>
-                <input type="file" name="admin_csv_file" accept=".csv" required>
             </div>
-            <button type="submit" name="upload_admin_csv" class="btn btn-success">Import Admins</button>
-        </form>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label>Select CSV File <span class="required">*</span></label>
+                    <input type="file" name="admin_csv_file" accept=".csv" required>
+                </div>
+                <button type="submit" name="upload_admin_csv" class="btn btn-success">Import Admins</button>
+            </form>
+        </div>
     </div>
-</div>
-<div id="createModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Add Admin</h2>
-            <button class="close" onclick="closeModal('createModal')">&times;</button>
-        </div>
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Admin</h2>
+                <button class="close" onclick="closeModal('createModal')">&times;</button>
+            </div>
 
-        <form method="POST" id="createAdminForm" novalidate>
-            <div class="form-group">
-                <label>Name *</label>
-                <input
-                    type="text"
-                    name="username"
-                    id="create_name"
-                    required
-                    data-hint="create_name_hint"
-                >
-                <p id="create_name_hint" class="field-hint">
-                    3+ characters. Letters, numbers, and "_" only. No spaces.
-                </p>
-            </div>
-            <div class="form-group">
-                <label>Email *</label>
-                <input
-                    type="email"
-                    name="email"
-                    id="create_email"
-                    required
-                    data-hint="create_email_hint"
-                >
-                <p id="create_email_hint" class="field-hint">
-                    Use a valid email like name@example.com.
-                </p>
-            </div>
-            <div class="form-group">
-                <label>Role *</label>
-                <select
-                    name="role"
-                    id="create_role"
-                    required
-                >
-                    <option value="super admin">Super Admin</option>
-                    <option value="user admin">User Admin</option>
-                    <option value="admin manager">Admin Manager</option>
-                    <option value="product admin">Product Admin</option>
-                    <option value="order admin">Order Admin</option>
-                    <option value="support admin">Support Admin</option>
-                    <option value="analyst">Analyst</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Password *</label>
-                <div class="input-with-icon">
+            <form method="POST" id="createAdminForm" novalidate>
+                <div class="form-group">
+                    <label>Name *</label>
                     <input
-                        type="password"
-                        name="password"
-                        id="create_admin_password"
+                        type="text"
+                        name="username"
+                        id="create_name"
                         required
-                        minlength="8"
-                        data-hint="create_password_hint"
-                    >
-                    <button
-                        type="button"
-                        id="toggleCreateAdminPwd"
-                        class="password-toggle"
-                        aria-label="Toggle password visibility"
-                    >👁</button>
+                        data-hint="create_name_hint">
+                    <p id="create_name_hint" class="field-hint">
+                        3+ characters. Letters, numbers, and "_" only. No spaces.
+                    </p>
                 </div>
-                <p id="create_password_hint" class="field-hint">
-                    At least 8 characters with uppercase, lowercase, number and symbol.
-                </p>
-            </div>
-
-            <button type="submit" name="create_admin" class="btn btn-primary">Create</button>
-        </form>
-    </div>
-</div>
-
-<!-- EDIT ADMIN MODAL -->
-<div id="editModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>Edit Admin</h2>
-            <button class="close" onclick="closeModal('editModal')">&times;</button>
-        </div>
-
-        <form method="POST" id="editAdminForm" novalidate>
-            <input type="hidden" name="admin_id" id="edit_admin_id">
-
-            <div class="form-group">
-                <label>Name *</label>
-                <input
-                    type="text"
-                    name="username"
-                    id="edit_name"
-                    required
-                    data-hint="edit_name_hint"
-                >
-                <p id="edit_name_hint" class="field-hint">
-                    3+ characters. Letters, numbers, and "_" only. No spaces.
-                </p>
-            </div>
-            <div class="form-group">
-                <label>Email *</label>
-                <input
-                    type="email"
-                    name="email"
-                    id="edit_email"
-                    required
-                    data-hint="edit_email_hint"
-                >
-                <p id="edit_email_hint" class="field-hint">
-                    Use a valid email like name@example.com.
-                </p>
-            </div>
-            <div class="form-group">
-                <label>Role *</label>
-                <select
-                    name="role"
-                    id="edit_role"
-                    required
-                >
-                    <option value="super admin">Super Admin</option>
-                    <option value="user admin">User Admin</option>
-                    <option value="admin manager">Admin Manager</option>
-                    <option value="product admin">Product Admin</option>
-                    <option value="order admin">Order Admin</option>
-                    <option value="support admin">Support Admin</option>
-                    <option value="analyst">Analyst</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>New Password (optional)</label>
-                <div class="input-with-icon">
+                <div class="form-group">
+                    <label>Email *</label>
                     <input
-                        type="password"
-                        name="new_password"
-                        id="edit_admin_password"
-                        placeholder="Leave blank to keep old password"
-                        data-hint="edit_password_hint"
-                    >
-                    <button
-                        type="button"
-                        id="toggleEditAdminPwd"
-                        class="password-toggle"
-                        aria-label="Toggle new password visibility"
-                    >👁</button>
+                        type="email"
+                        name="email"
+                        id="create_email"
+                        required
+                        data-hint="create_email_hint">
+                    <p id="create_email_hint" class="field-hint">
+                        Use a valid email like name@example.com.
+                    </p>
                 </div>
-                <p id="edit_password_hint" class="field-hint">
-                    Leave blank to keep current password. If provided, must be at least 8 characters with uppercase, lowercase, number and symbol.
-                </p>
+                <div class="form-group">
+                    <label>Role *</label>
+                    <select
+                        name="role"
+                        id="create_role"
+                        required>
+                        <?php foreach ($allRoles as $roleName): ?>
+                            <?php if ($roleName === 'super admin' && $currentAdminRole !== 'super admin') continue; ?>
+                            <option value="<?= htmlspecialchars($roleName) ?>"><?= ucwords(htmlspecialchars($roleName)) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Password *</label>
+                    <div class="input-with-icon">
+                        <input
+                            type="password"
+                            name="password"
+                            id="create_admin_password"
+                            required
+                            minlength="8"
+                            data-hint="create_password_hint">
+                        <button
+                            type="button"
+                            id="toggleCreateAdminPwd"
+                            class="password-toggle"
+                            aria-label="Toggle password visibility">👁</button>
+                    </div>
+                    <p id="create_password_hint" class="field-hint">
+                        At least 8 characters with uppercase, lowercase, number and symbol.
+                    </p>
+                </div>
+
+                <button type="submit" name="create_admin" class="btn btn-primary">Create</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- EDIT ADMIN MODAL -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Admin</h2>
+                <button class="close" onclick="closeModal('editModal')">&times;</button>
             </div>
 
-            <button type="submit" name="update_admin" class="btn btn-success">Update</button>
-        </form>
+            <form method="POST" id="editAdminForm" novalidate>
+                <input type="hidden" name="admin_id" id="edit_admin_id">
+
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input
+                        type="text"
+                        name="username"
+                        id="edit_name"
+                        required
+                        data-hint="edit_name_hint">
+                    <p id="edit_name_hint" class="field-hint">
+                        3+ characters. Letters, numbers, and "_" only. No spaces.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label>Email *</label>
+                    <input
+                        type="email"
+                        name="email"
+                        id="edit_email"
+                        required
+                        data-hint="edit_email_hint">
+                    <p id="edit_email_hint" class="field-hint">
+                        Use a valid email like name@example.com.
+                    </p>
+                </div>
+                <div class="form-group">
+                    <label>Role *</label>
+                    <select
+                        name="role"
+                        id="edit_role"
+                        required>
+                        <?php foreach ($allRoles as $roleName): ?>
+                            <?php if ($roleName === 'super admin' && $currentAdminRole !== 'super admin') continue; ?>
+                            <option value="<?= htmlspecialchars($roleName) ?>"><?= ucwords(htmlspecialchars($roleName)) ?></option>
+                        <?php endforeach; ?>
+                        <!-- Hidden option to preserve value if it's super admin but current user isn't -->
+                        <option value="super admin" id="edit_role_super_admin_hidden" style="display:none;">Super Admin</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>New Password (optional)</label>
+                    <div class="input-with-icon">
+                        <input
+                            type="password"
+                            name="new_password"
+                            id="edit_admin_password"
+                            placeholder="Leave blank to keep old password"
+                            data-hint="edit_password_hint">
+                        <button
+                            type="button"
+                            id="toggleEditAdminPwd"
+                            class="password-toggle"
+                            aria-label="Toggle new password visibility">👁</button>
+                    </div>
+                    <p id="edit_password_hint" class="field-hint">
+                        Leave blank to keep current password. If provided, must be at least 8 characters with uppercase, lowercase, number and symbol.
+                    </p>
+                </div>
+
+                <button type="submit" name="update_admin" class="btn btn-success">Update</button>
+            </form>
+        </div>
     </div>
-</div>
 
-<!-- DELETE FORM -->
-<form method="POST" id="deleteForm" style="display:none;">
-    <input type="hidden" name="admin_id" id="delete_admin_id">
-    <input type="hidden" name="delete_admin" value="1">
-</form>
+    <!-- DELETE FORM -->
+    <form method="POST" id="deleteForm" style="display:none;">
+        <input type="hidden" name="admin_id" id="delete_admin_id">
+        <input type="hidden" name="delete_admin" value="1">
+    </form>
 
-<script>
-function openCreateModal() {
-    document.getElementById('createModal').style.display = 'block';
-}
-function openCSVModalAdmin() {
-    document.getElementById('csvModalAdmin').style.display = 'block';
-}
-function openEditModal(data) {
-    document.getElementById('edit_admin_id').value = data.admin_id;
-    document.getElementById('edit_name').value = data.username;
-    document.getElementById('edit_email').value = data.email;
-    document.getElementById('edit_role').value = data.role || 'user admin';
-    document.getElementById('editModal').style.display = 'block';
-}
-function confirmDelete(id) {
-    if (confirm("Are you sure you want to delete this admin?")) {
-        document.getElementById('delete_admin_id').value = id;
-        document.getElementById('deleteForm').submit();
-    }
-}
-function closeModal(modalId) {
-    document.getElementById(modalId).style.display = 'none';
-}
-
-function setupBulkSelect(config) {
-    const form = document.getElementById(config.formId);
-    if (!form) return;
-
-    const selectAll = document.getElementById(config.selectAllId);
-    const deleteBtn = document.getElementById(config.deleteButtonId);
-    const exportBtn = document.getElementById(config.exportButtonId);
-    const checkboxSelector = `input[name="${config.checkboxName}"]`;
-
-    const getRowCheckboxes = () =>
-        Array.from(form.querySelectorAll(checkboxSelector)).filter(cb => !cb.disabled);
-
-    function updateRowHighlights() {
-        getRowCheckboxes().forEach(cb => {
-            const row = cb.closest('.selectable-row');
-            if (row) {
-                row.classList.toggle('row-selected', cb.checked);
-            }
-        });
-    }
-
-    function updateButtons() {
-        const anyChecked = getRowCheckboxes().some(cb => cb.checked);
-        [deleteBtn, exportBtn].forEach(btn => {
-            if (btn) {
-                btn.disabled = !anyChecked;
-            }
-        });
-        updateRowHighlights();
-    }
-
-    function syncSelectAll() {
-        if (!selectAll) return;
-        const checkboxes = getRowCheckboxes();
-        if (checkboxes.length === 0) {
-            selectAll.checked = false;
-            selectAll.indeterminate = false;
-            return;
+    <script>
+        function openCreateModal() {
+            document.getElementById('createModal').style.display = 'block';
         }
-        const checkedCount = checkboxes.filter(cb => cb.checked).length;
-        if (checkedCount === 0) {
-            selectAll.checked = false;
-            selectAll.indeterminate = false;
-        } else if (checkedCount === checkboxes.length) {
-            selectAll.checked = true;
-            selectAll.indeterminate = false;
-        } else {
-            selectAll.checked = false;
-            selectAll.indeterminate = true;
+
+        function openCSVModalAdmin() {
+            document.getElementById('csvModalAdmin').style.display = 'block';
         }
-    }
 
-    selectAll?.addEventListener('change', () => {
-        const checkboxes = getRowCheckboxes();
-        checkboxes.forEach(cb => {
-            cb.checked = selectAll.checked;
-        });
-        selectAll.indeterminate = false;
-        updateButtons();
-    });
+        function openEditModal(data) {
+            document.getElementById('edit_admin_id').value = data.admin_id;
+            document.getElementById('edit_name').value = data.username;
+            document.getElementById('edit_email').value = data.email;
 
-    form.addEventListener('change', (event) => {
-        if (event.target.matches(checkboxSelector)) {
+            const roleSelect = document.getElementById('edit_role');
+            roleSelect.value = data.role || 'user admin';
+
+            // If target is super admin, disable role change
+            if (data.role === 'super admin') {
+                roleSelect.disabled = true;
+                // Ensure 'super admin' is visible in dropdown if it was hidden
+                const hiddenOpt = document.getElementById('edit_role_super_admin_hidden');
+                if (hiddenOpt) {
+                    roleSelect.value = 'super admin';
+                }
+            } else {
+                roleSelect.disabled = false;
+            }
+
+            document.getElementById('editModal').style.display = 'block';
+        }
+
+        function confirmDelete(id) {
+            if (confirm("Are you sure you want to delete this admin?")) {
+                document.getElementById('delete_admin_id').value = id;
+                document.getElementById('deleteForm').submit();
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+
+        function setupBulkSelect(config) {
+            const form = document.getElementById(config.formId);
+            if (!form) return;
+
+            const selectAll = document.getElementById(config.selectAllId);
+            const deleteBtn = document.getElementById(config.deleteButtonId);
+            const exportBtn = document.getElementById(config.exportButtonId);
+            const checkboxSelector = `input[name="${config.checkboxName}"]`;
+
+            const getRowCheckboxes = () =>
+                Array.from(form.querySelectorAll(checkboxSelector)).filter(cb => !cb.disabled);
+
+            function updateRowHighlights() {
+                getRowCheckboxes().forEach(cb => {
+                    const row = cb.closest('.selectable-row');
+                    if (row) {
+                        row.classList.toggle('row-selected', cb.checked);
+                    }
+                });
+            }
+
+            function updateButtons() {
+                const anyChecked = getRowCheckboxes().some(cb => cb.checked);
+                [deleteBtn, exportBtn].forEach(btn => {
+                    if (btn) {
+                        btn.disabled = !anyChecked;
+                    }
+                });
+                updateRowHighlights();
+            }
+
+            function syncSelectAll() {
+                if (!selectAll) return;
+                const checkboxes = getRowCheckboxes();
+                if (checkboxes.length === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                    return;
+                }
+                const checkedCount = checkboxes.filter(cb => cb.checked).length;
+                if (checkedCount === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else if (checkedCount === checkboxes.length) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                }
+            }
+
+            selectAll?.addEventListener('change', () => {
+                const checkboxes = getRowCheckboxes();
+                checkboxes.forEach(cb => {
+                    cb.checked = selectAll.checked;
+                });
+                selectAll.indeterminate = false;
+                updateButtons();
+            });
+
+            form.addEventListener('change', (event) => {
+                if (event.target.matches(checkboxSelector)) {
+                    updateButtons();
+                    syncSelectAll();
+                }
+            });
+
             updateButtons();
             syncSelectAll();
         }
-    });
 
-    updateButtons();
-    syncSelectAll();
-}
+        function setupRowClickSelection(rowSelector) {
+            document.querySelectorAll(rowSelector).forEach(row => {
+                const checkboxId = row.getAttribute('data-checkbox-id');
+                if (!checkboxId) return;
+                const checkbox = document.getElementById(checkboxId);
+                if (!checkbox) return;
 
-function setupRowClickSelection(rowSelector) {
-    document.querySelectorAll(rowSelector).forEach(row => {
-        const checkboxId = row.getAttribute('data-checkbox-id');
-        if (!checkboxId) return;
-        const checkbox = document.getElementById(checkboxId);
-        if (!checkbox) return;
+                row.addEventListener('click', (event) => {
+                    if (event.target === checkbox) {
+                        return;
+                    }
+                    const interactive = event.target.closest('a, button, input, label, select, textarea');
+                    if (interactive) {
+                        return;
+                    }
+                    if (checkbox.disabled) return;
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change', {
+                        bubbles: true
+                    }));
+                });
+            });
+        }
 
-        row.addEventListener('click', (event) => {
-            if (event.target === checkbox) {
-                return;
-            }
-            const interactive = event.target.closest('a, button, input, label, select, textarea');
-            if (interactive) {
-                return;
-            }
-            if (checkbox.disabled) return;
-            checkbox.checked = !checkbox.checked;
-            checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-        });
-    });
-}
+        /* ===== TABLE SORTING (CLIENT-SIDE) + password toggles + FORM VALIDATION ===== */
+        document.addEventListener('DOMContentLoaded', function() {
+            const headers = document.querySelectorAll('th.sortable');
 
-/* ===== TABLE SORTING (CLIENT-SIDE) + password toggles + FORM VALIDATION ===== */
-document.addEventListener('DOMContentLoaded', function () {
-    const headers = document.querySelectorAll('th.sortable');
+            headers.forEach(function(header) {
+                header.addEventListener('click', function() {
+                    const table = header.closest('table');
+                    const tbody = table.querySelector('tbody');
+                    const colIdx = parseInt(header.getAttribute('data-column'), 10);
+                    const type = header.getAttribute('data-type') || 'string';
 
-    headers.forEach(function (header) {
-        header.addEventListener('click', function () {
-            const table   = header.closest('table');
-            const tbody   = table.querySelector('tbody');
-            const colIdx  = parseInt(header.getAttribute('data-column'), 10);
-            const type    = header.getAttribute('data-type') || 'string';
+                    // toggle sort direction
+                    const currentOrder = header.getAttribute('data-order') || 'asc';
+                    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+                    header.setAttribute('data-order', newOrder);
 
-            // toggle sort direction
-            const currentOrder = header.getAttribute('data-order') || 'asc';
-            const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
-            header.setAttribute('data-order', newOrder);
+                    // remove sort class from other headers
+                    headers.forEach(h => {
+                        if (h !== header) h.removeAttribute('data-order');
+                    });
 
-            // remove sort class from other headers
-            headers.forEach(h => {
-                if (h !== header) h.removeAttribute('data-order');
+                    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+                    rows.sort(function(rowA, rowB) {
+                        const cellA = rowA.children[colIdx].innerText.trim();
+                        const cellB = rowB.children[colIdx].innerText.trim();
+
+                        let valA = cellA;
+                        let valB = cellB;
+
+                        if (type === 'number') {
+                            valA = parseFloat(cellA) || 0;
+                            valB = parseFloat(cellB) || 0;
+                        } else {
+                            valA = cellA.toLowerCase();
+                            valB = cellB.toLowerCase();
+                        }
+
+                        if (valA < valB) return newOrder === 'asc' ? -1 : 1;
+                        if (valA > valB) return newOrder === 'asc' ? 1 : -1;
+                        return 0;
+                    });
+
+                    rows.forEach(row => tbody.appendChild(row));
+                });
             });
 
-            const rows = Array.from(tbody.querySelectorAll('tr'));
+            // 👁 Password eye toggles for Admins page
+            const createPwd = document.getElementById('create_admin_password');
+            const toggleCreatePwdBtn = document.getElementById('toggleCreateAdminPwd');
 
-            rows.sort(function (rowA, rowB) {
-                const cellA = rowA.children[colIdx].innerText.trim();
-                const cellB = rowB.children[colIdx].innerText.trim();
+            toggleCreatePwdBtn?.addEventListener('click', () => {
+                const show = createPwd.type === 'password';
+                createPwd.type = show ? 'text' : 'password';
+                toggleCreatePwdBtn.textContent = show ? '🙈' : '👁';
+            });
 
-                let valA = cellA;
-                let valB = cellB;
+            const editPwd = document.getElementById('edit_admin_password');
+            const toggleEditPwdBtn = document.getElementById('toggleEditAdminPwd');
 
-                if (type === 'number') {
-                    valA = parseFloat(cellA) || 0;
-                    valB = parseFloat(cellB) || 0;
-                } else {
-                    valA = cellA.toLowerCase();
-                    valB = cellB.toLowerCase();
+            toggleEditPwdBtn?.addEventListener('click', () => {
+                const show = editPwd.type === 'password';
+                editPwd.type = show ? 'text' : 'password';
+                toggleEditPwdBtn.textContent = show ? '🙈' : '👁';
+            });
+
+            // ===== HINTS SUPPORT =====
+            const hintDefaults = {};
+            document.querySelectorAll('.field-hint').forEach(function(hint) {
+                hintDefaults[hint.id] = hint.textContent;
+            });
+
+            function setError(field, hintEl, message) {
+                if (field) {
+                    field.classList.add('input--error');
                 }
+                if (hintEl) {
+                    hintEl.textContent = message;
+                    hintEl.classList.add('field-hint--visible', 'hint--error');
+                }
+            }
 
-                if (valA < valB) return newOrder === 'asc' ? -1 : 1;
-                if (valA > valB) return newOrder === 'asc' ?  1 : -1;
-                return 0;
+            function clearError(field, hintEl) {
+                if (field) {
+                    field.classList.remove('input--error');
+                }
+                if (hintEl && hintDefaults[hintEl.id]) {
+                    hintEl.textContent = hintDefaults[hintEl.id];
+                    hintEl.classList.remove('hint--error');
+                }
+            }
+
+            // Show hints only when that particular input is focused
+            document.querySelectorAll('[data-hint]').forEach(function(field) {
+                const hintId = field.getAttribute('data-hint');
+                const hintEl = document.getElementById(hintId);
+                if (!hintEl) return;
+
+                field.addEventListener('focus', function() {
+                    hintEl.classList.add('field-hint--visible');
+                });
+
+                field.addEventListener('blur', function() {
+                    if (hintEl.classList.contains('hint--error')) return;
+                    hintEl.classList.remove('field-hint--visible');
+                });
             });
 
-            rows.forEach(row => tbody.appendChild(row));
+            const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/;
+
+            // ===== CREATE ADMIN FORM VALIDATION =====
+            const createForm = document.getElementById('createAdminForm');
+            if (createForm) {
+                createForm.addEventListener('submit', function(e) {
+                    let valid = true;
+
+                    const nameField = document.getElementById('create_name');
+                    const emailField = document.getElementById('create_email');
+                    const pwdField = document.getElementById('create_admin_password');
+
+                    const nameHint = document.getElementById('create_name_hint');
+                    const emailHint = document.getElementById('create_email_hint');
+                    const pwdHint = document.getElementById('create_password_hint');
+
+                    const username = nameField.value.trim();
+                    const email = emailField.value.trim();
+                    const pwd = pwdField.value.trim();
+
+                    // Name
+                    clearError(nameField, nameHint);
+                    if (!username) {
+                        setError(nameField, nameHint, 'Admin username is required.');
+                        valid = false;
+                    } else if (username.length < 3) {
+                        setError(nameField, nameHint, 'Admin username must be at least 3 characters.');
+                        valid = false;
+                    } else if (/\s/.test(username)) {
+                        setError(nameField, nameHint, 'Admin username cannot contain spaces. Use "_" instead.');
+                        valid = false;
+                    } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
+                        setError(nameField, nameHint, 'Admin username can only contain letters, numbers, and underscores.');
+                        valid = false;
+                    }
+
+                    // Email
+                    clearError(emailField, emailHint);
+                    if (!email) {
+                        setError(emailField, emailHint, 'Admin email is required.');
+                        valid = false;
+                    } else if (!emailField.checkValidity()) {
+                        setError(emailField, emailHint, 'Please enter a valid admin email.');
+                        valid = false;
+                    }
+
+                    // Password
+                    clearError(pwdField, pwdHint);
+                    if (!pwd) {
+                        setError(pwdField, pwdHint, 'Password is required.');
+                        valid = false;
+                    } else if (!passwordPattern.test(pwd)) {
+                        setError(pwdField, pwdHint, 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
+                        valid = false;
+                    }
+
+                    if (!valid) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            // ===== EDIT ADMIN FORM VALIDATION =====
+            const editForm = document.getElementById('editAdminForm');
+            if (editForm) {
+                editForm.addEventListener('submit', function(e) {
+                    let valid = true;
+
+                    const nameField = document.getElementById('edit_name');
+                    const emailField = document.getElementById('edit_email');
+                    const pwdField = document.getElementById('edit_admin_password');
+
+                    const nameHint = document.getElementById('edit_name_hint');
+                    const emailHint = document.getElementById('edit_email_hint');
+                    const pwdHint = document.getElementById('edit_password_hint');
+
+                    const username = nameField.value.trim();
+                    const email = emailField.value.trim();
+                    const pwd = pwdField.value.trim();
+
+                    // Name
+                    clearError(nameField, nameHint);
+                    if (!username) {
+                        setError(nameField, nameHint, 'Admin username is required.');
+                        valid = false;
+                    } else if (username.length < 3) {
+                        setError(nameField, nameHint, 'Admin username must be at least 3 characters.');
+                        valid = false;
+                    } else if (/\s/.test(username)) {
+                        setError(nameField, nameHint, 'Admin username cannot contain spaces. Use "_" instead.');
+                        valid = false;
+                    } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
+                        setError(nameField, nameHint, 'Admin username can only contain letters, numbers, and underscores.');
+                        valid = false;
+                    }
+
+                    // Email
+                    clearError(emailField, emailHint);
+                    if (!email) {
+                        setError(emailField, emailHint, 'Admin email is required.');
+                        valid = false;
+                    } else if (!emailField.checkValidity()) {
+                        setError(emailField, emailHint, 'Please enter a valid admin email.');
+                        valid = false;
+                    }
+
+                    // New password (optional)
+                    clearError(pwdField, pwdHint);
+                    if (pwd && !passwordPattern.test(pwd)) {
+                        setError(pwdField, pwdHint, 'New password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
+                        valid = false;
+                    }
+
+                    if (!valid) {
+                        e.preventDefault();
+                    }
+                });
+            }
+
+            setupBulkSelect({
+                formId: 'adminBulkForm',
+                checkboxName: 'selected_admins[]',
+                selectAllId: 'select_all_admins',
+                deleteButtonId: 'deleteSelectedAdminsBtn',
+                exportButtonId: 'exportSelectedAdminsBtn'
+            });
+
+            setupRowClickSelection('#adminBulkForm .selectable-row');
         });
-    });
-
-    // 👁 Password eye toggles for Admins page
-    const createPwd = document.getElementById('create_admin_password');
-    const toggleCreatePwdBtn = document.getElementById('toggleCreateAdminPwd');
-
-    toggleCreatePwdBtn?.addEventListener('click', () => {
-        const show = createPwd.type === 'password';
-        createPwd.type = show ? 'text' : 'password';
-        toggleCreatePwdBtn.textContent = show ? '🙈' : '👁';
-    });
-
-    const editPwd = document.getElementById('edit_admin_password');
-    const toggleEditPwdBtn = document.getElementById('toggleEditAdminPwd');
-
-    toggleEditPwdBtn?.addEventListener('click', () => {
-        const show = editPwd.type === 'password';
-        editPwd.type = show ? 'text' : 'password';
-        toggleEditPwdBtn.textContent = show ? '🙈' : '👁';
-    });
-
-    // ===== HINTS SUPPORT =====
-    const hintDefaults = {};
-    document.querySelectorAll('.field-hint').forEach(function (hint) {
-        hintDefaults[hint.id] = hint.textContent;
-    });
-
-    function setError(field, hintEl, message) {
-        if (field) {
-            field.classList.add('input--error');
-        }
-        if (hintEl) {
-            hintEl.textContent = message;
-            hintEl.classList.add('field-hint--visible', 'hint--error');
-        }
-    }
-
-    function clearError(field, hintEl) {
-        if (field) {
-            field.classList.remove('input--error');
-        }
-        if (hintEl && hintDefaults[hintEl.id]) {
-            hintEl.textContent = hintDefaults[hintEl.id];
-            hintEl.classList.remove('hint--error');
-        }
-    }
-
-    // Show hints only when that particular input is focused
-    document.querySelectorAll('[data-hint]').forEach(function (field) {
-        const hintId = field.getAttribute('data-hint');
-        const hintEl = document.getElementById(hintId);
-        if (!hintEl) return;
-
-        field.addEventListener('focus', function () {
-            hintEl.classList.add('field-hint--visible');
-        });
-
-        field.addEventListener('blur', function () {
-            if (hintEl.classList.contains('hint--error')) return;
-            hintEl.classList.remove('field-hint--visible');
-        });
-    });
-
-    const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*#?&^_\-])[A-Za-z\d@$!%*#?&^_\-]{8,}$/;
-
-    // ===== CREATE ADMIN FORM VALIDATION =====
-    const createForm = document.getElementById('createAdminForm');
-    if (createForm) {
-        createForm.addEventListener('submit', function (e) {
-            let valid = true;
-
-            const nameField  = document.getElementById('create_name');
-            const emailField = document.getElementById('create_email');
-            const pwdField   = document.getElementById('create_admin_password');
-
-            const nameHint  = document.getElementById('create_name_hint');
-            const emailHint = document.getElementById('create_email_hint');
-            const pwdHint   = document.getElementById('create_password_hint');
-
-            const username  = nameField.value.trim();
-            const email = emailField.value.trim();
-            const pwd   = pwdField.value.trim();
-
-            // Name
-            clearError(nameField, nameHint);
-            if (!username) {
-                setError(nameField, nameHint, 'Admin username is required.');
-                valid = false;
-            } else if (username.length < 3) {
-                setError(nameField, nameHint, 'Admin username must be at least 3 characters.');
-                valid = false;
-            } else if (/\s/.test(username)) {
-                setError(nameField, nameHint, 'Admin username cannot contain spaces. Use "_" instead.');
-                valid = false;
-            } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
-                setError(nameField, nameHint, 'Admin username can only contain letters, numbers, and underscores.');
-                valid = false;
-            }
-
-            // Email
-            clearError(emailField, emailHint);
-            if (!email) {
-                setError(emailField, emailHint, 'Admin email is required.');
-                valid = false;
-            } else if (!emailField.checkValidity()) {
-                setError(emailField, emailHint, 'Please enter a valid admin email.');
-                valid = false;
-            }
-
-            // Password
-            clearError(pwdField, pwdHint);
-            if (!pwd) {
-                setError(pwdField, pwdHint, 'Password is required.');
-                valid = false;
-            } else if (!passwordPattern.test(pwd)) {
-                setError(pwdField, pwdHint, 'Password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
-                valid = false;
-            }
-
-            if (!valid) {
-                e.preventDefault();
-            }
-        });
-    }
-
-    // ===== EDIT ADMIN FORM VALIDATION =====
-    const editForm = document.getElementById('editAdminForm');
-    if (editForm) {
-        editForm.addEventListener('submit', function (e) {
-            let valid = true;
-
-            const nameField  = document.getElementById('edit_name');
-            const emailField = document.getElementById('edit_email');
-            const pwdField   = document.getElementById('edit_admin_password');
-
-            const nameHint  = document.getElementById('edit_name_hint');
-            const emailHint = document.getElementById('edit_email_hint');
-            const pwdHint   = document.getElementById('edit_password_hint');
-
-            const username  = nameField.value.trim();
-            const email = emailField.value.trim();
-            const pwd   = pwdField.value.trim();
-
-            // Name
-            clearError(nameField, nameHint);
-            if (!username) {
-                setError(nameField, nameHint, 'Admin username is required.');
-                valid = false;
-            } else if (username.length < 3) {
-                setError(nameField, nameHint, 'Admin username must be at least 3 characters.');
-                valid = false;
-            } else if (/\s/.test(username)) {
-                setError(nameField, nameHint, 'Admin username cannot contain spaces. Use "_" instead.');
-                valid = false;
-            } else if (!/^[A-Za-z0-9_]+$/.test(username)) {
-                setError(nameField, nameHint, 'Admin username can only contain letters, numbers, and underscores.');
-                valid = false;
-            }
-
-            // Email
-            clearError(emailField, emailHint);
-            if (!email) {
-                setError(emailField, emailHint, 'Admin email is required.');
-                valid = false;
-            } else if (!emailField.checkValidity()) {
-                setError(emailField, emailHint, 'Please enter a valid admin email.');
-                valid = false;
-            }
-
-            // New password (optional)
-            clearError(pwdField, pwdHint);
-            if (pwd && !passwordPattern.test(pwd)) {
-                setError(pwdField, pwdHint, 'New password must be at least 8 characters and include uppercase, lowercase, number and symbol.');
-                valid = false;
-            }
-
-            if (!valid) {
-                e.preventDefault();
-            }
-        });
-    }
-
-    setupBulkSelect({
-        formId: 'adminBulkForm',
-        checkboxName: 'selected_admins[]',
-        selectAllId: 'select_all_admins',
-        deleteButtonId: 'deleteSelectedAdminsBtn',
-        exportButtonId: 'exportSelectedAdminsBtn'
-    });
-
-    setupRowClickSelection('#adminBulkForm .selectable-row');
-});
-</script>
+    </script>
 
 </body>
-</html>
 
+</html>
