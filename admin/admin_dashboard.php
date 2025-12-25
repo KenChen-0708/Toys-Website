@@ -571,7 +571,7 @@ try {
                                                     <?php endfor; ?>
                                                 </div>
                                             </div>
-                                            <div class="feedback-text"><?= e(substr($feedback['content'], 0, 100)) ?><?= strlen($feedback['content']) > 100 ? '...' : '' ?></div>
+                                            <div class="feedback-text"><?= e(substr($feedback['message'], 0, 100)) ?><?= strlen($feedback['message']) > 100 ? '...' : '' ?></div>
                                             <div class="feedback-time"><?= date('M j, Y H:i', strtotime($feedback['created_at'])) ?></div>
                                         </div>
                                     </div>
