@@ -71,6 +71,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_notification']))
                             $count++;
                         }
                     }
+
+                    // LOG SENT EMAIL
+                    if ($count > 0) {
+                        try {
+                            $admin_id = $_SESSION['admin']['id'] ?? 1; // Default to 1 if not set
+                            $stmtLog = $pdo->prepare("INSERT INTO Sent_Email (admin_id, subject, message, recipient_count, sent_at) VALUES (?, ?, ?, ?, NOW())");
+                            $stmtLog->execute([$admin_id, $subject, $body, $count]);
+                        } catch (PDOException $logError) {
+                            // Silent error for logging or handle as needed
+                        }
+                    }
+
                     $message = "Notification sent successfully to $count users!";
                     $message_type = "success";
                 } else {
@@ -117,6 +129,71 @@ $total_subscribers = count($subscribers);
 // Get unsubscribed count
 $stmt = $pdo->query("SELECT COUNT(*) FROM Member_Settings WHERE email_notifications = 0");
 $unsubscribed_count = $stmt->fetchColumn();
+
+// EXPORT SELECTED SENT EMAILS
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['export_selected_emails'])) {
+    if (!empty($_POST['selected_emails'])) {
+        $selectedIds = array_filter(array_map('intval', $_POST['selected_emails']));
+        if (!empty($selectedIds)) {
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename=sent_emails_export.csv');
+
+            $output = fopen('php://output', 'w');
+            fputcsv($output, ['Email ID', 'Sender Admin', 'Subject', 'Recipient Count', 'Sent At', 'Message Snippet']);
+
+            $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
+            $sql = "
+                SELECT e.email_id, a.username as admin_name, e.subject, e.recipient_count, e.sent_at, e.message 
+                FROM Sent_Email e
+                JOIN Admin a ON e.admin_id = a.admin_id
+                WHERE e.email_id IN ($placeholders)
+                ORDER BY e.sent_at DESC
+            ";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($selectedIds);
+
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                fputcsv($output, [
+                    $row['email_id'],
+                    $row['admin_name'],
+                    $row['subject'],
+                    $row['recipient_count'],
+                    $row['sent_at'],
+                    substr($row['message'], 0, 100) . (strlen($row['message']) > 100 ? '...' : '')
+                ]);
+            }
+            fclose($output);
+            exit;
+        }
+    }
+}
+
+// Fetch Sent History
+$sent_history = [];
+try {
+    $h_search = isset($_GET['h_search']) ? trim($_GET['h_search']) : '';
+    $sql_history = "
+        SELECT e.*, a.username as admin_name 
+        FROM Sent_Email e 
+        JOIN Admin a ON e.admin_id = a.admin_id 
+        WHERE 1=1
+    ";
+
+    if (!empty($h_search)) {
+        $sql_history .= " AND (e.subject LIKE :h_search OR a.username LIKE :h_search OR e.message LIKE :h_search)";
+    }
+
+    $sql_history .= " ORDER BY e.sent_at DESC";
+
+    $stmt = $pdo->prepare($sql_history);
+    if (!empty($h_search)) {
+        $stmt->bindValue(':h_search', "%$h_search%");
+    }
+    $stmt->execute();
+    $sent_history = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $sent_history = [];
+}
 
 ?>
 <!DOCTYPE html>
@@ -239,10 +316,70 @@ $unsubscribed_count = $stmt->fetchColumn();
             opacity: 1;
         }
 
-        /* When sorted descending – override with single arrow */
         th.sortable[data-order="desc"]::after {
             content: '▼';
             opacity: 1;
+        }
+
+        /* Collapsible Section Styles */
+        .collapsible-header {
+            background-color: #f8fafc;
+            padding: 1.25rem 1.5rem;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.25s ease;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .collapsible-header:hover {
+            background-color: #f1f5f9;
+            border-color: #cbd5e0;
+        }
+
+        .collapsible-header h3 {
+            margin: 0;
+            font-size: 1.1rem;
+            color: #1e293b;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .collapsible-header .toggle-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #fff;
+            border-radius: 50%;
+            border: 1px solid #e2e8f0;
+            font-size: 0.75rem;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #64748b;
+        }
+
+        .collapsible-content {
+            display: none;
+            opacity: 0;
+            transform: translateY(-10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        .collapsible-content.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .collapsible-header.active .toggle-icon {
+            transform: rotate(180deg);
+            background: #f1f5f9;
         }
     </style>
 
@@ -285,59 +422,143 @@ $unsubscribed_count = $stmt->fetchColumn();
             <!-- Search Bar -->
             <div class="filter-bar">
                 <form method="GET" style="display:flex; gap:15px; flex:1;">
+                    <input type="hidden" name="h_search" value="<?php echo htmlspecialchars($h_search ?? ''); ?>">
                     <input type="text" name="search" placeholder="Search subscribed users..."
                         value="<?php echo htmlspecialchars($search); ?>">
                     <button type="submit" class="btn btn-primary">Search</button>
-                    <a href="manage_email.php" class="btn" style="background:#cbd5e0;">Clear</a>
+                    <a href="manage_email.php<?php echo !empty($h_search) ? '?h_search=' . urlencode($h_search) : ''; ?>" class="btn" style="background:#cbd5e0;">Clear</a>
                 </form>
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <h3>Subscribed Users</h3>
+            <div class="collapsible-header <?php echo !empty($search) ? 'active' : ''; ?>" id="subscribersToggle">
+                <h3><span>👥</span> Select Subscribed Users <small style="margin-left: 8px; color: #94a3b8; font-weight: normal; font-size: 0.85rem; background: #f1f5f9; padding: 2px 8px; border-radius: 12px; border: 1px solid #e2e8f0;"><?php echo $total_subscribers; ?></small></h3>
+                <div class="toggle-icon">▼</div>
             </div>
 
-            <form id="emailBulkForm">
-                <div class="table-container">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th style="width: 40px;"><input type="checkbox" id="selectAll" class="enhanced-checkbox"></th>
-                                <th class="sortable" data-column="1" data-type="number" style="width: 50px;">ID</th>
-                                <th style="width: 80px;">Photo</th>
-                                <th class="sortable" data-column="3" data-type="string">Username</th>
-                                <th class="sortable" data-column="4" data-type="string">Email</th>
-                                <th class="sortable" data-column="5" data-type="string">Last Updated</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php if (count($subscribers) > 0): ?>
-                                <?php foreach ($subscribers as $s): ?>
-                                    <?php $checkboxId = 'user_check_' . $s['member_id']; ?>
-                                    <tr class="selectable-row" data-checkbox-id="<?php echo $checkboxId; ?>">
-                                        <td>
-                                            <input type="checkbox" name="selected_users[]" id="<?php echo $checkboxId; ?>" class="enhanced-checkbox row-checkbox" value="<?php echo $s['member_id']; ?>">
-                                        </td>
-                                        <td><?php echo $s['member_id']; ?></td>
-                                        <td>
-                                            <?php
-                                            $photo = !empty($s['profile_photo_path']) ? $s['profile_photo_path'] : '/assets/img/profile_photo/test.jpg';
-                                            ?>
-                                            <img src="<?php echo htmlspecialchars($photo); ?>" alt="Profile" class="profile-photo-thumb">
-                                        </td>
-                                        <td><?php echo htmlspecialchars($s['username']); ?></td>
-                                        <td><?php echo htmlspecialchars($s['email']); ?></td>
-                                        <td><?php echo $s['updated_at']; ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php else: ?>
+            <div class="collapsible-content <?php echo !empty($search) ? 'active' : ''; ?>" id="subscribersContent">
+                <form id="emailBulkForm">
+                    <div class="table-container">
+                        <table>
+                            <thead>
                                 <tr>
-                                    <td colspan="6" style="text-align:center; padding: 2rem;">No subscribed users found.</td>
+                                    <th style="width: 40px;"><input type="checkbox" id="selectAll" class="enhanced-checkbox"></th>
+                                    <th class="sortable" data-column="1" data-type="number" style="width: 50px;">ID</th>
+                                    <th style="width: 80px;">Photo</th>
+                                    <th class="sortable" data-column="3" data-type="string">Username</th>
+                                    <th class="sortable" data-column="4" data-type="string">Email</th>
+                                    <th class="sortable" data-column="5" data-type="string">Last Updated</th>
                                 </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <?php if (count($subscribers) > 0): ?>
+                                    <?php foreach ($subscribers as $s): ?>
+                                        <?php $checkboxId = 'user_check_' . $s['member_id']; ?>
+                                        <tr class="selectable-row" data-checkbox-id="<?php echo $checkboxId; ?>">
+                                            <td>
+                                                <input type="checkbox" name="selected_users[]" id="<?php echo $checkboxId; ?>" class="enhanced-checkbox row-checkbox" value="<?php echo $s['member_id']; ?>">
+                                            </td>
+                                            <td><?php echo $s['member_id']; ?></td>
+                                            <td>
+                                                <?php
+                                                $photo = !empty($s['profile_photo_path']) ? $s['profile_photo_path'] : '/assets/img/profile_photo/test.jpg';
+                                                ?>
+                                                <img src="<?php echo htmlspecialchars($photo); ?>" alt="Profile" class="profile-photo-thumb">
+                                            </td>
+                                            <td><?php echo htmlspecialchars($s['username']); ?></td>
+                                            <td><?php echo htmlspecialchars($s['email']); ?></td>
+                                            <td><?php echo $s['updated_at']; ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <tr>
+                                        <td colspan="6" style="text-align:center; padding: 2rem;">No subscribed users found.</td>
+                                    </tr>
+                                <?php endif; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </form>
+            </div>
+
+            <form method="POST" id="historyBulkForm">
+                <div style="margin-top: 3rem; margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <h3 style="margin: 0;">Sent Notifications History</h3>
+                    <div style="display: flex; gap: 10px; align-items: center; flex: 1; justify-content: flex-end;">
+                        <input type="text" form="historySearchForm" name="h_search" placeholder="Search history..."
+                            value="<?php echo htmlspecialchars($h_search ?? ''); ?>"
+                            style="padding: 0.5rem; border: 1px solid #d1d5db; border-radius: 6px; max-width: 250px;">
+                        <button type="submit" form="historySearchForm" class="btn btn-primary">Search</button>
+                        <?php if (!empty($h_search)): ?>
+                            <a href="manage_email.php<?php echo !empty($search) ? '?search=' . urlencode($search) : ''; ?>" class="btn" style="background:#cbd5e0;">Clear</a>
+                        <?php endif; ?>
+                        <button type="submit" name="export_selected_emails" id="exportEmailsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
+                    </div>
                 </div>
             </form>
+            <form id="historySearchForm" method="GET" style="display: none;">
+                <input type="hidden" name="search" value="<?php echo htmlspecialchars($search ?? ''); ?>">
+            </form>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="selectAllEmails" class="enhanced-checkbox"></th>
+                            <th class="sortable" data-column="1" data-type="number" style="width: 50px;">ID</th>
+                            <th class="sortable" data-column="2" data-type="string">Subject</th>
+                            <th class="sortable" data-column="3" data-type="string">Sent By</th>
+                            <th class="sortable" data-column="4" data-type="number">Recipients</th>
+                            <th class="sortable" data-column="5" data-type="string">Sent At</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php if (count($sent_history) > 0): ?>
+                            <?php foreach ($sent_history as $h): ?>
+                                <?php $historyCheckboxId = 'email_check_' . $h['email_id']; ?>
+                                <tr class="selectable-row" data-checkbox-id="<?php echo $historyCheckboxId; ?>">
+                                    <td>
+                                        <input type="checkbox" name="selected_emails[]" id="<?php echo $historyCheckboxId; ?>" class="enhanced-checkbox email-row-checkbox" value="<?php echo $h['email_id']; ?>">
+                                    </td>
+                                    <td><?php echo $h['email_id']; ?></td>
+                                    <td><?php echo htmlspecialchars($h['subject']); ?></td>
+                                    <td><?php echo htmlspecialchars($h['admin_name']); ?></td>
+                                    <td><?php echo $h['recipient_count']; ?></td>
+                                    <td><?php echo $h['sent_at']; ?></td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-info" onclick='viewEmailDetails(<?php echo json_encode($h, JSON_HEX_APOS | JSON_HEX_QUOT); ?>)'>View Details</button>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr>
+                                <td colspan="7" style="text-align:center; padding: 2rem;">No sent history found.</td>
+                            </tr>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Email Details Modal -->
+    <div id="detailsModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeDetailsModal()">&times;</span>
+            <h2 id="detailsSubjectHeader" style="margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem;">Email Details</h2>
+            <div style="margin-bottom: 1rem;">
+                <p><strong>Subject:</strong> <span id="detailsSubject"></span></p>
+                <p><strong>Sent By:</strong> <span id="detailsAdmin"></span></p>
+                <p><strong>Sent At:</strong> <span id="detailsAt"></span></p>
+                <p><strong>Recipient Count:</strong> <span id="detailsCount"></span></p>
+            </div>
+            <div class="form-group">
+                <label>Message Content</label>
+                <div id="detailsMessage" style="padding: 1rem; background: #f9fafb; border-radius: 6px; border: 1px solid #d1d5db; white-space: pre-wrap; max-height: 300px; overflow-y: auto;"></div>
+            </div>
+            <div style="text-align: right;">
+                <button type="button" class="btn btn-secondary" onclick="closeDetailsModal()">Close</button>
+            </div>
         </div>
     </div>
 
@@ -464,24 +685,33 @@ $unsubscribed_count = $stmt->fetchColumn();
                     }
                 }
 
+                function updateState() {
+                    updateRowHighlights();
+                    syncSelectAll();
+                    if (config.btnId) {
+                        const btn = document.getElementById(config.btnId);
+                        if (btn) {
+                            btn.disabled = getRowCheckboxes().filter(cb => cb.checked).length === 0;
+                        }
+                    }
+                }
+
                 selectAll?.addEventListener('change', () => {
                     const checkboxes = getRowCheckboxes();
                     checkboxes.forEach(cb => {
                         cb.checked = selectAll.checked;
                     });
-                    updateRowHighlights();
+                    updateState();
                 });
 
                 form.addEventListener('change', (event) => {
                     if (event.target.matches(checkboxSelector)) {
-                        syncSelectAll();
-                        updateRowHighlights();
+                        updateState();
                     }
                 });
 
                 // Initial Sync
-                updateRowHighlights();
-                syncSelectAll();
+                updateState();
             }
 
             function setupRowClickSelection(rowSelector) {
@@ -504,11 +734,17 @@ $unsubscribed_count = $stmt->fetchColumn();
                 });
             }
 
-            // Initialize Selection
             setupBulkSelect({
                 formId: 'emailBulkForm',
                 checkboxName: 'selected_users[]',
                 selectAllId: 'selectAll'
+            });
+
+            setupBulkSelect({
+                formId: 'historyBulkForm',
+                checkboxName: 'selected_emails[]',
+                selectAllId: 'selectAllEmails',
+                btnId: 'exportEmailsBtn'
             });
 
             setupRowClickSelection('.selectable-row');
@@ -534,10 +770,40 @@ $unsubscribed_count = $stmt->fetchColumn();
                 modal.style.display = "none";
             }
 
+            window.viewEmailDetails = function(data) {
+                document.getElementById('detailsSubject').innerText = data.subject;
+                document.getElementById('detailsAdmin').innerText = data.admin_name;
+                document.getElementById('detailsAt').innerText = data.sent_at;
+                document.getElementById('detailsCount').innerText = data.recipient_count;
+                document.getElementById('detailsMessage').innerText = data.message;
+                document.getElementById('detailsModal').style.display = 'flex';
+            }
+
+            window.closeDetailsModal = function() {
+                document.getElementById('detailsModal').style.display = 'none';
+            }
+
             window.onclick = function(event) {
                 if (event.target == modal) {
                     closeEmailModal();
                 }
+                if (event.target == document.getElementById('detailsModal')) {
+                    closeDetailsModal();
+                }
+            }
+
+            // Collapsible Toggle Logic
+            const subsToggle = document.getElementById('subscribersToggle');
+            const subsContent = document.getElementById('subscribersContent');
+
+            if (subsToggle && subsContent) {
+                subsToggle.addEventListener('click', function() {
+                    const isActive = subsToggle.classList.toggle('active');
+                    subsContent.classList.toggle('active');
+
+                    // Add/Remove aria-expanded for screen readers if needed
+                    subsToggle.setAttribute('aria-expanded', isActive);
+                });
             }
         });
     </script>
