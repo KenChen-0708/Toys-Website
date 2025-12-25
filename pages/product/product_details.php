@@ -40,6 +40,7 @@ if (!$product) {
 $reviews = [];
 $review_count = 0;
 $average_rating = 0;
+$review_media = [];
 try {
   $stmt = $pdo->prepare("SELECT r.*, m.username as member_name 
                          FROM Review r 
@@ -53,6 +54,25 @@ try {
   if ($review_count > 0) {
     $total_rating = array_sum(array_column($reviews, 'rating'));
     $average_rating = round($total_rating / $review_count, 1);
+    
+    // Load review media
+    $review_ids = array_column($reviews, 'review_id');
+    if (!empty($review_ids)) {
+      try {
+        $placeholders = implode(',', array_fill(0, count($review_ids), '?'));
+        $media_stmt = $pdo->prepare("SELECT review_id, file_path FROM Review_Media WHERE review_id IN ($placeholders)");
+        $media_stmt->execute($review_ids);
+        foreach ($media_stmt->fetchAll(PDO::FETCH_ASSOC) as $media) {
+          $rid = (int)$media['review_id'];
+          if (!isset($review_media[$rid])) {
+            $review_media[$rid] = [];
+          }
+          $review_media[$rid][] = $media['file_path'];
+        }
+      } catch (PDOException $mediaEx) {
+        // Skip media if table doesn't exist
+      }
+    }
   }
 } catch (PDOException $e) {
   $reviews = [];
@@ -260,6 +280,16 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 </div>
               </div>
               <p class="review-text"><?= nl2br(htmlspecialchars($review['review_text'])) ?></p>
+              <?php 
+                $media_list = $review_media[$review['review_id']] ?? [];
+                if (!empty($media_list)):
+              ?>
+                <div class="review-media" style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                  <?php foreach ($media_list as $path): ?>
+                    <img src="<?= htmlspecialchars($path) ?>" alt="Review image" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer;" onclick="window.open(this.src, '_blank')">
+                  <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
             </div>
           <?php endforeach; ?>
         </div>
