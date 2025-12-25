@@ -171,6 +171,20 @@ CREATE TABLE Review (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE Review_Reply (
+    reply_id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    reply_text TEXT NOT NULL,
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (review_id) REFERENCES Review(review_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE Voucher (
     voucher_id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,

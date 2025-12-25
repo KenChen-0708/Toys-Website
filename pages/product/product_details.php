@@ -41,6 +41,7 @@ $reviews = [];
 $review_count = 0;
 $average_rating = 0;
 $review_media = [];
+$review_replies = [];
 try {
   $stmt = $pdo->prepare("SELECT r.*, m.username as member_name 
                          FROM Review r 
@@ -72,6 +73,19 @@ try {
       } catch (PDOException $mediaEx) {
         // Skip media if table doesn't exist
       }
+    }
+
+    // Load review replies
+    try {
+      $placeholders = implode(',', array_fill(0, count($review_ids), '?'));
+      $reply_stmt = $pdo->prepare("SELECT reply_id, review_id, reply_text, created_date FROM Review_Reply WHERE review_id IN ($placeholders)");
+      $reply_stmt->execute($review_ids);
+      foreach ($reply_stmt->fetchAll(PDO::FETCH_ASSOC) as $reply) {
+        $rid = (int)$reply['review_id'];
+        $review_replies[$rid] = $reply;
+      }
+    } catch (PDOException $replyEx) {
+      // Skip replies if table doesn't exist
     }
   }
 } catch (PDOException $e) {
@@ -288,6 +302,21 @@ $title = htmlspecialchars($product['name']) . " — Details";
                   <?php foreach ($media_list as $path): ?>
                     <img src="<?= htmlspecialchars($path) ?>" alt="Review image" style="width: 100px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid #e0e0e0; cursor: pointer;" onclick="window.open(this.src, '_blank')">
                   <?php endforeach; ?>
+                </div>
+              <?php endif; ?>
+
+              <!-- Admin Reply Section -->
+              <?php if (isset($review_replies[$review['review_id']])): 
+                $reply = $review_replies[$review['review_id']];
+              ?>
+                <div class="admin-reply" style="margin-top: 16px; padding: 12px; background-color: #f0f9ff; border-left: 4px solid #3b82f6; border-radius: 4px;">
+                  <div style="font-weight: 600; color: #1e40af; margin-bottom: 8px; font-size: 0.9rem;">
+                    Merchant Reply
+                  </div>
+                  <p style="margin: 0; color: #374151; line-height: 1.5;"><?= nl2br(htmlspecialchars($reply['reply_text'])) ?></p>
+                  <div style="margin-top: 8px; font-size: 0.8rem; color: #6b7280;">
+                    <?= date('F j, Y', strtotime($reply['created_date'])) ?>
+                  </div>
                 </div>
               <?php endif; ?>
             </div>

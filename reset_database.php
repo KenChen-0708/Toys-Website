@@ -229,6 +229,20 @@ CREATE TABLE Review (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE Review_Reply (
+    reply_id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    admin_id INT NOT NULL,
+    reply_text TEXT NOT NULL,
+    created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (review_id) REFERENCES Review(review_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE Review_Media (
     review_media_id INT AUTO_INCREMENT PRIMARY KEY,
     review_id INT NOT NULL,
@@ -515,6 +529,20 @@ INSERT INTO Review (product_id, member_id, rating, review_text, created_date) VA
 (16,8,5,'Police patrol Lego kit has great details!','2024-12-08 19:10:00'),
 (18,9,3,'Clone figure looks fine but plastic quality feels cheap.','2025-06-11 13:50:00'),
 (17,10,5,'The turtle van is amazing! Great collectible item.','2023-04-20 17:25:00');
+
+-- Sample Review Media
+INSERT INTO Review_Media (review_id, file_path, created_at) VALUES
+(1, '/assets/img/reviews/review_1_img1.png', '2024-01-12 10:30:00'),
+(4, '/assets/img/reviews/review_2_img2.png', '2024-01-12 10:30:00'),
+(9, '/assets/img/reviews/review_3_img3.png', '2024-03-22 09:10:00'),
+(6, '/assets/img/reviews/review_4_img4.png', '2025-02-17 18:35:00');
+
+-- Sample Review Replies (merchant/admin responses)
+INSERT INTO Review_Reply (review_id, admin_id, reply_text, created_date) VALUES
+(1, 1, 'Thanks for the great feedback! Enjoy your purchase 😊', '2024-01-12 12:00:00'),
+(5, 4, 'Appreciate the review! We\'re glad the mask fits well.', '2024-03-22 12:30:00'),
+(6, 1, 'Happy to hear you loved the saber! ⚡', '2025-02-17 19:00:00'),
+(9, 2, 'Sorry about the quality. Please contact support for a replacement.', '2025-06-12 09:00:00');
 
 INSERT INTO Wishlist (member_id) VALUES
 (1),
