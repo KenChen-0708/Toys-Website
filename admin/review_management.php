@@ -344,11 +344,7 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
 
             <!-- Reviews Table -->
             <form method="POST" id="reviewBulkForm">
-                <div class="bulk-actions">
-                    <label>
-                        <input type="checkbox" id="select_all_reviews" class="enhanced-checkbox">
-                        Select All
-                    </label>
+                <div class="bulk-actions" style="justify-content: flex-end;">
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button type="submit" name="batch_delete_reviews" id="deleteSelectedReviewsBtn" class="btn btn-danger" disabled>Delete Selected</button>
                         <button type="submit" name="export_selected_reviews" id="exportSelectedReviewsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
@@ -358,7 +354,9 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:40px;"></th>
+                                <th style="width:40px; text-align:center;">
+                                    <input type="checkbox" id="select_all_reviews" class="enhanced-checkbox">
+                                </th>
                                 <!-- data-column index must match the <td> order -->
                                 <th class="sortable" data-column="1" data-type="number">ID</th>
                                 <th class="sortable" data-column="2" data-type="string">Product</th>
@@ -374,7 +372,7 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                                 <?php foreach ($reviews as $r): ?>
                                     <?php $rowCheckboxId = 'review-select-' . $r['review_id']; ?>
                                     <tr class="selectable-row" data-checkbox-id="<?= $rowCheckboxId ?>">
-                                        <td>
+                                        <td style="text-align:center;">
                                             <input
                                                 type="checkbox"
                                                 name="selected_reviews[]"

@@ -728,10 +728,7 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
             <!-- Members Table -->
             <form method="POST" id="memberBulkForm">
                 <div class="bulk-actions">
-                    <label>
-                        <input type="checkbox" id="select_all_members" class="enhanced-checkbox">
-                        Select All
-                    </label>
+                    <div></div> <!-- Spacer to keep buttons on the right if needed, or just let them stay left -->
                     <div style="display:flex; gap:10px; flex-wrap:wrap;">
                         <button type="submit" name="batch_delete_members" id="deleteSelectedMembersBtn" class="btn btn-danger" disabled>Delete Selected</button>
                         <button type="submit" name="export_selected_members" id="exportSelectedMembersBtn" class="btn btn-info" disabled>Export Selected CSV</button>
@@ -741,7 +738,7 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:40px;"></th>
+                                <th style="width:40px;"><input type="checkbox" id="select_all_members" class="enhanced-checkbox"></th>
                                 <!-- data-column index must match the <td> order -->
                                 <th class="sortable" data-column="1" data-type="number">ID</th>
                                 <th data-column="2">Profile Photo</th>

@@ -618,11 +618,7 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
             <!-- Admins Table -->
             <form method="POST" id="adminBulkForm">
                 <div class="bulk-actions">
-                    <label>
-                        <input type="checkbox" id="select_all_admins" class="enhanced-checkbox">
-                        Select All
-                    </label>
-                    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <div style="display:flex; gap:10px; flex-wrap:wrap; margin-left: auto;">
                         <button type="submit" name="batch_delete_admins" id="deleteSelectedAdminsBtn" class="btn btn-danger" disabled>Delete Selected</button>
                         <button type="submit" name="export_selected_admins" id="exportSelectedAdminsBtn" class="btn btn-info" disabled>Export Selected CSV</button>
                     </div>
@@ -631,7 +627,7 @@ $admin_stats['total_admins'] = $pdo->query("SELECT COUNT(*) FROM Admin")->fetchC
                     <table>
                         <thead>
                             <tr>
-                                <th style="width:40px;"></th>
+                                <th style="width:40px;"><input type="checkbox" id="select_all_admins" class="enhanced-checkbox"></th>
                                 <th class="sortable" data-column="1" data-type="number">ID</th>
                                 <th class="sortable" data-column="2" data-type="string">Name</th>
                                 <th class="sortable" data-column="3" data-type="string">Email</th>
