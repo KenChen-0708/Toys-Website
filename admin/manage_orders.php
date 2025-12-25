@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Edit shipping address
         if (isset($_POST['edit_address']) && isset($_POST['order_id'])) {
             $order_id = (int)$_POST['order_id'];
-            
+
             // Get all the address fields
             $address_line1 = $_POST['address_line1'] ?? '';
             $address_line2 = $_POST['address_line2'] ?? '';
@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $state = $_POST['state'] ?? '';
             $postal_code = $_POST['postal_code'] ?? '';
             $country = $_POST['country'] ?? '';
-            
+
             // Validate required fields
             if (empty($address_line1) || empty($city) || empty($country)) {
                 $message = 'Address Line 1, City, and Country are required.';
@@ -70,13 +70,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Optional: Delete order
         if (isset($_POST['delete_order']) && isset($_POST['order_id'])) {
             $order_id = (int)$_POST['order_id'];
-            // Deleting order will cascade to Order_Item and Payment (if FK with ON DELETE CASCADE)
-            $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
-            if ($stmt->execute([$order_id])) {
-                $message = 'Order deleted.';
+
+            try {
+                // Start transaction
+                $pdo->beginTransaction();
+
+                // 1. Delete child records first
+                $stmt = $pdo->prepare("DELETE FROM Order_Item WHERE order_id = ?");
+                $stmt->execute([$order_id]);
+
+                // 2. (Optional) delete payments if you have a Payment table
+                // $stmt = $pdo->prepare("DELETE FROM Payment WHERE order_id = ?");
+                // $stmt->execute([$order_id]);
+
+                // 3. Delete the order
+                $stmt = $pdo->prepare("DELETE FROM `Order` WHERE order_id = ?");
+                $stmt->execute([$order_id]);
+
+                // Commit if everything succeeded
+                $pdo->commit();
+
+                $message = 'Order deleted successfully.';
                 $message_type = 'success';
-            } else {
-                $message = 'Error deleting order.';
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $message = 'Cannot delete order. It may still be linked to other records.';
                 $message_type = 'error';
             }
         }
@@ -124,7 +142,7 @@ if ($search !== "") {
     if (ctype_digit($search)) {
         $sql .= " AND o.order_id = ?";
         $params[] = (int)$search;
-    } 
+    }
     // Otherwise → text search on member, address, and product names
     else {
         $sql .= " AND (m.username LIKE ? 
@@ -246,7 +264,7 @@ try {
                     <!-- Basic Search Row -->
                     <div class="search-row">
                         <input type="text" name="search" class="search-input" placeholder="Search order ID, member, address or product..." value="<?php echo htmlspecialchars($search); ?>">
-                        
+
                         <select name="status" class="filter-select">
                             <option value="">All Statuses</option>
                             <option value="Pending" <?php if ($filter_status == 'Pending') echo 'selected'; ?>>Pending</option>
