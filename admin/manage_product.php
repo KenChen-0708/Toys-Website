@@ -13,47 +13,123 @@ $errors = [];
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
-    // BATCH DELETE
+    // BATCH DELETE (Soft Delete)
     if (isset($_POST['batch_delete'])) {
         if (!empty($_POST['selected_products'])) {
             try {
-                $pdo->beginTransaction();
-
                 $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
-                $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id IN ($placeholders)");
-                $stmt->execute($_POST['selected_products']);
-                $products = $stmt->fetchAll();
-
-                // Delete images
-                foreach ($products as $product) {
-                    if (
-                        !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
-                        $product['main_image_path'] != '../assets/img/default.jpg'
-                    ) {
-                        @unlink($product['main_image_path']);
-                    }
-                }
-
-                // Delete sub images
-                $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id IN ($placeholders)");
-                $stmt->execute($_POST['selected_products']);
-                $subImages = $stmt->fetchAll();
-                foreach ($subImages as $img) {
-                    if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
-                        @unlink($img['sub_image_path']);
-                    }
-                }
-
-                // Delete products
-                $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id IN ($placeholders)");
+                
+                // Instead of deleting, change status to 'Deleted'
+                $stmt = $pdo->prepare("UPDATE Product SET status = 'Deleted' WHERE product_id IN ($placeholders)");
                 $stmt->execute($_POST['selected_products']);
 
-                $pdo->commit();
-                $message = count($_POST['selected_products']) . " product(s) deleted successfully!";
+                $message = count($_POST['selected_products']) . " product(s) marked as deleted successfully!";
                 $message_type = "success";
             } catch (Exception $e) {
-                $pdo->rollBack();
-                $message = "Error deleting products: " . $e->getMessage();
+                $message = "Error marking products as deleted: " . $e->getMessage();
+                $message_type = "error";
+            }
+        } else {
+            $message = "No products selected";
+            $message_type = "error";
+        }
+    }
+
+    // BATCH RESTORE
+    if (isset($_POST['batch_restore'])) {
+        if (!empty($_POST['selected_products'])) {
+            try {
+                $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
+                
+                // Restore products by changing status to 'Available'
+                $stmt = $pdo->prepare("UPDATE Product SET status = 'Available' WHERE product_id IN ($placeholders)");
+                $stmt->execute($_POST['selected_products']);
+
+                $message = count($_POST['selected_products']) . " product(s) restored successfully!";
+                $message_type = "success";
+            } catch (Exception $e) {
+                $message = "Error restoring products: " . $e->getMessage();
+                $message_type = "error";
+            }
+        } else {
+            $message = "No products selected";
+            $message_type = "error";
+        }
+    }
+
+    // BATCH PERMANENT DELETE
+    if (isset($_POST['batch_permanent_delete'])) {
+        if (!empty($_POST['selected_products'])) {
+            try {
+                $placeholders = str_repeat('?,', count($_POST['selected_products']) - 1) . '?';
+                
+                // First, check which products have orders
+                $stmt = $pdo->prepare("
+                    SELECT p.product_id, p.name, COUNT(oi.order_item_id) as order_count
+                    FROM Product p
+                    LEFT JOIN Order_Item oi ON p.product_id = oi.product_id
+                    WHERE p.product_id IN ($placeholders)
+                    GROUP BY p.product_id, p.name
+                ");
+                $stmt->execute($_POST['selected_products']);
+                $products_check = $stmt->fetchAll();
+
+                $can_delete = [];
+                $cannot_delete = [];
+                
+                foreach ($products_check as $product) {
+                    if ($product['order_count'] > 0) {
+                        $cannot_delete[] = $product['name'] . ' (' . $product['order_count'] . ' orders)';
+                    } else {
+                        $can_delete[] = $product['product_id'];
+                    }
+                }
+
+                if (!empty($cannot_delete)) {
+                    $message = "Cannot permanently delete some products with order history: " . implode(', ', $cannot_delete);
+                    if (!empty($can_delete)) {
+                        $message .= ". Other products without orders were deleted.";
+                    }
+                    $message_type = "warning";
+                } else {
+                    $message = count($can_delete) . " product(s) permanently deleted successfully!";
+                    $message_type = "success";
+                }
+
+                // Delete products that can be deleted
+                if (!empty($can_delete)) {
+                    // Delete images first
+                    $placeholders_delete = str_repeat('?,', count($can_delete) - 1) . '?';
+                    
+                    $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id IN ($placeholders_delete)");
+                    $stmt->execute($can_delete);
+                    $products = $stmt->fetchAll();
+
+                    foreach ($products as $product) {
+                        if (
+                            !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
+                            $product['main_image_path'] != '../assets/img/default.jpg'
+                        ) {
+                            @unlink($product['main_image_path']);
+                        }
+                    }
+
+                    $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id IN ($placeholders_delete)");
+                    $stmt->execute($can_delete);
+                    $subImages = $stmt->fetchAll();
+                    foreach ($subImages as $img) {
+                        if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
+                            @unlink($img['sub_image_path']);
+                        }
+                    }
+
+                    // Delete the products
+                    $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id IN ($placeholders_delete)");
+                    $stmt->execute($can_delete);
+                }
+
+            } catch (Exception $e) {
+                $message = "Error permanently deleting products: " . $e->getMessage();
                 $message_type = "error";
             }
         } else {
@@ -299,34 +375,75 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         }
     }
 
-    // DELETE PRODUCT
+    // DELETE PRODUCT (Soft Delete)
     if (isset($_POST['delete_product'])) {
         try {
-            $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id=?");
-            $stmt->execute([$_POST['product_id']]);
-            $product = $stmt->fetch();
-
-            if (
-                $product && !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
-                $product['main_image_path'] != '../assets/img/default.jpg'
-            ) {
-                @unlink($product['main_image_path']);
-            }
-
-            $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id=?");
-            $stmt->execute([$_POST['product_id']]);
-            $subImages = $stmt->fetchAll();
-            foreach ($subImages as $img) {
-                if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
-                    @unlink($img['sub_image_path']);
-                }
-            }
-
-            $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id=?");
+            // Instead of deleting, change status to 'Deleted'
+            $stmt = $pdo->prepare("UPDATE Product SET status = 'Deleted' WHERE product_id = ?");
             $stmt->execute([$_POST['product_id']]);
 
-            $message = "Product deleted successfully!";
+            $message = "Product marked as deleted successfully!";
             $message_type = "success";
+        } catch (Exception $e) {
+            $message = "Error: " . $e->getMessage();
+            $message_type = "error";
+        }
+    }
+
+    // RESTORE PRODUCT
+    if (isset($_POST['restore_product'])) {
+        try {
+            // Restore product by changing status back to 'Available'
+            $stmt = $pdo->prepare("UPDATE Product SET status = 'Available' WHERE product_id = ?");
+            $stmt->execute([$_POST['product_id']]);
+
+            $message = "Product restored successfully!";
+            $message_type = "success";
+        } catch (Exception $e) {
+            $message = "Error: " . $e->getMessage();
+            $message_type = "error";
+        }
+    }
+
+    // PERMANENT DELETE PRODUCT
+    if (isset($_POST['permanent_delete_product'])) {
+        try {
+            // First check if product has been ordered
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
+            $stmt->execute([$_POST['product_id']]);
+            $order_count = $stmt->fetchColumn();
+
+            if ($order_count > 0) {
+                $message = "Cannot permanently delete this product because it has been ordered " . $order_count . " time(s). Products with order history can only be soft deleted.";
+                $message_type = "error";
+            } else {
+                // Safe to permanently delete - no order history
+                $stmt = $pdo->prepare("SELECT main_image_path FROM Product WHERE product_id=?");
+                $stmt->execute([$_POST['product_id']]);
+                $product = $stmt->fetch();
+
+                if (
+                    $product && !empty($product['main_image_path']) && file_exists($product['main_image_path']) &&
+                    $product['main_image_path'] != '../assets/img/default.jpg'
+                ) {
+                    @unlink($product['main_image_path']);
+                }
+
+                $stmt = $pdo->prepare("SELECT sub_image_path FROM Product_Sub_Image WHERE product_id=?");
+                $stmt->execute([$_POST['product_id']]);
+                $subImages = $stmt->fetchAll();
+                foreach ($subImages as $img) {
+                    if (!empty($img['sub_image_path']) && file_exists($img['sub_image_path'])) {
+                        @unlink($img['sub_image_path']);
+                    }
+                }
+
+                $stmt = $pdo->prepare("DELETE FROM Product WHERE product_id=?");
+                $stmt->execute([$_POST['product_id']]);
+
+                $message = "Product permanently deleted successfully!";
+                $message_type = "success";
+            }
         } catch (Exception $e) {
             $message = "Error: " . $e->getMessage();
             $message_type = "error";
@@ -363,12 +480,17 @@ $status_filter = isset($_GET['status']) ? trim($_GET['status']) : '';
 $stock_alert = isset($_GET['stock_alert']) ? true : false;
 $sort_by = isset($_GET['sort_by']) ? trim($_GET['sort_by']) : 'newest';
 
-// Build query
+// Build query - exclude deleted products by default unless specifically filtering for them
 $sql = "SELECT p.*, COALESCE(SUM(oi.quantity), 0) as total_sold 
         FROM Product p 
         LEFT JOIN Order_Item oi ON p.product_id = oi.product_id 
         WHERE 1=1";
 $params = [];
+
+// If not specifically filtering for deleted products, exclude them
+if ($status_filter !== 'Deleted') {
+    $sql .= " AND p.status != 'Deleted'";
+}
 
 if (!empty($search)) {
     $sql .= " AND (p.name LIKE ? OR p.description LIKE ?)";
@@ -426,12 +548,13 @@ $products = $stmt->fetchAll();
 // Get categories
 $categories = $pdo->query("SELECT DISTINCT category FROM Product WHERE category IS NOT NULL AND category != '' ORDER BY category")->fetchAll();
 
-// Get statistics
+// Get statistics (excluding deleted products)
 $stats = [];
-$stats['total_products'] = $pdo->query("SELECT COUNT(*) FROM Product")->fetchColumn();
-$stats['low_stock'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE stock <= 10")->fetchColumn();
-$stats['out_of_stock'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE stock = 0")->fetchColumn();
+$stats['total_products'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status != 'Deleted'")->fetchColumn();
+$stats['low_stock'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE stock <= 10 AND status != 'Deleted'")->fetchColumn();
+$stats['out_of_stock'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE stock = 0 AND status != 'Deleted'")->fetchColumn();
 $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'Unavailable'")->fetchColumn();
+$stats['deleted'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status = 'Deleted'")->fetchColumn();
 ?>
 
 <!DOCTYPE html>
@@ -467,6 +590,14 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                 </div>
             <?php endif; ?>
 
+            <?php if ($status_filter == 'Deleted'): ?>
+                <div class="alert alert-info">
+                    <strong>ℹ️ Permanent Delete Information:</strong> 
+                    Products that have been ordered cannot be permanently deleted to preserve order history and data integrity. 
+                    Only products with no order history can be permanently removed from the database.
+                </div>
+            <?php endif; ?>
+
             <!-- Statistics Cards -->
             <div class="stats-container">
                 <div class="stat-card">
@@ -497,6 +628,13 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                         <p>Unavailable</p>
                     </div>
                 </div>
+                <div class="stat-card deleted">
+                    <div class="stat-icon">🗑️</div>
+                    <div class="stat-info">
+                        <h3><?php echo $stats['deleted']; ?></h3>
+                        <p>Deleted</p>
+                    </div>
+                </div>
             </div>
 
             <!-- Filter Bar -->
@@ -516,6 +654,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                         <option value="">All Status</option>
                         <option value="Available" <?php echo ($status_filter == 'Available') ? 'selected' : ''; ?>>Available</option>
                         <option value="Unavailable" <?php echo ($status_filter == 'Unavailable') ? 'selected' : ''; ?>>Unavailable</option>
+                        <option value="Deleted" <?php echo ($status_filter == 'Deleted') ? 'selected' : ''; ?>>Deleted</option>
                     </select>
                     <select name="sort_by">
                         <option value="top_selling" <?php echo ($sort_by == 'top_selling') ? 'selected' : ''; ?>>Top Selling</option>
@@ -531,6 +670,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                     <button type="submit" class="btn btn-primary">Apply</button>
                     <a href="manage_product.php" class="btn btn-secondary">Clear</a>
                     <button type="button" class="btn btn-warning" onclick="filterLowStock()">⚠️ Low Stock</button>
+                    <button type="button" class="btn btn-info" onclick="viewDeleted()">🗑️ View Deleted</button>
                 </form>
             </div>
 
@@ -539,7 +679,12 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                 <span class="selected-count">0 selected</span>
                 <button type="button" class="btn btn-sm btn-success" onclick="openBatchStatusModal()">Update Status</button>
                 <button type="button" class="btn btn-sm btn-info" onclick="openBatchCategoryModal()">Change Category</button>
-                <button type="button" class="btn btn-sm btn-danger" onclick="batchDelete()">Delete Selected</button>
+                <?php if ($status_filter == 'Deleted'): ?>
+                    <button type="button" class="btn btn-sm btn-success" onclick="batchRestore()">Restore Selected</button>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="batchPermanentDelete()">Permanent Delete</button>
+                <?php else: ?>
+                    <button type="button" class="btn btn-sm btn-danger" onclick="batchDelete()">Delete Selected</button>
+                <?php endif; ?>
             </div>
 
             <!-- Products Table -->
@@ -557,6 +702,9 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                             <th>Status</th>
                             <?php if ($sort_by == 'top_selling'): ?>
                                 <th>Sales</th>
+                            <?php endif; ?>
+                            <?php if ($status_filter == 'Deleted'): ?>
+                                <th>Orders</th>
                             <?php endif; ?>
                             <th>Actions</th>
                         </tr>
@@ -586,7 +734,12 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                                     <td>
                                         <?php
                                         $status = trim($product['status'] ?? '');
-                                        $statusClass = (strtolower($status) == 'available') ? 'available' : 'unavailable';
+                                        $statusClass = 'unavailable'; // default
+                                        if (strtolower($status) == 'available') {
+                                            $statusClass = 'available';
+                                        } elseif (strtolower($status) == 'deleted') {
+                                            $statusClass = 'deleted';
+                                        }
                                         $statusDisplay = !empty($status) ? $status : 'Unavailable';
                                         ?>
                                         <span class="status-badge status-<?php echo $statusClass; ?>">
@@ -600,21 +753,67 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                                             </span>
                                         </td>
                                     <?php endif; ?>
+                                    <?php if ($status_filter == 'Deleted'): ?>
+                                        <td>
+                                            <?php
+                                            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
+                                            $stmt->execute([$product['product_id']]);
+                                            $order_count = $stmt->fetchColumn();
+                                            ?>
+                                            <?php if ($order_count > 0): ?>
+                                                <span class="order-badge has-orders">
+                                                    🔒 <?php echo $order_count; ?> order(s)
+                                                </span>
+                                            <?php else: ?>
+                                                <span class="order-badge no-orders">
+                                                    ✅ No orders
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                    <?php endif; ?>
                                     <td>
-                                        <button class="btn btn-warning btn-sm"
-                                            onclick='openEditModal(<?php echo json_encode($product); ?>)'>
-                                            Edit
-                                        </button>
-                                        <button class="btn btn-danger btn-sm"
-                                            onclick="confirmDelete(<?php echo $product['product_id']; ?>)">
-                                            Delete
-                                        </button>
+                                        <?php if ($product['status'] == 'Deleted'): ?>
+                                            <button class="btn btn-success btn-sm"
+                                                onclick="restoreProduct(<?php echo $product['product_id']; ?>)">
+                                                Restore
+                                            </button>
+                                            <?php
+                                            // Check if product has been ordered
+                                            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Order_Item WHERE product_id = ?");
+                                            $stmt->execute([$product['product_id']]);
+                                            $order_count = $stmt->fetchColumn();
+                                            ?>
+                                            <?php if ($order_count > 0): ?>
+                                                <button class="btn btn-secondary btn-sm" disabled title="Cannot permanently delete - product has <?php echo $order_count; ?> order(s)">
+                                                    🔒 Has Orders (<?php echo $order_count; ?>)
+                                                </button>
+                                            <?php else: ?>
+                                                <button class="btn btn-danger btn-sm"
+                                                    onclick="permanentDelete(<?php echo $product['product_id']; ?>)">
+                                                    Permanent Delete
+                                                </button>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <button class="btn btn-warning btn-sm"
+                                                onclick='openEditModal(<?php echo json_encode($product); ?>)'>
+                                                Edit
+                                            </button>
+                                            <button class="btn btn-danger btn-sm"
+                                                onclick="confirmDelete(<?php echo $product['product_id']; ?>)">
+                                                Delete
+                                            </button>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php else: ?>
                             <tr>
-                                <td colspan="<?php echo ($sort_by == 'top_selling') ? '10' : '9'; ?>" style="text-align: center; padding: 40px;">
+                                <td colspan="<?php 
+                                    $colspan = 9; // base columns
+                                    if ($sort_by == 'top_selling') $colspan++;
+                                    if ($status_filter == 'Deleted') $colspan++;
+                                    echo $colspan;
+                                ?>" style="text-align: center; padding: 40px;">
                                     No products found. Add your first product!
                                 </td>
                             </tr>
@@ -638,7 +837,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                 <?php echo renderTextarea('description', 'Description'); ?>
                 <?php echo renderInput('category', 'Category', 'text'); ?>
                 <?php echo renderInput('stock', 'Stock', 'number', '', true, ['min' => '0']); ?>
-                <?php echo renderSelect('status', 'Status', ['Available' => 'Available', 'Unavailable' => 'Unavailable'], 'Available', true); ?>
+                <?php echo renderSelect('status', 'Status', ['Available' => 'Available', 'Unavailable' => 'Unavailable', 'Deleted' => 'Deleted'], 'Available', true); ?>
                 <div class="form-group">
                     <label>Main Product Image</label>
                     <input type="file" name="main_image" accept="image/*" onchange="previewImage(event, 'createPreview')">
@@ -689,6 +888,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                     <select name="status" id="edit_status" required>
                         <option value="Available">Available</option>
                         <option value="Unavailable">Unavailable</option>
+                        <option value="Deleted">Deleted</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -726,11 +926,12 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                     <li><strong>description</strong> - Product description</li>
                     <li><strong>category</strong> - Product category</li>
                     <li><strong>stock</strong> - Stock quantity (required)</li>
-                    <li><strong>status</strong> - Available or Unavailable (optional, defaults to Available)</li>
+                    <li><strong>status</strong> - Available, Unavailable, or Deleted (optional, defaults to Available)</li>
                 </ol>
                 <p class="csv-example"><strong>Example:</strong><br>
                     Laptop,999.99,High performance laptop,Electronics,50,Available<br>
-                    Mouse,29.99,Wireless mouse,Electronics,100,Available</p>
+                    Mouse,29.99,Wireless mouse,Electronics,100,Available<br>
+                    Old Product,15.99,Discontinued product,Electronics,0,Deleted</p>
                 <div style="margin-top: 15px;">
                     <a href="download_sample.php" class="btn btn-info btn-sm">📥 Download Sample CSV</a>
                 </div>
@@ -759,6 +960,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                     <select name="batch_status" required>
                         <option value="Available">Available</option>
                         <option value="Unavailable">Unavailable</option>
+                        <option value="Deleted">Deleted</option>
                     </select>
                 </div>
                 <button type="submit" name="batch_update_status" class="btn btn-success">Update Status</button>
@@ -795,14 +997,19 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
         <input type="hidden" name="delete_product" value="1">
     </form>
 
+    <form method="POST" id="restoreForm" style="display: none;">
+        <input type="hidden" name="product_id" id="restore_product_id">
+        <input type="hidden" name="restore_product" value="1">
+    </form>
+
+    <form method="POST" id="permanentDeleteForm" style="display: none;">
+        <input type="hidden" name="product_id" id="permanent_delete_product_id">
+        <input type="hidden" name="permanent_delete_product" value="1">
+    </form>
+
     <form method="POST" id="deleteSubImageForm" style="display: none;">
         <input type="hidden" name="sub_image_id" id="delete_sub_image_id">
         <input type="hidden" name="delete_sub_image" value="1">
-    </form>
-
-    <form method="POST" id="batchDeleteForm" style="display: none;">
-        <input type="hidden" name="selected_products[]" id="batchDeleteProducts">
-        <input type="hidden" name="batch_delete" value="1">
     </form>
 
     <script src="../assets/js/manage_product.js"></script>

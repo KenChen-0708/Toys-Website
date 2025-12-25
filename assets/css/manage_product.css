@@ -834,3 +834,77 @@ tbody tr:last-child td {
         opacity: 0.7;
     }
 }
+/* Deleted Status Styling */
+.status-badge.status-deleted {
+    background: #6b7280;
+    color: white;
+    border: 1px solid #4b5563;
+}
+
+.stat-card.deleted {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+}
+
+.stat-card.deleted .stat-icon {
+    color: #f3f4f6;
+}
+
+/* Deleted products should appear dimmed */
+tr:has(.status-deleted) {
+    opacity: 0.7;
+    background-color: #f9fafb;
+}
+
+tr:has(.status-deleted):hover {
+    background-color: #f3f4f6;
+}
+/* Order Badge Styling */
+.order-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.order-badge.has-orders {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+}
+
+.order-badge.no-orders {
+    background: #d1fae5;
+    color: #065f46;
+    border: 1px solid #10b981;
+}
+
+/* Disabled button styling */
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn:disabled:hover {
+    transform: none;
+    box-shadow: none;
+}
+/* Info Alert Styling */
+.alert.alert-info {
+    background: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #3b82f6;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
+
+.alert.alert-warning {
+    background: #fef3c7;
+    color: #92400e;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
