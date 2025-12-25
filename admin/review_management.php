@@ -111,6 +111,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
     }
+
+    /** ADD REPLY TO REVIEW **/
+    if (isset($_POST['add_reply'])) {
+        if (!has_permission('reviews', 'update')) {
+            $message = "You don't have permission to reply to reviews.";
+            $message_type = 'error';
+        } else {
+            $review_id = (int)$_POST['review_id'];
+            $reply_text = trim($_POST['reply_text'] ?? '');
+
+            if (empty($reply_text)) {
+                $message = "Reply text cannot be empty.";
+                $message_type = "error";
+            } else {
+                try {
+                    // Get current admin ID from session
+                    $admin_id = $_SESSION['admin']['id'] ?? null;
+                    if (!$admin_id) {
+                        throw new Exception("Admin ID not found in session.");
+                    }
+
+                    // Check if reply already exists for this review
+                    $checkStmt = $pdo->prepare("SELECT reply_id FROM Review_Reply WHERE review_id = ?");
+                    $checkStmt->execute([$review_id]);
+                    $existingReply = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingReply) {
+                        // Update existing reply
+                        $stmt = $pdo->prepare("UPDATE Review_Reply SET reply_text = ?, created_date = NOW() WHERE review_id = ?");
+                        $stmt->execute([$reply_text, $review_id]);
+                        $message = "Reply updated successfully!";
+                    } else {
+                        // Insert new reply
+                        $stmt = $pdo->prepare("INSERT INTO Review_Reply (review_id, admin_id, reply_text, created_date) VALUES (?, ?, ?, NOW())");
+                        $stmt->execute([$review_id, $admin_id, $reply_text]);
+                        $message = "Reply added successfully!";
+                    }
+                    $message_type = "success";
+                } catch (PDOException $e) {
+                    $message = "Error adding reply: " . $e->getMessage();
+                    $message_type = "error";
+                }
+            }
+        }
+    }
+
+    /** DELETE REPLY **/
+    if (isset($_POST['delete_reply'])) {
+        if (!has_permission('reviews', 'delete')) {
+            $message = "You don't have permission to delete replies.";
+            $message_type = 'error';
+        } else {
+            $reply_id = (int)$_POST['reply_id'];
+            try {
+                $stmt = $pdo->prepare("DELETE FROM Review_Reply WHERE reply_id = ?");
+                $stmt->execute([$reply_id]);
+                $message = "Reply deleted successfully!";
+                $message_type = "success";
+            } catch (PDOException $e) {
+                $message = "Error deleting reply: " . $e->getMessage();
+                $message_type = "error";
+            }
+        }
+    }
 }
 
 // EXPORT REVIEWS TO CSV
@@ -154,6 +218,26 @@ $sql .= " ORDER BY r.created_date DESC";
 $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $reviews = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch review media for all reviews
+$review_media = [];
+if (!empty($reviews)) {
+    $review_ids = array_column($reviews, 'review_id');
+    $placeholders = implode(',', array_fill(0, count($review_ids), '?'));
+    try {
+        $media_stmt = $pdo->prepare("SELECT review_id, file_path FROM Review_Media WHERE review_id IN ($placeholders)");
+        $media_stmt->execute($review_ids);
+        foreach ($media_stmt->fetchAll(PDO::FETCH_ASSOC) as $media) {
+            $rid = (int)$media['review_id'];
+            if (!isset($review_media[$rid])) {
+                $review_media[$rid] = [];
+            }
+            $review_media[$rid][] = $media['file_path'];
+        }
+    } catch (PDOException $e) {
+        // Skip if Review_Media table doesn't exist
+    }
+}
 
 // review statistics
 $review_stats = [];
@@ -279,6 +363,19 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
             background-color: #fee2e2;
             color: #991b1b;
         }
+
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: nowrap;
+            align-items: center;
+        }
+
+        .action-buttons .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+            white-space: nowrap;
+        }
     </style>
 </head>
 
@@ -399,16 +496,18 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                                         <td><?= $r['created_date'] ?></td>
 
                                         <td>
-                                            <button type="button" class="btn btn-warning btn-sm"
-                                                onclick='openViewModal(<?= json_encode($r) ?>)'>
-                                                View
-                                            </button>
-                                            <?php if (has_permission('reviews', 'delete')): ?>
-                                                <button type="button" class="btn btn-danger btn-sm"
-                                                    onclick="confirmDelete(<?= $r['review_id'] ?>)">
-                                                    Delete
+                                            <div class="action-buttons">
+                                                <button type="button" class="btn btn-warning btn-sm"
+                                                    onclick='openViewModal(<?= json_encode($r) ?>, <?= json_encode($review_media[$r["review_id"]] ?? []) ?>)'>
+                                                    View
                                                 </button>
-                                            <?php endif; ?>
+                                                <?php if (has_permission('reviews', 'delete')): ?>
+                                                    <button type="button" class="btn btn-danger btn-sm"
+                                                        onclick="confirmDelete(<?= $r['review_id'] ?>)">
+                                                        Delete
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -458,6 +557,38 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                     <label>Created Date:</label>
                     <p id="view_created_date"></p>
                 </div>
+                
+                <!-- Review Media Section -->
+                <div class="form-group" id="view_media_section" style="display: none;">
+                    <label>Review Media:</label>
+                    <div id="view_media_container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;"></div>
+                </div>
+
+                <!-- REPLY SECTION -->
+                <hr style="margin: 20px 0; border: none; border-top: 1px solid #e5e7eb;">
+                <h3 style="margin-top: 20px; margin-bottom: 15px;">Admin Reply</h3>
+                
+                <div id="existingReplySection" style="display: none; margin-bottom: 20px; padding: 15px; background: #f9fafb; border-left: 4px solid #2563eb; border-radius: 4px;">
+                    <div style="margin-bottom: 10px;">
+                        <strong>Existing Reply:</strong>
+                    </div>
+                    <p id="view_reply_text" style="margin: 10px 0; color: #374151;"></p>
+                    <small id="view_reply_date" style="color: #6b7280;"></small>
+                    <?php if (has_permission('reviews', 'delete')): ?>
+                        <button type="button" class="btn btn-danger btn-sm" style="margin-top: 10px;" onclick="deleteReply()">Delete Reply</button>
+                    <?php endif; ?>
+                </div>
+
+                <form id="replyForm" method="POST" style="margin-top: 15px;">
+                    <input type="hidden" name="review_id" id="reply_review_id">
+                    <div class="form-group">
+                        <label for="reply_text">Your Reply:</label>
+                        <textarea id="reply_text" name="reply_text" rows="4" placeholder="Enter your reply to this review..." style="width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 4px; font-family: Arial, sans-serif;"></textarea>
+                    </div>
+                    <?php if (has_permission('reviews', 'update')): ?>
+                        <button type="submit" name="add_reply" class="btn btn-success" style="margin-top: 10px;">Submit Reply</button>
+                    <?php endif; ?>
+                </form>
             </div>
         </div>
     </div>
@@ -468,20 +599,91 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
         <input type="hidden" name="delete_review" value="1">
     </form>
 
+    <!-- DELETE REPLY FORM -->
+    <form method="POST" id="deleteReplyForm" style="display:none;">
+        <input type="hidden" name="reply_id" id="delete_reply_id">
+        <input type="hidden" name="delete_reply" value="1">
+    </form>
+
     <script>
         window.onbeforeunload = function() {
             window.scrollTo(0, 0);
         };
 
-        function openViewModal(data) {
+        function openViewModal(data, media = []) {
             document.getElementById('view_review_id').textContent = data.review_id;
             document.getElementById('view_product_name').textContent = data.product_name;
             document.getElementById('view_username').textContent = data.username;
             document.getElementById('view_rating').textContent = data.rating + '/5';
             document.getElementById('view_review_text').textContent = data.review_text;
             document.getElementById('view_created_date').textContent = data.created_date;
+            document.getElementById('reply_review_id').value = data.review_id;
+
+            // Display media if available
+            const mediaSection = document.getElementById('view_media_section');
+            const mediaContainer = document.getElementById('view_media_container');
+            
+            if (media && media.length > 0) {
+                mediaSection.style.display = 'block';
+                mediaContainer.innerHTML = '';
+                media.forEach(filePath => {
+                    const img = document.createElement('img');
+                    img.src = filePath;
+                    img.alt = 'Review media';
+                    img.style.cssText = 'width: 120px; height: 120px; object-fit: cover; border-radius: 8px; border: 2px solid #e5e7eb; cursor: pointer;';
+                    img.onclick = function() { window.open(this.src, '_blank'); };
+                    mediaContainer.appendChild(img);
+                });
+            } else {
+                mediaSection.style.display = 'none';
+            }
+
+            // Fetch existing reply if any
+            fetchExistingReply(data.review_id);
 
             document.getElementById('viewModal').style.display = 'block';
+        }
+
+        function fetchExistingReply(reviewId) {
+            // Create a simple AJAX call to get the existing reply
+            fetch(`get_review_reply.php?review_id=${reviewId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.reply) {
+                        document.getElementById('existingReplySection').style.display = 'block';
+                        document.getElementById('view_reply_text').textContent = data.reply.reply_text;
+                        document.getElementById('view_reply_date').textContent = 'Replied on: ' + data.reply.created_date;
+                        document.getElementById('reply_text').value = data.reply.reply_text;
+                        window.currentReplyId = data.reply.reply_id;
+                    } else {
+                        document.getElementById('existingReplySection').style.display = 'none';
+                        document.getElementById('reply_text').value = '';
+                        window.currentReplyId = null;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching reply:', error);
+                    document.getElementById('existingReplySection').style.display = 'none';
+                });
+        }
+
+        function openReplyModal(data, media = []) {
+            openViewModal(data, media);
+            // Focus on reply section
+            setTimeout(() => {
+                document.getElementById('reply_text').focus();
+            }, 100);
+        }
+
+        function deleteReply() {
+            if (!window.currentReplyId) {
+                alert('No reply to delete');
+                return;
+            }
+            if (confirm('Are you sure you want to delete this reply?')) {
+                document.getElementById('delete_reply_id').value = window.currentReplyId;
+                document.getElementById('deleteReplyForm').submit();
+            }
         }
 
         function confirmDelete(id) {
