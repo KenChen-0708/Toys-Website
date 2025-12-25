@@ -1,6 +1,8 @@
 // Manage Product JavaScript with jQuery
+console.log('manage_product.js loaded successfully');
 
 $(document).ready(function() {
+    console.log('Document ready, initializing...');
     // Auto-hide alerts after 5 seconds
     setTimeout(function() {
         $('.alert').fadeOut('slow');
@@ -53,6 +55,7 @@ function getSelectedProducts() {
     $('.product-checkbox:checked').each(function() {
         selected.push($(this).val());
     });
+    console.log('getSelectedProducts called, found:', selected);
     return selected;
 }
 
@@ -65,16 +68,17 @@ function batchDelete() {
         return;
     }
     
-    if (confirm(`Are you sure you want to delete ${selected.length} product(s)? This action cannot be undone.`)) {
-        // Create form with selected products
-        const $form = $('#batchDeleteForm');
-        $form.find('input[name="selected_products[]"]').remove();
+    if (confirm(`Are you sure you want to delete ${selected.length} product(s)? This will mark them as deleted.`)) {
+        // Create and submit form
+        const form = $('<form method="POST">')
+            .append('<input type="hidden" name="batch_delete" value="1">');
         
-        selected.forEach(function(id) {
-            $form.append(`<input type="hidden" name="selected_products[]" value="${id}">`);
+        selected.forEach(id => {
+            form.append(`<input type="hidden" name="selected_products[]" value="${id}">`);
         });
         
-        $form.submit();
+        $('body').append(form);
+        form.submit();
     }
 }
 
@@ -360,3 +364,90 @@ $('form').on('submit', function(e) {
         }, 500);
     }
 });
+// Restore Product
+function restoreProduct(productId) {
+    if (confirm('Are you sure you want to restore this product? It will be marked as Available.')) {
+        $('#restore_product_id').val(productId);
+        $('#restoreForm').submit();
+    }
+}
+
+// Permanent Delete Product
+function permanentDelete(productId) {
+    if (confirm('⚠️ WARNING: This will PERMANENTLY delete the product and all its data!\n\nThis product has no order history, so it can be safely deleted.\n\nThis action cannot be undone. Are you absolutely sure?')) {
+        if (confirm('This is your final confirmation. The product will be completely removed from the database. Continue?')) {
+            $('#permanent_delete_product_id').val(productId);
+            $('#permanentDeleteForm').submit();
+        }
+    }
+}
+// View Deleted Products
+function viewDeleted() {
+    window.location.href = 'manage_product.php?status=Deleted';
+}
+// Batch Restore Products
+function batchRestore() {
+    console.log('batchRestore called');
+    const selectedIds = getSelectedProducts();
+    console.log('Selected IDs:', selectedIds);
+    
+    if (selectedIds.length === 0) {
+        alert('Please select products to restore');
+        return;
+    }
+    
+    if (confirm(`Are you sure you want to restore ${selectedIds.length} selected product(s)? They will be marked as Available.`)) {
+        console.log('User confirmed restore');
+        
+        // Create form HTML as string
+        let formHtml = '<form method="POST" style="display:none;">';
+        formHtml += '<input type="hidden" name="batch_restore" value="1">';
+        
+        selectedIds.forEach(id => {
+            formHtml += `<input type="hidden" name="selected_products[]" value="${id}">`;
+        });
+        
+        formHtml += '</form>';
+        
+        console.log('Form HTML:', formHtml);
+        
+        // Add form to body and submit
+        const $form = $(formHtml);
+        $('body').append($form);
+        $form.submit();
+    }
+}
+// Batch Permanent Delete Products
+function batchPermanentDelete() {
+    console.log('batchPermanentDelete called');
+    const selectedIds = getSelectedProducts();
+    console.log('Selected IDs:', selectedIds);
+    
+    if (selectedIds.length === 0) {
+        alert('Please select products to permanently delete');
+        return;
+    }
+    
+    if (confirm(`⚠️ WARNING: This will attempt to PERMANENTLY delete ${selectedIds.length} selected product(s)!\n\nProducts with order history will be skipped and cannot be permanently deleted.\n\nThis action cannot be undone for products without orders. Are you sure?`)) {
+        if (confirm('This is your final confirmation. Products without order history will be completely removed from the database. Continue?')) {
+            console.log('User confirmed permanent delete');
+            
+            // Create form HTML as string
+            let formHtml = '<form method="POST" style="display:none;">';
+            formHtml += '<input type="hidden" name="batch_permanent_delete" value="1">';
+            
+            selectedIds.forEach(id => {
+                formHtml += `<input type="hidden" name="selected_products[]" value="${id}">`;
+            });
+            
+            formHtml += '</form>';
+            
+            console.log('Form HTML:', formHtml);
+            
+            // Add form to body and submit
+            const $form = $(formHtml);
+            $('body').append($form);
+            $form.submit();
+        }
+    }
+}

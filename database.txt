@@ -42,7 +42,7 @@ CREATE TABLE Product (
     description TEXT,
     category VARCHAR(100),
     stock INT NOT NULL,
-    status ENUM('Available', 'Unavailable') NOT NULL DEFAULT 'Available',
+    status ENUM('Available', 'Unavailable', 'Deleted') NOT NULL DEFAULT 'Available',
     main_image_path VARCHAR(255),
     created_date DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
