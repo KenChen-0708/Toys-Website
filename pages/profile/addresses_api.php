@@ -45,13 +45,32 @@ function validate_fields($line1, $city, $postcode) {
   return $errors;
 }
 
+// Check if the same address already exists for this member (case-insensitive via collation)
+function address_exists($pdo, $memberId, $line1, $line2, $city, $state, $postcode, $country, $excludeId = null) {
+  $sql = "SELECT 1 FROM Shipping_Address WHERE member_id = ? AND COALESCE(address_line1, '') = ? AND COALESCE(address_line2, '') = ? AND COALESCE(city, '') = ? AND COALESCE(state, '') = ? AND COALESCE(postal_code, '') = ? AND COALESCE(country, '') = ?";
+  $params = [$memberId, $line1, $line2, $city, $state, $postcode, $country];
+  if ($excludeId !== null) {
+    $sql .= " AND shipping_address_id <> ?";
+    $params[] = $excludeId;
+  }
+  $sql .= " LIMIT 1";
+  $stmt = $pdo->prepare($sql);
+  $stmt->execute($params);
+  return (bool)$stmt->fetchColumn();
+}
+
 switch ($action) {
   case 'create':
     $errs = validate_fields($line1, $city, $postcode);
     if ($errs) respond(false, ['error' => implode(' ', $errs)], 422);
 
+    $countryToSave = $country ?: 'Malaysia';
+    if (address_exists($pdo, $memberId, $line1, $line2 ?: '', $city, $state ?: '', $postcode ?: '', $countryToSave)) {
+      respond(false, ['error' => 'This is a duplicate address. You already saved this exact address.'], 409);
+    }
+
     $ins = $pdo->prepare("INSERT INTO Shipping_Address (member_id, address_line1, address_line2, city, state, postal_code, country, created_date) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-    $ins->execute([$memberId, $line1, $line2 ?: null, $city, $state ?: null, $postcode ?: null, $country ?: 'Malaysia']);
+    $ins->execute([$memberId, $line1, $line2 ?: null, $city, $state ?: null, $postcode ?: null, $countryToSave]);
     respond(true, ['message' => 'Address added']);
 
   case 'update':
@@ -66,8 +85,13 @@ switch ($action) {
     $errs = validate_fields($line1, $city, $postcode);
     if ($errs) respond(false, ['error' => implode(' ', $errs)], 422);
 
+    $countryToSave = $country ?: 'Malaysia';
+    if (address_exists($pdo, $memberId, $line1, $line2 ?: '', $city, $state ?: '', $postcode ?: '', $countryToSave, $addrId)) {
+      respond(false, ['error' => 'This is a duplicate address. You already saved this exact address.'], 409);
+    }
+
     $upd = $pdo->prepare("UPDATE Shipping_Address SET address_line1 = ?, address_line2 = ?, city = ?, state = ?, postal_code = ?, country = ? WHERE shipping_address_id = ?");
-    $upd->execute([$line1, $line2 ?: null, $city, $state ?: null, $postcode ?: null, $country ?: 'Malaysia', $addrId]);
+    $upd->execute([$line1, $line2 ?: null, $city, $state ?: null, $postcode ?: null, $countryToSave, $addrId]);
     respond(true, ['message' => 'Address updated']);
 
   case 'delete':
