@@ -1062,6 +1062,28 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 </script>
 <script src="/assets/js/account.js?v=<?= @filemtime(__DIR__ . '/assets/js/account.js') ?: time() ?>"></script>
 
+<script>
+// Auto-dismiss alert messages after 5 seconds (errors and success messages)
+document.addEventListener('DOMContentLoaded', function() {
+  const alerts = document.querySelectorAll('.alert[role="alert"]');
+  alerts.forEach(alert => {
+    // Set a timeout to fade out and remove the alert
+    setTimeout(() => {
+      alert.style.transition = 'opacity 0.3s ease, max-height 0.3s ease';
+      alert.style.opacity = '0';
+      alert.style.maxHeight = '0';
+      alert.style.overflow = 'hidden';
+      alert.style.marginBottom = '0';
+      
+      // Remove after animation completes
+      setTimeout(() => {
+        alert.remove();
+      }, 300);
+    }, 5000); // 5 seconds before disappearing
+  });
+});
+</script>
+
 <!-- UI Confirm Modal -->
 <div class="address-edit-modal" id="confirmModal">
   <div class="address-edit-modal__content">
