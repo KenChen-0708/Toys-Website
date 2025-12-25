@@ -475,7 +475,7 @@ include '../../partials/header.php';
         modalBody.innerHTML = '<p style="text-align: center; padding: 20px;">Loading review...</p>';
         modal.style.display = 'flex';
 
-        fetch('../../pages/review/review.php?order_id=' + orderId + '&ajax=1')
+        fetch('../review/review.php?order_id=' + orderId + '&ajax=1')
             .then(response => response.text())
             .then(html => {
                 modalBody.innerHTML = html;
@@ -504,6 +504,19 @@ include '../../partials/header.php';
                 e.preventDefault();
                 const formData = new FormData(form);
                 
+                // Find the file input in this form and add files from our storage
+                const fileInput = form.querySelector('input[type="file"][name="photos[]"]');
+                if (fileInput && uploadedFiles.has(fileInput)) {
+                    // Remove any existing photo entries
+                    formData.delete('photos[]');
+                    
+                    // Add files from our storage
+                    const files = uploadedFiles.get(fileInput) || [];
+                    files.forEach(file => {
+                        formData.append('photos[]', file);
+                    });
+                }
+                
                 fetch('../../pages/review/review_post.php?ajax=1', {
                     method: 'POST',
                     body: formData
@@ -516,8 +529,9 @@ include '../../partials/header.php';
                         modalBody.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="color: #10b981; font-size: 16px; font-weight: 600; margin-bottom: 16px;">✓ ' + data.message + '</div><button class="btn btn-primary" onclick="closeReviewModal()">Close</button></div>';
                         setTimeout(() => {
                             closeReviewModal();
-                            location.reload();
-                        }, 2000);
+                            // Reload the page to refresh all data including photos
+                            window.location.reload();
+                        }, 1500);
                     } else {
                         const modalBody = document.getElementById('modalBody');
                         const alert = document.createElement('div');
@@ -540,6 +554,9 @@ include '../../partials/header.php';
             form._submitHandler = submitHandler;
             form.addEventListener('submit', submitHandler);
         });
+        
+        // Attach file input handlers after forms are attached
+        attachFileInputHandlers();
     }
 
     function attachEditButtonListeners() {
@@ -553,11 +570,198 @@ include '../../partials/header.php';
                         form.style.display = 'flex';
                         form.style.flexDirection = 'column';
                         attachFormListener();
+                        attachFileInputHandlers();
                     } else {
                         form.style.display = 'none';
                     }
                 }
             });
+        });
+    }
+
+    // File input handling with preview
+    // Map to store files separately since input.files is read-only
+    const uploadedFiles = new Map();
+    
+    // Show UI alert message instead of browser alert
+    function showAlert(message, type = 'error') {
+        const modalBody = document.getElementById('modalBody');
+        if (!modalBody) return;
+        
+        const alert = document.createElement('div');
+        alert.className = `alert alert-${type}`;
+        alert.style.cssText = `
+            background: ${type === 'error' ? '#fee' : '#e8f5e9'};
+            color: ${type === 'error' ? '#c00' : '#2e7d32'};
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-size: 14px;
+            border-left: 4px solid ${type === 'error' ? '#c00' : '#4caf50'};
+            animation: slideIn 0.3s ease-out;
+        `;
+        alert.textContent = message;
+        
+        // Auto-dismiss after 4 seconds
+        setTimeout(() => {
+            alert.style.animation = 'fadeOut 0.3s ease-out';
+            setTimeout(() => alert.remove(), 300);
+        }, 4000);
+        
+        modalBody.insertBefore(alert, modalBody.firstChild);
+    }
+    
+    function attachFileInputHandlers() {
+        const fileInputs = document.querySelectorAll('.file-input-wrapper input[type="file"]');
+        
+        fileInputs.forEach(input => {
+            // Skip if already attached to prevent duplicate handlers
+            if (input._handlersAttached) {
+                return;
+            }
+            input._handlersAttached = true;
+            
+            // Initialize file storage for this input
+            if (!uploadedFiles.has(input)) {
+                uploadedFiles.set(input, []);
+            }
+            
+            const wrapper = input.closest('.file-input-wrapper');
+            if (!wrapper) return;
+            
+            const label = wrapper.querySelector('.file-label');
+            const preview = wrapper.querySelector('.file-preview');
+            
+            // Handle file selection from file picker
+            input.addEventListener('change', function() {
+                const currentFileCount = this.files.length;
+                
+                // Only update preview if files were actually selected
+                // If currentFileCount is 0, user just closed the dialog without selecting - ignore it
+                if (currentFileCount === 0) {
+                    return;
+                }
+                
+                // Store the files in our Map
+                uploadedFiles.set(input, Array.from(this.files));
+                updatePreview(input, preview);
+            });
+            
+            // Drag and drop
+            if (label) {
+                label.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    label.classList.add('dragover');
+                });
+                
+                label.addEventListener('dragleave', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // Check if we're actually leaving the label
+                    if (e.target === label) {
+                        label.classList.remove('dragover');
+                    }
+                });
+                
+                label.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    label.classList.remove('dragover');
+                    
+                    const droppedFiles = e.dataTransfer.files;
+                    
+                    if (droppedFiles.length === 0) {
+                        return;
+                    }
+                    
+                    // Get existing files from storage
+                    let storedFiles = uploadedFiles.get(input) || [];
+                    
+                    // Combine with dropped files
+                    const combinedFiles = [...storedFiles, ...Array.from(droppedFiles)];
+                    
+                    // Check if total exceeds 3
+                    if (combinedFiles.length > 3) {
+                        showAlert('You can upload maximum 3 photos per review.');
+                        return;
+                    }
+                    
+                    // Store the combined files
+                    uploadedFiles.set(input, combinedFiles);
+                    
+                    // Update preview
+                    updatePreview(input, preview);
+                });
+            }
+        });
+    }
+    
+    function updatePreview(input, preview) {
+        // Clear previous preview completely
+        while (preview.firstChild) {
+            preview.removeChild(preview.firstChild);
+        }
+        
+        // Get files from our storage Map instead of input.files
+        const files = uploadedFiles.get(input) || [];
+        
+        if (files.length > 3) {
+            showAlert('You can upload maximum 3 photos per review.');
+            uploadedFiles.set(input, []);
+            return;
+        }
+        
+        if (files.length === 0) {
+            return;
+        }
+        
+        // Process each file with index-based identification
+        files.forEach((file, index) => {
+            if (!file.type.startsWith('image/')) {
+                showAlert('Only image files are allowed.');
+                return;
+            }
+            
+            if (file.size > 2 * 1024 * 1024) {
+                showAlert('Each image must be 2MB or smaller.');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const item = document.createElement('div');
+                item.className = 'file-preview-item';
+                // Store the index to identify this specific file
+                item.setAttribute('data-file-index', index);
+                item.innerHTML = `
+                    <img src="${e.target.result}" alt="Preview">
+                    <button type="button" class="remove-btn" data-file-index="${index}">×</button>
+                `;
+                
+                const removeBtn = item.querySelector('.remove-btn');
+                removeBtn.addEventListener('click', function(evt) {
+                    evt.preventDefault();
+                    evt.stopPropagation();
+                    
+                    // Get the current files from storage
+                    const currentFiles = uploadedFiles.get(input) || [];
+                    const indexToRemove = parseInt(this.getAttribute('data-file-index'));
+                    
+                    // Remove file at the specified index
+                    if (indexToRemove >= 0 && indexToRemove < currentFiles.length) {
+                        // Remove the file from storage
+                        const newFiles = currentFiles.filter((f, i) => i !== indexToRemove);
+                        uploadedFiles.set(input, newFiles);
+                        
+                        // Refresh the preview
+                        updatePreview(input, preview);
+                    }
+                });
+                
+                preview.appendChild(item);
+            };
+            reader.readAsDataURL(file);
         });
     }
 
@@ -568,6 +772,13 @@ include '../../partials/header.php';
             closeReviewModal();
         }
     });
+    
+    // Initialize file handlers on modal load
+    const originalOpenReviewModal = window.openReviewModal;
+    window.openReviewModal = function(orderId) {
+        originalOpenReviewModal(orderId);
+    };
+
 </script>
 </body>
 

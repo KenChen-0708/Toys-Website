@@ -192,8 +192,26 @@ if ($is_ajax) {
 										<label class="form-label" for="review-text-<?php echo $product_id; ?>" style="font-size: 13px;">Update feedback</label>
 										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="3" placeholder="What did you like or dislike?" maxlength="1000" required style="font-size: 13px;"><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
 
+										<label class="form-label" style="font-size: 13px;">Current photos</label>
+										<?php if (!empty($media_list)): ?>
+											<div class="review-media" style="display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 12px 0;">
+												<?php foreach ($media_list as $path): ?>
+													<img src="<?php echo htmlspecialchars($path); ?>" alt="Review media" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+												<?php endforeach; ?>
+											</div>
+										<?php else: ?>
+											<p style="font-size: 12px; color: #6b7280; margin: 0 0 12px 0;">No photos yet</p>
+										<?php endif; ?>
+
 										<label class="form-label" style="font-size: 13px;">Update photos (optional, max 3)</label>
-										<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+										<div class="file-input-wrapper">
+											<input type="file" id="photos-modal-edit-<?php echo $product_id; ?>" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+											<label for="photos-modal-edit-<?php echo $product_id; ?>" class="file-label">
+												<span class="file-icon">📷</span>
+												<span class="file-text">Click to select photos</span>
+											</label>
+											<div class="file-preview" id="preview-modal-edit-<?php echo $product_id; ?>"></div>
+										</div>
 
 										<button type="submit" class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Update Review</button>
 								</form>								<?php endif; ?>
@@ -213,7 +231,14 @@ if ($is_ajax) {
 									<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="3" placeholder="What did you like or dislike?" maxlength="1000" required style="font-size: 13px;"></textarea>
 
 									<label class="form-label" style="font-size: 13px;">Upload photos (optional, max 3)</label>
-									<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+									<div class="file-input-wrapper">
+										<input type="file" id="photos-modal-new-<?php echo $product_id; ?>" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+										<label for="photos-modal-new-<?php echo $product_id; ?>" class="file-label">
+											<span class="file-icon">📷</span>
+											<span class="file-text">Click to select photos</span>
+										</label>
+										<div class="file-preview" id="preview-modal-new-<?php echo $product_id; ?>"></div>
+									</div>
 
 									<button type="submit" class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Submit Review</button>
 							</form>
@@ -335,8 +360,14 @@ if ($is_ajax) {
 										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="4" placeholder="What did you like or dislike?" maxlength="1000" required><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
 
 										<label class="form-label">Update photos (optional, max 3)</label>
-										<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
-
+									<div class="file-input-wrapper">
+										<input type="file" id="photos-edit-<?php echo $product_id; ?>" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
+										<label for="photos-edit-<?php echo $product_id; ?>" class="file-label">
+											<span class="file-icon">📷</span>
+											<span class="file-text">Click to select photos or drag & drop</span>
+										</label>
+										<div class="file-preview" id="preview-edit-<?php echo $product_id; ?>"></div>
+									</div>
 										<button type="submit" class="btn btn-primary">Update Review</button>
 									</form>
 								<?php endif; ?>
@@ -358,7 +389,14 @@ if ($is_ajax) {
 									<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="4" placeholder="What did you like or dislike?" maxlength="1000" required></textarea>
 
 									<label class="form-label">Upload photos (optional, max 3)</label>
-									<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
+									<div class="file-input-wrapper">
+										<input type="file" id="photos-new-<?php echo $product_id; ?>" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
+										<label for="photos-new-<?php echo $product_id; ?>" class="file-label">
+											<span class="file-icon">📷</span>
+											<span class="file-text">Click to select photos or drag & drop</span>
+										</label>
+										<div class="file-preview" id="preview-new-<?php echo $product_id; ?>"></div>
+									</div>
 
 									<button type="submit" class="btn btn-primary">Submit Review</button>
 								</form>
