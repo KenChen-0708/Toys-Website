@@ -480,6 +480,7 @@ include '../../partials/header.php';
             .then(html => {
                 modalBody.innerHTML = html;
                 attachFormListener();
+                attachEditButtonListeners();
             })
             .catch(error => {
                 modalBody.innerHTML = '<div style="color: red; padding: 20px;">Error loading review: ' + error + '</div>';
@@ -493,7 +494,13 @@ include '../../partials/header.php';
     function attachFormListener() {
         const forms = document.querySelectorAll('.review-form');
         forms.forEach(form => {
-            form.addEventListener('submit', function(e) {
+            // Remove old listener if exists
+            const oldListener = form._submitHandler;
+            if (oldListener) {
+                form.removeEventListener('submit', oldListener);
+            }
+            
+            const submitHandler = function(e) {
                 e.preventDefault();
                 const formData = new FormData(form);
                 
@@ -515,6 +522,7 @@ include '../../partials/header.php';
                         const modalBody = document.getElementById('modalBody');
                         const alert = document.createElement('div');
                         alert.className = 'alert alert-error';
+                        alert.style.cssText = 'background: #fee; color: #c00; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
                         alert.textContent = data.message || 'An error occurred';
                         modalBody.insertBefore(alert, modalBody.firstChild);
                     }
@@ -523,9 +531,32 @@ include '../../partials/header.php';
                     const modalBody = document.getElementById('modalBody');
                     const alert = document.createElement('div');
                     alert.className = 'alert alert-error';
+                    alert.style.cssText = 'background: #fee; color: #c00; padding: 12px; border-radius: 6px; margin-bottom: 12px;';
                     alert.textContent = 'Error submitting review';
                     modalBody.insertBefore(alert, modalBody.firstChild);
                 });
+            };
+            
+            form._submitHandler = submitHandler;
+            form.addEventListener('submit', submitHandler);
+        });
+    }
+
+    function attachEditButtonListeners() {
+        const editButtons = document.querySelectorAll('.toggle-edit-btn');
+        editButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const productId = this.getAttribute('data-product-id');
+                const form = document.getElementById('edit-form-' + productId);
+                if (form) {
+                    if (form.style.display === 'none' || form.style.display === '') {
+                        form.style.display = 'flex';
+                        form.style.flexDirection = 'column';
+                        attachFormListener();
+                    } else {
+                        form.style.display = 'none';
+                    }
+                }
             });
         });
     }
