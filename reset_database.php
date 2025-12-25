@@ -305,6 +305,17 @@ CREATE TABLE Member_Settings (
     UNIQUE KEY unique_member_setting (member_id)
 );
 
+-- SENT EMAIL LOG
+CREATE TABLE Sent_Email (
+    email_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    subject VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    recipient_count INT NOT NULL,
+    sent_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE
+);
+
 -- INSERT DATA
 INSERT INTO Product (name, price, description, category, stock, status, main_image_path) VALUES
 ('LCD Color Drawing Pad', 13.50, 'LCD Color Drawing Pad product.', 'artCraft', 10, 'Available', '../assets/img/Product1_artCraft_13.50_LCD Color Drawing Pad.png'),
@@ -543,6 +554,11 @@ VALUES
 -- Optional: Insert default settings for existing members (safely)
 INSERT IGNORE INTO Member_Settings (member_id, theme_preference)
 SELECT member_id, 'light' FROM Member;
+
+INSERT INTO Sent_Email (admin_id, subject, message, recipient_count, sent_at) VALUES
+(1, 'Welcome to Our Store!', 'Hello everyone, welcome to our new online store!', 11, '2025-12-01 09:00:00'),
+(1, 'Holiday Sale!', 'Check out our amazing holiday deals!', 11, '2025-12-15 10:30:00'),
+(2, 'Exclusive Offer', 'A special discount just for you.', 5, '2025-12-20 14:00:00');
 
 SQL;
 

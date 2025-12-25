@@ -3,6 +3,16 @@ if (session_status() === PHP_SESSION_NONE) {
   session_start();
 }
 
+if (!function_exists('e')) {
+  /**
+   * Escape HTML output
+   */
+  function e($value)
+  {
+    return htmlspecialchars($value ?? '', ENT_QUOTES, 'UTF-8');
+  }
+}
+
 function csrf_token()
 {
   if (empty($_SESSION['csrf_token'])) {
