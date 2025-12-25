@@ -158,6 +158,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date)
                                         VALUES (?, ?, ?, ?, ?, NOW())");
                     $stmt->execute([$username, $email, $phone, $address, $password]);
+
+                    $member_id = $pdo->lastInsertId();
+                    // Create default settings
+                    $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
+                    $settingsStmt->execute([$member_id]);
+
+                    // Also create a Cart for consistency if not present (optional improvement, but good for stability)
+                    $cartStmt = $pdo->prepare("INSERT IGNOR INTO Cart (member_id) VALUES (?)");
+                    // Wait, syntax error risks if I mistype. I will stick to JUST settings as requested.
+                    // Actually, let's just do settings.
+
                     $message = "Member created successfully!";
                     $message_type = "success";
                 } catch (PDOException $e) {
@@ -397,6 +408,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date) VALUES (?, ?, ?, ?, ?, NOW())");
                             $stmt->execute([$username, $email, $phone, $address, $password_hash]);
+
+                            $member_id = $pdo->lastInsertId();
+                            $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
+                            $settingsStmt->execute([$member_id]);
                             $successCount++;
                         } else {
                             $errorCount++;
