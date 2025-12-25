@@ -9,12 +9,46 @@ is_logged_in();
 
 // Redirect if not logged in
 if (!isset($_SESSION['member'])) {
-    header('Location: login.php');
+    header('Location: ../../login.php');
     exit;
 }
 
 // Get member info
 $member_id = $_SESSION['member']['id'];
+
+// Initialize message variables
+$success_message = '';
+$error_message = '';
+
+// Handle cancel order request
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cancel_order'])) {
+    $order_id = (int)$_POST['order_id'];
+    
+    try {
+        // Verify the order belongs to the logged-in member and status is Pending
+        $check_sql = "SELECT status FROM `Order` WHERE order_id = ? AND member_id = ?";
+        $check_stmt = $pdo->prepare($check_sql);
+        $check_stmt->execute([$order_id, $member_id]);
+        $order = $check_stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($order) {
+            if ($order['status'] === 'Pending') {
+                // Update status to Cancelled
+                $update_sql = "UPDATE `Order` SET status = 'Cancelled' WHERE order_id = ? AND member_id = ?";
+                $update_stmt = $pdo->prepare($update_sql);
+                $update_stmt->execute([$order_id, $member_id]);
+                $success_message = "Order #$order_id has been cancelled successfully. Your refund will be processed within 5-7 business days.";
+            } else {
+                $error_message = "Only pending orders can be cancelled. This order is already {$order['status']}.";
+            }
+        } else {
+            $error_message = "Order not found or you don't have permission to cancel this order.";
+        }
+    } catch (PDOException $e) {
+        $error_message = "Error cancelling order: " . $e->getMessage();
+        error_log("Cancel order error: " . $e->getMessage());
+    }
+}
 
 // Initialize ALL variables with default values FIRST
 $search = '';
@@ -179,6 +213,19 @@ include '../../partials/header.php';
 
     <h1>My Orders</h1>
 
+    <!-- Success/Error Messages -->
+    <?php if (!empty($success_message)): ?>
+        <div class="alert alert-success">
+            ✓ <?php echo htmlspecialchars($success_message); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if (!empty($error_message)): ?>
+        <div class="alert alert-error">
+            ⚠ <?php echo htmlspecialchars($error_message); ?>
+        </div>
+    <?php endif; ?>
+
     <!-- Filter/Search -->
     <div class="filter-bar">
         <div class="filter-header">
@@ -307,6 +354,12 @@ include '../../partials/header.php';
                             </td>
                             <td>
                                 <a class="btn btn-primary" href="order_details.php?order_id=<?php echo urlencode($row['order_id']); ?>">View</a>
+                                <?php if ($row['status'] === 'Pending'): ?>
+                                    <form method="POST" action="orders.php" style="display:inline; margin-top: 8px;" onsubmit="return confirm('Are you sure you want to cancel Order #<?php echo htmlspecialchars($row['order_id']); ?>? This action cannot be undone.');">
+                                        <input type="hidden" name="order_id" value="<?php echo htmlspecialchars($row['order_id']); ?>">
+                                        <button type="submit" name="cancel_order" class="btn btn-danger">Cancel</button>
+                                    </form>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <?php
