@@ -91,7 +91,7 @@ $(document).ready(function() {
     const quantity = parseInt($('#quantity').val());
     const originalHtml = $btn.html();
 
-    $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Adding...');
+    $btn.prop('disabled', true).html('<span class="spinner">⟳</span> Adding...');
 
     $.ajax({
       url: '../cart/cart_actions.php',
@@ -111,7 +111,7 @@ $(document).ready(function() {
             window.loadHeaderCounts();
           }
           
-          $btn.html('<i class="fi fi-rs-check"></i> Added!');
+          $btn.html('<span>✓</span> Added!');
           setTimeout(() => {
             $btn.html(originalHtml).prop('disabled', false);
           }, 1500);
@@ -138,7 +138,7 @@ $(document).ready(function() {
     const productId = $btn.data('product-id') || window.productId;
     const originalHtml = $btn.html();
 
-    $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
+    $btn.prop('disabled', true).html('<span class="spinner">⟳</span>');
 
     $.ajax({
       url: '../wishlist/wishlist_actions.php',
@@ -157,7 +157,7 @@ $(document).ready(function() {
             window.loadHeaderCounts();
           }
           
-          $btn.html('<i class="fi fi-ss-heart"></i>');
+          $btn.html('<span>♥</span>');
           setTimeout(() => {
             $btn.html(originalHtml).prop('disabled', false);
           }, 1500);
@@ -187,7 +187,7 @@ $(document).ready(function() {
     const quantity = parseInt($('#quantity').val());
     const originalHtml = $btn.html();
 
-    $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i> Processing...');
+    $btn.prop('disabled', true).html('<span class="spinner">⟳</span> Processing...');
 
     $.ajax({
       url: '../cart/cart_actions.php',
@@ -227,7 +227,7 @@ $(document).ready(function() {
     const productId = $btn.data('product-id');
     const originalHtml = $btn.html();
 
-    $btn.prop('disabled', true).html('<i class="fi fi-rs-spinner"></i>');
+    $btn.prop('disabled', true).html('<span class="spinner">⟳</span>');
 
     $.ajax({
       url: '../cart/cart_actions.php',
@@ -247,7 +247,7 @@ $(document).ready(function() {
             window.loadHeaderCounts();
           }
           
-          $btn.html('<i class="fi fi-rs-check"></i>');
+          $btn.html('<span>✓</span>');
           setTimeout(() => {
             $btn.html(originalHtml).prop('disabled', false);
           }, 1000);
@@ -273,7 +273,7 @@ $(document).ready(function() {
     const productId = $btn.data('product-id');
     const originalHtml = $btn.html();
 
-    $btn.html('<i class="fi fi-rs-spinner"></i>');
+    $btn.html('<span class="spinner">⟳</span>');
 
     $.ajax({
       url: '../wishlist/wishlist_actions.php',
@@ -292,7 +292,7 @@ $(document).ready(function() {
             window.loadHeaderCounts();
           }
           
-          $btn.html('<i class="fi fi-ss-heart"></i>');
+          $btn.html('<span>♥</span>');
           setTimeout(() => {
             $btn.html(originalHtml);
           }, 1000);

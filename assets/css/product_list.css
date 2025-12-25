@@ -1143,3 +1143,54 @@ body {
     padding: 1rem 1.5rem;
   }
 }
+/* Icon Styles */
+.search-icon {
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-filter-btn span:first-child,
+.close-sidebar span {
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
+.mobile-filter-btn:hover span:first-child,
+.close-sidebar:hover span {
+  opacity: 0.8;
+}
+/* Star Rating Styles for Product List */
+.star {
+  color: #d1d5db;
+  font-size: 1em;
+  margin-right: 2px;
+}
+
+.star.filled {
+  color: #fbbf24;
+}
+
+.star.half {
+  color: #fbbf24;
+}
+
+.product-rating .star {
+  font-size: 0.9em;
+}
+
+/* Spinner animation */
+.spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Toast icon styling */
+.toast-icon {
+  font-weight: bold;
+  margin-right: 8px;
+}
