@@ -333,10 +333,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['place_order'])) {
 
             $final_amount = $cart_total - $final_discount + $shipping_fee;
             
-            // Ensure final amount is never negative (minimum should be shipping fee if applicable)
-            if ($final_amount < 0) {
+            // Ensure final amount is never less than shipping fee (minimum RM5 when shipping applies)
+            if ($shipping_fee > 0 && $final_amount < $shipping_fee) {
                 $final_amount = $shipping_fee;
-                // Adjust discount to prevent negative total
+                // Adjust discount to ensure minimum total of shipping fee
+                $final_discount = $cart_total;
+            } elseif ($shipping_fee == 0 && $final_amount < 0) {
+                // For free shipping orders, ensure total is never negative
+                $final_amount = 0;
                 $final_discount = $cart_total;
             }
 
@@ -375,10 +379,17 @@ if ($cart_total >= $free_shipping_threshold) {
 
 $final_total = $cart_total - $voucher_discount + $shipping_fee;
 
-// Ensure final total is never negative (minimum should be shipping fee if applicable)
-if ($final_total < 0) {
+// Ensure final total is never less than shipping fee (minimum RM5 when shipping applies)
+if ($shipping_fee > 0 && $final_total < $shipping_fee) {
+    // Customer should pay minimum of shipping fee (RM5)
     $final_total = $shipping_fee;
-    // Adjust discount to prevent negative total
+    // Recalculate discount: if final_total = shipping_fee, then discount = cart_total
+    // Because: cart_total - discount + shipping_fee = shipping_fee
+    // Therefore: discount = cart_total
+    $voucher_discount = $cart_total;
+} elseif ($shipping_fee == 0 && $final_total < 0) {
+    // For free shipping orders, ensure total is never negative
+    $final_total = 0;
     $voucher_discount = $cart_total;
 }
 ?>
