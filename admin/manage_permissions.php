@@ -682,7 +682,6 @@ if ($selectedAdmin) {
                         <?php if ($selectedAdmin): ?>
                             <h3>Permissions for: <?= htmlspecialchars($selectedAdmin['username']) ?></h3>
                             <div class="info-box">
-                                <strong>Role:</strong> <?= htmlspecialchars(ucwords($selectedAdmin['role'])) ?><br>
                                 <strong>Note:</strong> Permissions inherited from role are shown as checked. Unchecking a permission will revoke it even if it's granted by the role (shown with ✕). Checking additional permissions will grant them beyond the role permissions.
                             </div>
 

@@ -977,6 +977,12 @@ jane_admin,jane@example.com,Password!234,super admin
                 }
             });
 
+            deleteBtn?.addEventListener('click', (e) => {
+                if (!confirm("Are you sure you want to delete the selected admin(s)?")) {
+                    e.preventDefault();
+                }
+            });
+
             updateButtons();
             syncSelectAll();
         }

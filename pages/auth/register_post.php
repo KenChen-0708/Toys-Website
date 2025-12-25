@@ -64,10 +64,10 @@ if (!$errors) {
 
         try {
             $stmt = $pdo->prepare("
-                INSERT INTO Member (username, password, email, phone_number, register_date)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO Member (username, password, email, phone_number, profile_photo_path, register_date)
+                VALUES (?, ?, ?, ?, ?, ?)
             ");
-            $stmt->execute([$username, $hash, $email, $phone, $now]);
+            $stmt->execute([$username, $hash, $email, $phone, '/assets/img/profile_photo/user_icon.svg', $now]);
 
             $member_id = $pdo->lastInsertId();
 
