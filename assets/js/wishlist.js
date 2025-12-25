@@ -104,16 +104,16 @@ $(document).ready(function() {
           }
           
           setTimeout(function() {
-            $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
+            $btn.html('<img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px; margin-right: 8px;"> Add to Cart').prop('disabled', false);
           }, 2000);
         } else {
           showAlert(response.message, 'error');
-          $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
+          $btn.html('<img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px; margin-right: 8px;"> Add to Cart').prop('disabled', false);
         }
       },
       error: function() {
         showAlert('An error occurred while adding to cart', 'error');
-        $btn.html('<i class="fi fi-rs-shopping-cart-add"></i> Add to Cart').prop('disabled', false);
+        $btn.html('<img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px; margin-right: 8px;"> Add to Cart').prop('disabled', false);
       }
     });
   });

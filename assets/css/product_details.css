@@ -748,3 +748,40 @@
     grid-template-columns: 1fr;
   }
 }
+/* Star Rating Styles */
+.product-details-page .star {
+  color: #d1d5db;
+  font-size: 1.2em;
+  margin-right: 2px;
+}
+
+.product-details-page .star.filled {
+  color: #fbbf24;
+}
+
+.product-details-page .star.half {
+  color: #fbbf24;
+}
+
+.product-details-page .rating-stars .star,
+.product-details-page .rating-stars-large .star {
+  font-size: 1.4em;
+}
+
+.product-details-page .product-rating-small .star {
+  font-size: 0.9em;
+}
+
+.product-details-page .review-rating .star {
+  font-size: 1em;
+}
+/* Spinner animation */
+.product-details-page .spinner {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

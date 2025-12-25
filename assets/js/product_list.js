@@ -229,7 +229,7 @@ $(document).ready(function () {
       $grid.html(`
         <div class="empty-state" style="grid-column: 1 / -1;">
           <div class="empty-icon">
-            <i class="fi fi-rs-box-open"></i>
+            <span style="font-size: 4rem; opacity: 0.6;">📦</span>
           </div>
           <h3 class="empty-title">No Products Found</h3>
           <p class="empty-text">We couldn't find any products matching your criteria. Try adjusting your filters.</p>
@@ -249,11 +249,11 @@ $(document).ready(function () {
       let starsHtml = '';
       for (let i = 1; i <= 5; i++) {
         if (i <= Math.floor(averageRating)) {
-          starsHtml += '<i class="fi fi-ss-star"></i>';
+          starsHtml += '<span class="star filled">★</span>';
         } else if (i - 0.5 <= averageRating) {
-          starsHtml += '<i class="fi fi-rs-star-half"></i>';
+          starsHtml += '<span class="star half">☆</span>';
         } else {
-          starsHtml += '<i class="fi fi-rs-star"></i>';
+          starsHtml += '<span class="star">☆</span>';
         }
       }
 
@@ -273,10 +273,10 @@ $(document).ready(function () {
             
             <div class="product-actions">
               <button class="action-btn wishlist-btn" data-product-id="${product.product_id}" aria-label="Add to Wishlist">
-                <i class="fi fi-rs-heart"></i>
+                <img src="../../assets/img/icon-heart.svg" alt="Heart" style="width: 16px; height: 16px;">
               </button>
               <a href="product_details.php?id=${product.product_id}" class="action-btn view-btn" aria-label="Quick View">
-                <i class="fi fi-rs-eye"></i>
+                <span>👁</span>
               </a>
             </div>
           </div>
@@ -297,7 +297,7 @@ $(document).ready(function () {
             <div class="product-footer">
               <span class="product-price">RM ${parseFloat(product.price).toFixed(2)}</span>
               <button class="add-to-cart-btn" data-product-id="${product.product_id}" aria-label="Add to Cart">
-                <i class="fi fi-rs-shopping-cart-add"></i>
+                <img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px;">
               </button>
             </div>
           </div>
@@ -325,7 +325,7 @@ $(document).ready(function () {
     if (pagination.current_page > 1) {
       html += `
         <a href="#" class="pagination-btn" data-page="${pagination.current_page - 1}">
-          <i class="fi fi-rs-angle-left"></i>
+          <span>‹</span>
         </a>
       `;
     }
@@ -360,7 +360,7 @@ $(document).ready(function () {
     if (pagination.current_page < pagination.total_pages) {
       html += `
         <a href="#" class="pagination-btn" data-page="${pagination.current_page + 1}">
-          <i class="fi fi-rs-angle-right"></i>
+          <span>›</span>
         </a>
       `;
     }
@@ -390,7 +390,7 @@ $(document).ready(function () {
   function addToCart(productId, $btn) {
     $btn.prop('disabled', true);
     const originalHtml = $btn.html();
-    $btn.html('<i class="fi fi-rs-spinner"></i>');
+    $btn.html('<span class="spinner">⟳</span>');
 
     $.ajax({
       url: '../cart/cart_actions.php',
@@ -408,7 +408,7 @@ $(document).ready(function () {
             updateCartCount(response.cart_count);
           }
 
-          $btn.html('<i class="fi fi-rs-check"></i>');
+          $btn.html('<span>✓</span>');
           setTimeout(() => {
             $btn.html(originalHtml);
             $btn.prop('disabled', false);
@@ -523,14 +523,20 @@ $(document).ready(function () {
     $('.toast').remove();
 
     const iconMap = {
-      success: 'fi-rs-check-circle',
-      error: 'fi-rs-cross-circle',
-      info: 'fi-rs-info'
+      success: 'check-circle',
+      error: 'cross-circle',
+      info: 'info'
+    };
+
+    const iconSymbols = {
+      success: '✓',
+      error: '✗',
+      info: 'ℹ'
     };
 
     const $toast = $(`
       <div class="toast toast--${type}">
-        <i class="fi ${iconMap[type]} toast-icon"></i>
+        <span class="toast-icon">${iconSymbols[type]}</span>
         <span class="toast-message">${escapeHtml(message)}</span>
       </div>
     `);
