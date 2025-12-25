@@ -60,7 +60,11 @@ try {
 
     // Build line items for Stripe with images
     $line_items = [];
-    $domain = 'http://localhost:8000';
+    
+    // Dynamic domain detection to support different ports
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST']; // This includes the port automatically
+    $domain = $protocol . '://' . $host;
 
     // Check if there's a discount applied
     $has_discount = $final_discount > 0.01;
