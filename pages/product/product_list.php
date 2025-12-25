@@ -23,8 +23,6 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
-  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-solid-straight/css/uicons-solid-straight.css" />
   <link rel="stylesheet" href="../../assets/css/product_list.css" />
   <link rel="stylesheet" href="/assets/css/styles.css">
   <title><?= htmlspecialchars($title) ?></title>
@@ -48,7 +46,7 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
 
         <div class="header-actions">
           <button class="mobile-filter-btn" id="mobileFilterBtn">
-            <i class="fi fi-rs-settings-sliders"></i>
+            <span>⚙</span>
             <span>Filters</span>
           </button>
 
@@ -71,14 +69,14 @@ $categories = $pdo->query($cat_query)->fetchAll(PDO::FETCH_COLUMN);
           <div class="sidebar-header">
             <h2 class="sidebar-title">Filters</h2>
             <button class="close-sidebar" id="closeSidebar">
-              <i class="fi fi-rs-cross"></i>
+              <span>×</span>
             </button>
           </div>
 
           <div class="filter-group">
             <label class="filter-label">Search</label>
             <div class="search-wrapper">
-              <i class="fi fi-rs-search search-icon"></i>
+              <img src="../../assets/img/search.png" alt="Search" class="search-icon" style="width: 16px; height: 16px;">
               <input type="text" id="searchInput" class="search-input" placeholder="Search products...">
             </div>
           </div>

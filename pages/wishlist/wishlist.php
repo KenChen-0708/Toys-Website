@@ -263,7 +263,7 @@ try {
                 <button class="btn-add-cart"
                   data-product-id="<?= $item['product_id'] ?>"
                   <?= ($item['status'] === 'Unavailable' || $item['stock'] < 1) ? 'disabled' : '' ?>>
-                  <i class="fi fi-rs-shopping-cart-add"></i>
+                  <img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px; margin-right: 8px;">
                   Add to Cart
                 </button>
               </div>

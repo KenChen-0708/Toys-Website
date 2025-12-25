@@ -310,7 +310,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
             <div class="account-stat-card stat-card--wishlist" data-stat-action="wishlist" data-stat-url="/pages/wishlist/wishlist.php">
               <div class="stat-icon stat-icon--wishlist">
-                <i class="fi fi-rs-heart"></i>
+                <img src="/assets/img/icon-heart.svg" alt="Heart" style="width: 24px; height: 24px;">
               </div>
               <div class="stat-body">
                 <p class="stat-label">Wishlist Items</p>

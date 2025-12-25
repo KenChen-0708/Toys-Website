@@ -128,7 +128,7 @@
 
 .image-placeholder {
     width: 100%;
-    max-width: 400px;
+    max-width: 280px;
     aspect-ratio: 1;
     background: linear-gradient(135deg, var(--pastel-green-lighter) 0%, var(--pastel-green-light) 100%);
     border-radius: 20px;
@@ -139,9 +139,51 @@
 }
 
 .image-placeholder i {
-    font-size: 120px;
+    font-size: 80px;
     color: var(--white);
     opacity: 0.7;
+}
+
+/* SVG Icon Styles */
+.icon-lg {
+    width: 80px;
+    height: 80px;
+    color: var(--white);
+    opacity: 0.7;
+}
+
+.icon-sm {
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    flex-shrink: 0;
+}
+
+.icon-xs {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+/* Value Icon SVG */
+.value-icon svg {
+    width: 28px;
+    height: 28px;
+    color: var(--white);
+}
+
+/* Feature Item SVG */
+.feature-item svg {
+    width: 40px;
+    height: 40px;
+    color: var(--pastel-green);
+    margin-bottom: 20px;
+}
+
+/* CTA Button SVG */
+.cta-btn svg {
+    width: 18px;
+    height: 18px;
 }
 
 /* Values Grid */
@@ -158,7 +200,7 @@
 
 .value-card {
     background: var(--white);
-    padding: 40px 30px;
+    padding: 30px 20px;
     border-radius: 15px;
     text-align: center;
     box-shadow: var(--shadow-md);
@@ -173,8 +215,8 @@
 }
 
 .value-icon {
-    width: 80px;
-    height: 80px;
+    width: 65px;
+    height: 65px;
     background: linear-gradient(135deg, var(--pastel-green) 0%, var(--pastel-green-light) 100%);
     border-radius: 50%;
     display: flex;
@@ -184,7 +226,7 @@
 }
 
 .value-icon i {
-    font-size: 35px;
+    font-size: 28px;
     color: var(--white);
 }
 
@@ -209,7 +251,7 @@
 /* Map Container */
 .map-container {
     width: 100%;
-    height: 500px;
+    height: 350px;
     border-radius: 15px;
     overflow: hidden;
     box-shadow: var(--shadow-lg);
@@ -292,6 +334,10 @@
     color: var(--pastel-green);
 }
 
+.store-header h3 svg {
+    color: var(--pastel-green);
+}
+
 .store-badge {
     background: linear-gradient(135deg, var(--pastel-green) 0%, var(--pastel-green-light) 100%);
     color: var(--white);
@@ -320,6 +366,10 @@
     width: 20px;
     flex-shrink: 0;
     margin-top: 3px;
+}
+
+.store-details p svg {
+    color: var(--pastel-green);
 }
 
 .time-indent {

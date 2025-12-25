@@ -67,8 +67,6 @@ $title = htmlspecialchars($product['name']) . " — Details";
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-regular-straight/css/uicons-regular-straight.css" />
-  <link rel="stylesheet" href="https://cdn-uicons.flaticon.com/2.0.0/uicons-solid-straight/css/uicons-solid-straight.css" />
   <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
   <link rel="stylesheet" href="/assets/css/styles.css">
   <link rel="stylesheet" href="/assets/css/product_details.css">
@@ -113,11 +111,11 @@ $title = htmlspecialchars($product['name']) . " — Details";
           <div class="rating-stars">
             <?php for ($i = 1; $i <= 5; $i++): ?>
               <?php if ($i <= floor($average_rating)): ?>
-                <i class="fi fi-ss-star"></i>
+                <span class="star filled">★</span>
               <?php elseif ($i - 0.5 <= $average_rating): ?>
-                <i class="fi fi-rs-star-half"></i>
+                <span class="star half">☆</span>
               <?php else: ?>
-                <i class="fi fi-rs-star"></i>
+                <span class="star">☆</span>
               <?php endif; ?>
             <?php endfor; ?>
           </div>
@@ -133,11 +131,11 @@ $title = htmlspecialchars($product['name']) . " — Details";
           </div>
           <?php if ($product['status'] == 'Available' && $product['stock'] > 0): ?>
             <span class="stock-badge in-stock">
-              <i class="fi fi-rs-check-circle"></i> In Stock
+              <span>✓</span> In Stock
             </span>
           <?php else: ?>
             <span class="stock-badge out-of-stock">
-              <i class="fi fi-rs-cross-circle"></i> Out of Stock
+              <span>✗</span> Out of Stock
             </span>
           <?php endif; ?>
         </div>
@@ -149,7 +147,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
         <div class="product-features">
           <div class="feature-item">
             <div class="feature-icon">
-              <i class="fi fi-rs-box"></i>
+              <span>📦</span>
             </div>
             <div class="feature-text">
               <strong>Stock Available</strong>
@@ -158,7 +156,7 @@ $title = htmlspecialchars($product['name']) . " — Details";
           </div>
           <div class="feature-item">
             <div class="feature-icon">
-              <i class="fi fi-rs-truck-side"></i>
+              <span>🚚</span>
             </div>
             <div class="feature-text">
               <strong>Free Shipping</strong>
@@ -171,26 +169,26 @@ $title = htmlspecialchars($product['name']) . " — Details";
           <label class="section-label">Quantity:</label>
           <div class="quantity-selector">
             <button class="qty-btn qty-minus" type="button" onclick="decreaseQty()">
-              <i class="fi fi-rs-minus-small"></i>
+              <span>−</span>
             </button>
             <input type="number" class="quantity-input" id="quantity" value="1" min="1" max="<?= $product['stock'] ?>" />
             <button class="qty-btn qty-plus" type="button" onclick="increaseQty()">
-              <i class="fi fi-rs-plus-small"></i>
+              <span>+</span>
             </button>
           </div>
         </div>
 
         <div class="action-buttons">
           <button class="btn btn-primary" id="addToCartBtn" data-product-id="<?= $product_id ?>" <?= ($product['status'] != 'Available' || $product['stock'] <= 0) ? 'disabled' : '' ?>>
-            <i class="fi fi-rs-shopping-cart-add"></i>
+            <img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px; margin-right: 8px;">
             Add to Cart
           </button>
           <button class="btn btn-secondary" id="buyNowBtn" data-product-id="<?= $product_id ?>" <?= ($product['status'] != 'Available' || $product['stock'] <= 0) ? 'disabled' : '' ?>>
-            <i class="fi fi-rs-shopping-bag"></i>
+            <span>🛍</span>
             Buy Now
           </button>
           <button class="btn btn-icon" id="addToWishlistBtn" data-product-id="<?= $product_id ?>" title="Add to Wishlist">
-            <i class="fi fi-rs-heart"></i>
+            <img src="../../assets/img/icon-heart.svg" alt="Heart" style="width: 16px; height: 16px;">
           </button>
         </div>
 
@@ -228,11 +226,11 @@ $title = htmlspecialchars($product['name']) . " — Details";
             <div class="rating-stars-large">
               <?php for ($i = 1; $i <= 5; $i++): ?>
                 <?php if ($i <= floor($average_rating)): ?>
-                  <i class="fi fi-ss-star"></i>
+                  <span class="star filled">★</span>
                 <?php elseif ($i - 0.5 <= $average_rating): ?>
-                  <i class="fi fi-rs-star-half"></i>
+                  <span class="star half">☆</span>
                 <?php else: ?>
-                  <i class="fi fi-rs-star"></i>
+                  <span class="star">☆</span>
                 <?php endif; ?>
               <?php endfor; ?>
             </div>
@@ -254,9 +252,9 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 <div class="review-rating">
                   <?php for ($i = 1; $i <= 5; $i++): ?>
                     <?php if ($i <= $review['rating']): ?>
-                      <i class="fi fi-ss-star"></i>
+                      <span class="star filled">★</span>
                     <?php else: ?>
-                      <i class="fi fi-rs-star"></i>
+                      <span class="star">☆</span>
                     <?php endif; ?>
                   <?php endfor; ?>
                 </div>
@@ -306,10 +304,10 @@ $title = htmlspecialchars($product['name']) . " — Details";
 
                 <div class="product-actions">
                   <button class="action-btn wishlist-btn" data-product-id="<?= $related['product_id'] ?>">
-                    <i class="fi fi-rs-heart"></i>
+                    <img src="../../assets/img/icon-heart.svg" alt="Heart" style="width: 16px; height: 16px;">
                   </button>
                   <a href="product_details.php?id=<?= $related['product_id'] ?>" class="action-btn">
-                    <i class="fi fi-rs-eye"></i>
+                    <span>👁</span>
                   </a>
                 </div>
               </div>
@@ -323,17 +321,17 @@ $title = htmlspecialchars($product['name']) . " — Details";
                 </h3>
 
                 <div class="product-rating-small">
-                  <i class="fi fi-ss-star"></i>
-                  <i class="fi fi-ss-star"></i>
-                  <i class="fi fi-ss-star"></i>
-                  <i class="fi fi-ss-star"></i>
-                  <i class="fi fi-rs-star"></i>
+                  <span class="star filled">★</span>
+                  <span class="star filled">★</span>
+                  <span class="star filled">★</span>
+                  <span class="star filled">★</span>
+                  <span class="star">☆</span>
                 </div>
 
                 <div class="product-footer">
                   <span class="product-price">RM <?= number_format($related['price'], 2) ?></span>
                   <button class="add-cart-btn" data-product-id="<?= $related['product_id'] ?>">
-                    <i class="fi fi-rs-shopping-cart-add"></i>
+                    <img src="../../assets/img/icon-cart.svg" alt="Cart" style="width: 16px; height: 16px;">
                   </button>
                 </div>
               </div>
