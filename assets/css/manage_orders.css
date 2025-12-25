@@ -329,6 +329,43 @@ tbody tr.row-Returned:hover {
   width: 100%;
 }
 
+/* Status Update Form - Enhanced visibility */
+.status-update-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 170px;
+  max-width: 220px;
+  padding: 10px;
+  background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.status-update-form:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.status-label {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-label::before {
+  content: '🔄';
+  font-size: 0.75rem;
+}
+
 /* Address Display Styles */
 .address-display {
   display: flex;
@@ -1049,20 +1086,68 @@ textarea {
 /* Keep status dropdowns clean and simple */
 select[name="status"] {
   font-size: 0.8125rem;
-  padding: 6px 10px;
-  border: 1px solid #cbd5e1;
+  padding: 8px 32px 8px 12px;
+  border: 2px solid #cbd5e1;
   border-radius: 6px;
-  background: white;
+  background: #ffffff;
   color: #1e293b;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%2364748b' d='M7 10L2 5h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  min-width: 140px;
+  position: relative;
 }
 
 select[name="status"]:hover {
   border-color: #94a3b8;
+  background-color: #f8fafc;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.12);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%233b82f6' d='M7 10L2 5h10z'/%3E%3C/svg%3E");
 }
 
 select[name="status"]:focus {
   outline: none;
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='%233b82f6' d='M7 10L2 5h10z'/%3E%3C/svg%3E");
+}
+
+/* Add visual indicator that status is interactive */
+select[name="status"]::before {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  background: linear-gradient(to left, rgba(203, 213, 225, 0.2), transparent);
+  pointer-events: none;
+  border-radius: 0 6px 6px 0;
+}
+
+/* Status-based colors for dropdown */
+select[name="status"] option[value="Pending"] {
+  color: #b45309;
+  background-color: #fef3c7;
+}
+
+select[name="status"] option[value="Shipped"] {
+  color: #047857;
+  background-color: #d1fae5;
+}
+
+select[name="status"] option[value="Delivered"] {
+  color: #15803d;
+  background-color: #d1fae5;
+}
+
+select[name="status"] option[value="Cancelled"] {
+  color: #b91c1c;
+  background-color: #fee2e2;
 }
