@@ -544,6 +544,21 @@ function updatePriceSummary(cartTotal, voucherDiscount, finalTotal, voucherCode)
         adjustedVoucherDiscount = cartTotal;
     }
 
+    // Recalculate final total with shipping and prevent negative values
+    let calculatedTotal = cartTotal + shippingFee - adjustedVoucherDiscount;
+    
+    // Ensure final total is never less than shipping fee (minimum RM5 when shipping applies)
+    if (shippingFee > 0 && calculatedTotal < shippingFee) {
+        calculatedTotal = shippingFee;
+        // Adjust discount display to match the minimum total requirement
+        adjustedVoucherDiscount = cartTotal; // This makes: cartTotal - cartTotal + shippingFee = shippingFee
+    } else if (shippingFee == 0 && calculatedTotal < 0) {
+        // For free shipping orders, ensure total is never negative
+        calculatedTotal = 0;
+        adjustedVoucherDiscount = cartTotal;
+    }
+
+    // Add discount row AFTER adjustment
     if (adjustedVoucherDiscount > 0) {
         html += `
             <div class="price-row discount">
@@ -552,14 +567,6 @@ function updatePriceSummary(cartTotal, voucherDiscount, finalTotal, voucherCode)
             </div>
             <input type="hidden" name="voucher_code_hidden" value="${voucherCode}">
         `;
-    }
-
-    // Recalculate final total with shipping and prevent negative values
-    let calculatedTotal = cartTotal + shippingFee - adjustedVoucherDiscount;
-    
-    // Ensure final total is never negative (minimum should be shipping fee if applicable)
-    if (calculatedTotal < 0) {
-        calculatedTotal = shippingFee;
     }
 
     html += `
