@@ -61,12 +61,16 @@ $offset = ($page - 1) * $per_page;
 
 // Build database query
 $sql = "SELECT o.order_id, o.order_date, o.total_amount, o.status,
-        o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, 
-        o.shipping_state, o.shipping_postal_code, o.shipping_country,
-        (SELECT p.main_image_path FROM Order_Item oi JOIN Product p ON oi.product_id = p.product_id 
-         WHERE oi.order_id = o.order_id LIMIT 1) AS thumb
-        FROM `Order` o
-        WHERE o.member_id = ?";
+    o.shipping_address_line1, o.shipping_address_line2, o.shipping_city, 
+    o.shipping_state, o.shipping_postal_code, o.shipping_country,
+    (SELECT p.main_image_path FROM Order_Item oi JOIN Product p ON oi.product_id = p.product_id 
+     WHERE oi.order_id = o.order_id LIMIT 1) AS thumb,
+    (SELECT COUNT(*) FROM Order_Item oi_count WHERE oi_count.order_id = o.order_id) AS item_count,
+    (SELECT COUNT(*) FROM Review r
+        JOIN Order_Item oi_review ON r.product_id = oi_review.product_id
+        WHERE oi_review.order_id = o.order_id AND r.member_id = o.member_id) AS reviewed_count
+    FROM `Order` o
+    WHERE o.member_id = ?";
 
 $params = [$member_id];
 
@@ -155,6 +159,7 @@ try {
     <link rel="stylesheet" href="assets/css/orders.css">
     <link rel="stylesheet" href="assets/css/styles.css">
     <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
+    <link rel="stylesheet" href="assets/css/review.css">
 </head>
 
 <?php
@@ -251,6 +256,7 @@ include 'partials/header.php';
                     <th>Status</th>
                     <th>Shipping Address</th>
                     <th>Actions</th>
+                    <th>Review</th>
                 </tr>
             </thead>
             <tbody>
@@ -294,17 +300,51 @@ include 'partials/header.php';
                             <td>
                                 <a class="btn btn-primary" href="order_details.php?order_id=<?php echo urlencode($row['order_id']); ?>">View</a>
                             </td>
+                            <td>
+                                <?php
+                                $item_count = (int)($row['item_count'] ?? 0);
+                                $reviewed_count = (int)($row['reviewed_count'] ?? 0);
+                                $all_reviewed = $item_count > 0 && $reviewed_count >= $item_count;
+
+                                if ($row['status'] === 'Delivered') {
+                                    if ($all_reviewed) {
+                                        echo '<button class="btn btn-success" onclick="openReviewModal(' . (int)$row['order_id'] . ')">View Review</button>';
+                                    } else {
+                                        echo '<button class="btn btn-secondary" onclick="openReviewModal(' . (int)$row['order_id'] . ')">Review</button>';
+                                    }
+                                } elseif ($row['status'] === 'Shipped') {
+                                    $tip = 'Shipped. You can leave a review once the order is Delivered.';
+                                    echo '<span class="review-pill review-pill-transit has-tooltip" title="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '" data-tooltip="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '">Shipped</span>';
+                                } elseif ($row['status'] === 'Pending') {
+                                    $tip = 'Not delivered yet. Reviews become available when status is Delivered.';
+                                    echo '<span class="review-pill review-pill-pending has-tooltip" title="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '" data-tooltip="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '">Pending</span>';
+                                } else {
+                                    $tip = 'Reviews are not available for this status.';
+                                    echo '<span class="review-pill review-pill-disabled has-tooltip" title="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '" data-tooltip="' . htmlspecialchars($tip, ENT_QUOTES, 'UTF-8') . '">N/A</span>';
+                                }
+                                ?>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="7" style="text-align:center; padding:40px;">No orders found.</td>
+                        <td colspan="8" style="text-align:center; padding:40px;">No orders found.</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
         </table>
     </div>
 
+</div>
+
+<!-- Review Modal -->
+<div id="reviewModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div class="modal-content" style="background: #ffffff; border-radius: 16px; width: 90%; max-width: 600px; max-height: 85vh; position: relative; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3); display: flex; flex-direction: column;">
+        <button class="modal-close" onclick="closeReviewModal()" style="position: absolute; top: 12px; right: 12px; background: none; border: none; font-size: 28px; cursor: pointer; color: #94a3b8; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; z-index: 10;">&times;</button>
+        <div id="modalBody" style="padding: 20px; overflow-y: auto; flex: 1;">
+            <p>Loading...</p>
+        </div>
+    </div>
 </div>
 
 <!-- Pagination -->
@@ -364,6 +404,76 @@ include 'partials/header.php';
 
         if (hasAdvancedFilters) {
             toggleAdvanced();
+        }
+    });
+
+    // Review Modal Functions
+    function openReviewModal(orderId) {
+        const modal = document.getElementById('reviewModal');
+        const modalBody = document.getElementById('modalBody');
+        modalBody.innerHTML = '<p style="text-align: center; padding: 20px;">Loading review...</p>';
+        modal.style.display = 'flex';
+
+        fetch('pages/product/review.php?order_id=' + orderId + '&ajax=1')
+            .then(response => response.text())
+            .then(html => {
+                modalBody.innerHTML = html;
+                attachFormListener();
+            })
+            .catch(error => {
+                modalBody.innerHTML = '<div style="color: red; padding: 20px;">Error loading review: ' + error + '</div>';
+            });
+    }
+
+    function closeReviewModal() {
+        document.getElementById('reviewModal').style.display = 'none';
+    }
+
+    function attachFormListener() {
+        const forms = document.querySelectorAll('.review-form');
+        forms.forEach(form => {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const formData = new FormData(form);
+                
+                fetch('pages/product/review_post.php?ajax=1', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const modal = document.getElementById('reviewModal');
+                        const modalBody = document.getElementById('modalBody');
+                        modalBody.innerHTML = '<div style="text-align: center; padding: 40px;"><div style="color: #10b981; font-size: 16px; font-weight: 600; margin-bottom: 16px;">✓ ' + data.message + '</div><button class="btn btn-primary" onclick="closeReviewModal()">Close</button></div>';
+                        setTimeout(() => {
+                            closeReviewModal();
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        const modalBody = document.getElementById('modalBody');
+                        const alert = document.createElement('div');
+                        alert.className = 'alert alert-error';
+                        alert.textContent = data.message || 'An error occurred';
+                        modalBody.insertBefore(alert, modalBody.firstChild);
+                    }
+                })
+                .catch(error => {
+                    const modalBody = document.getElementById('modalBody');
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-error';
+                    alert.textContent = 'Error submitting review';
+                    modalBody.insertBefore(alert, modalBody.firstChild);
+                });
+            });
+        });
+    }
+
+    // Close modal when clicking outside
+    window.addEventListener('click', function(e) {
+        const modal = document.getElementById('reviewModal');
+        if (e.target === modal) {
+            closeReviewModal();
         }
     });
 </script>
