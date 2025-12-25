@@ -635,6 +635,14 @@ $review_stats['five_star_reviews'] = $pdo->query("SELECT COUNT(*) FROM Review WH
                 exportButtonId: 'exportSelectedReviewsBtn'
             });
 
+            // Confirmation for batch delete
+            document.getElementById('deleteSelectedReviewsBtn')?.addEventListener('click', function(e) {
+                const count = document.querySelectorAll('input[name="selected_reviews[]"]:checked').length;
+                if (!confirm(`Are you sure you want to delete ${count} selected review(s)? This action cannot be undone.`)) {
+                    e.preventDefault();
+                }
+            });
+
             setupRowClickSelection('#reviewBulkForm .selectable-row');
         });
     </script>

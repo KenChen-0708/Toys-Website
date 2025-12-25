@@ -375,12 +375,12 @@ INSERT INTO Role (role_name) VALUES
 -- password: Password123!
 INSERT INTO admin (admin_id, username, password, email, role) VALUES
 (1, 'admin', '$2y$10$EmAKnZxA7KETDmLPgvsFa.zSkd/1RgJwfa9SLZ.qptPOXhDuclVHy', 'admin@example.com', 'super admin'),
-(2, 'user_admin', '$2y$10$KCljbye3yfPg/zMPIv4WLOTy8tSWn5ulxh/hakmOLuai5Fwfo.pbu', 'useradmin@example.com', 'user admin'),
-(3, 'admin_manager', '$2y$10$/mD2aLkUuqCAFkAYdhNg2u0AnVP44lvSqt9iw7d.tMSWVrnVr2oWi', 'adminmanager@example.com', 'admin manager'),
-(4, 'product_admin', '$2y$10$mbBDT8bCihrRZz/bgpaC6OWXMvwDdie1yOTlxkIHOxAjI2GGxHJWS', 'productadmin@example.com', 'product admin'),
-(5, 'order_admin', '$2y$10$6fF6eKkraui/jQS9J6sawO9W6R1thiuzEeotWkYUvnWi5su8ot.7C', 'orderadmin@example.com', 'order admin'),
-(6, 'support_admin', '$2y$10$1hVVlDAiWVCcA7OQ5k5JqOddpv0i1RarEDjwDChR.EgeprsXBEY..', 'supportadmin@example.com', 'support admin'),
-(7, 'analyst', '$2y$10$Ypqa7ilXbQm.LF7.pL5nW.gIxLmlgkARqkcAM/Vl.uklxsnz754nG', 'analyst@example.com', 'analyst');
+(2, 'admin_2', '$2y$10$KCljbye3yfPg/zMPIv4WLOTy8tSWn5ulxh/hakmOLuai5Fwfo.pbu', 'useradmin@example.com', 'user admin'),
+(3, 'admin_3', '$2y$10$/mD2aLkUuqCAFkAYdhNg2u0AnVP44lvSqt9iw7d.tMSWVrnVr2oWi', 'adminmanager@example.com', 'admin manager'),
+(4, 'admin_4', '$2y$10$mbBDT8bCihrRZz/bgpaC6OWXMvwDdie1yOTlxkIHOxAjI2GGxHJWS', 'productadmin@example.com', 'product admin'),
+(5, 'admin_5', '$2y$10$6fF6eKkraui/jQS9J6sawO9W6R1thiuzEeotWkYUvnWi5su8ot.7C', 'orderadmin@example.com', 'order admin'),
+(6, 'admin_6', '$2y$10$1hVVlDAiWVCcA7OQ5k5JqOddpv0i1RarEDjwDChR.EgeprsXBEY..', 'supportadmin@example.com', 'support admin'),
+(7, 'admin_7', '$2y$10$Ypqa7ilXbQm.LF7.pL5nW.gIxLmlgkARqkcAM/Vl.uklxsnz754nG', 'analyst@example.com', 'analyst');
 
 -- ROLE PERMISSIONS (default permissions for each role)
 -- Admin Manager

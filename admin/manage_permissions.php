@@ -3,8 +3,8 @@ session_start();
 include '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
-// Only Super Admin can manage permissions
-if (get_admin_role() !== 'super admin') {
+// Only Super Admin or admins with permission can manage permissions
+if (!has_permission('permissions', 'view')) {
     header('Location: admin_dashboard.php?error=access_denied');
     exit;
 }
@@ -32,6 +32,8 @@ $resources = [
     'analytics' => ['view'],
     'vouchers' => ['view', 'create', 'update', 'delete'],
     'emails' => ['view', 'create'],
+    'reviews' => ['view', 'delete'],
+    'permissions' => ['view', 'update'],
 ];
 
 $resourceLabels = [
@@ -43,6 +45,8 @@ $resourceLabels = [
     'analytics' => 'Analytics',
     'vouchers' => 'Vouchers',
     'emails' => 'Email Notifications',
+    'reviews' => 'Product Reviews',
+    'permissions' => 'Roles & Permissions',
 ];
 
 $actionLabels = [
