@@ -76,191 +76,209 @@ if ($selectedAdminId > 0) {
 
 // Handle role creation
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_role'])) {
-    $newRole = trim($_POST['new_role_name'] ?? '');
-
-    if (!empty($newRole)) {
-        // Check if role already exists
-        $stmt = $pdo->prepare("SELECT COUNT(*) FROM Role WHERE role_name = ?");
-        $stmt->execute([$newRole]);
-
-        if ($stmt->fetchColumn() > 0) {
-            $message = "Role '$newRole' already exists!";
-            $message_type = "error";
-        } else {
-            $stmt = $pdo->prepare("INSERT INTO Role (role_name) VALUES (?)");
-            $stmt->execute([$newRole]);
-            $_SESSION['permission_message'] = "Role '$newRole' created successfully! You can now assign permissions to it.";
-            $_SESSION['permission_message_type'] = "success";
-            header("Location: manage_permissions.php?tab=roles&role=" . urlencode($newRole));
-            exit;
-        }
+    if (!has_permission('permissions', 'update')) {
+        $message = "You don't have permission to create roles.";
+        $message_type = 'error';
     } else {
-        $message = "Role name cannot be empty!";
-        $message_type = "error";
+        $newRole = trim($_POST['new_role_name'] ?? '');
+
+        if (!empty($newRole)) {
+            // Check if role already exists
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Role WHERE role_name = ?");
+            $stmt->execute([$newRole]);
+
+            if ($stmt->fetchColumn() > 0) {
+                $message = "Role '$newRole' already exists!";
+                $message_type = "error";
+            } else {
+                $stmt = $pdo->prepare("INSERT INTO Role (role_name) VALUES (?)");
+                $stmt->execute([$newRole]);
+                $_SESSION['permission_message'] = "Role '$newRole' created successfully! You can now assign permissions to it.";
+                $_SESSION['permission_message_type'] = "success";
+                header("Location: manage_permissions.php?tab=roles&role=" . urlencode($newRole));
+                exit;
+            }
+        } else {
+            $message = "Role name cannot be empty!";
+            $message_type = "error";
+        }
     }
 }
 
 // Handle role deletion
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_role'])) {
-    $roleToDelete = trim($_POST['role_to_delete'] ?? '');
+    if (!has_permission('permissions', 'update')) {
+        $message = "You don't have permission to delete roles.";
+        $message_type = 'error';
+    } else {
+        $roleToDelete = trim($_POST['role_to_delete'] ?? '');
 
-    if (!empty($roleToDelete) && $roleToDelete !== 'super admin') {
-        try {
-            // Check if any admins have this role
-            $stmt = $pdo->prepare("SELECT COUNT(*) FROM Admin WHERE role = ?");
-            $stmt->execute([$roleToDelete]);
-            $adminCount = $stmt->fetchColumn();
+        if (!empty($roleToDelete) && $roleToDelete !== 'super admin') {
+            try {
+                // Check if any admins have this role
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM Admin WHERE role = ?");
+                $stmt->execute([$roleToDelete]);
+                $adminCount = $stmt->fetchColumn();
 
-            if ($adminCount > 0) {
-                $message = "Cannot delete role '$roleToDelete' because $adminCount admin(s) are using it. Please reassign them first.";
+                if ($adminCount > 0) {
+                    $message = "Cannot delete role '$roleToDelete' because $adminCount admin(s) are using it. Please reassign them first.";
+                    $message_type = "error";
+                } else {
+                    $pdo->beginTransaction();
+
+                    // Delete role permissions
+                    $stmt = $pdo->prepare("DELETE FROM Role_Permission WHERE role = ?");
+                    $stmt->execute([$roleToDelete]);
+
+                    // Delete the role from Role table
+                    $stmt = $pdo->prepare("DELETE FROM Role WHERE role_name = ?");
+                    $stmt->execute([$roleToDelete]);
+
+                    $pdo->commit();
+                    $message = "Role '$roleToDelete' deleted successfully!";
+                    $message_type = "success";
+                    $selectedRole = '';
+                    $activeTab = 'roles';
+
+                    // Refresh roles list
+                    $stmt = $pdo->query("SELECT role_name FROM Role WHERE role_name != 'super admin' ORDER BY role_name");
+                    $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                }
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $message = "Error deleting role: " . $e->getMessage();
                 $message_type = "error";
-            } else {
-                $pdo->beginTransaction();
-
-                // Delete role permissions
-                $stmt = $pdo->prepare("DELETE FROM Role_Permission WHERE role = ?");
-                $stmt->execute([$roleToDelete]);
-
-                // Delete the role from Role table
-                $stmt = $pdo->prepare("DELETE FROM Role WHERE role_name = ?");
-                $stmt->execute([$roleToDelete]);
-
-                $pdo->commit();
-                $message = "Role '$roleToDelete' deleted successfully!";
-                $message_type = "success";
-                $selectedRole = '';
-                $activeTab = 'roles';
-
-                // Refresh roles list
-                $stmt = $pdo->query("SELECT role_name FROM Role WHERE role_name != 'super admin' ORDER BY role_name");
-                $roles = $stmt->fetchAll(PDO::FETCH_COLUMN);
             }
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $message = "Error deleting role: " . $e->getMessage();
+        } else {
+            $message = "Invalid role or cannot delete super admin role!";
             $message_type = "error";
         }
-    } else {
-        $message = "Invalid role or cannot delete super admin role!";
-        $message_type = "error";
     }
 }
 
 // Handle role permission updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_role_permissions'])) {
-    $role = trim($_POST['role'] ?? '');
+    if (!has_permission('permissions', 'update')) {
+        $message = "You don't have permission to update role permissions.";
+        $message_type = 'error';
+    } else {
+        $role = trim($_POST['role'] ?? '');
 
-    if (!empty($role)) {
-        try {
-            $pdo->beginTransaction();
+        if (!empty($role)) {
+            try {
+                $pdo->beginTransaction();
 
-            // Delete existing permissions for this role
-            $stmt = $pdo->prepare("DELETE FROM Role_Permission WHERE role = ?");
-            $stmt->execute([$role]);
+                // Delete existing permissions for this role
+                $stmt = $pdo->prepare("DELETE FROM Role_Permission WHERE role = ?");
+                $stmt->execute([$role]);
 
-            // Insert new permissions
-            if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
-                $insertStmt = $pdo->prepare("INSERT INTO Role_Permission (role, resource, action) VALUES (?, ?, ?)");
+                // Insert new permissions
+                if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
+                    $insertStmt = $pdo->prepare("INSERT INTO Role_Permission (role, resource, action) VALUES (?, ?, ?)");
 
-                foreach ($_POST['permissions'] as $permission) {
-                    list($resource, $action) = explode(':', $permission);
-                    $insertStmt->execute([$role, $resource, $action]);
+                    foreach ($_POST['permissions'] as $permission) {
+                        list($resource, $action) = explode(':', $permission);
+                        $insertStmt->execute([$role, $resource, $action]);
+                    }
                 }
-            }
 
-            $pdo->commit();
-            $message = "Role permissions updated successfully!";
-            $message_type = "success";
-            $selectedRole = $role;
-            $activeTab = 'roles';
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $message = "Error updating role permissions: " . $e->getMessage();
-            $message_type = "error";
+                $pdo->commit();
+                $message = "Role permissions updated successfully!";
+                $message_type = "success";
+                $selectedRole = $role;
+                $activeTab = 'roles';
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $message = "Error updating role permissions: " . $e->getMessage();
+                $message_type = "error";
+            }
         }
     }
 }
 
 // Handle admin permission updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_admin_permissions'])) {
-    $adminId = (int)($_POST['admin_id'] ?? 0);
+    if (!has_permission('permissions', 'update')) {
+        $message = "You don't have permission to update admin permission overrides.";
+        $message_type = 'error';
+    } else {
+        $adminId = (int)($_POST['admin_id'] ?? 0);
 
-    if ($adminId > 0 && $selectedAdmin) {
-        try {
-            $pdo->beginTransaction();
+        if ($adminId > 0 && $selectedAdmin) {
+            try {
+                $pdo->beginTransaction();
 
-            // Get all permissions that should be checked (from form)
-            $checkedPermissions = [];
-            if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
-                foreach ($_POST['permissions'] as $permission) {
-                    $checkedPermissions[] = $permission;
+                // Get all permissions that should be checked (from form)
+                $checkedPermissions = [];
+                if (isset($_POST['permissions']) && is_array($_POST['permissions'])) {
+                    foreach ($_POST['permissions'] as $permission) {
+                        $checkedPermissions[] = $permission;
+                    }
                 }
-            }
 
-            // Get role permissions for this admin
-            $rolePermissions = [];
-            $stmt = $pdo->prepare("SELECT resource, action FROM Role_Permission WHERE role = ?");
-            $stmt->execute([$selectedAdmin['role']]);
-            $rolePerms = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            foreach ($rolePerms as $perm) {
-                $rolePermissions[] = $perm['resource'] . ':' . $perm['action'];
-            }
+                // Get role permissions for this admin
+                $rolePermissions = [];
+                $stmt = $pdo->prepare("SELECT resource, action FROM Role_Permission WHERE role = ?");
+                $stmt->execute([$selectedAdmin['role']]);
+                $rolePerms = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rolePerms as $perm) {
+                    $rolePermissions[] = $perm['resource'] . ':' . $perm['action'];
+                }
 
-            // Process each possible permission
-            foreach ($resources as $resource => $actions) {
-                foreach ($actions as $action) {
-                    $permissionKey = $resource . ':' . $action;
-                    $isChecked = in_array($permissionKey, $checkedPermissions);
-                    $isInRole = in_array($permissionKey, $rolePermissions);
+                // Process each possible permission
+                foreach ($resources as $resource => $actions) {
+                    foreach ($actions as $action) {
+                        $permissionKey = $resource . ':' . $action;
+                        $isChecked = in_array($permissionKey, $checkedPermissions);
+                        $isInRole = in_array($permissionKey, $rolePermissions);
 
-
-
-                    if ($isChecked) {
-                        // Permission is checked
-                        if ($isInRole) {
-                            // It's in role permissions, so remove from denied (if exists)
-                            $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
-                            $stmt->execute([$adminId, $resource, $action]);
+                        if ($isChecked) {
+                            // Permission is checked
+                            if ($isInRole) {
+                                // It's in role permissions, so remove from denied (if exists)
+                                $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
+                                $stmt->execute([$adminId, $resource, $action]);
+                            } else {
+                                // It's not in role permissions, so add to explicit permissions
+                                $stmt = $pdo->prepare("INSERT IGNORE INTO Admin_Permission (admin_id, resource, action) VALUES (?, ?, ?)");
+                                $stmt->execute([$adminId, $resource, $action]);
+                                // Also remove from denied if exists
+                                $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
+                                $stmt->execute([$adminId, $resource, $action]);
+                            }
                         } else {
-                            // It's not in role permissions, so add to explicit permissions
-                            $stmt = $pdo->prepare("INSERT IGNORE INTO Admin_Permission (admin_id, resource, action) VALUES (?, ?, ?)");
-                            $stmt->execute([$adminId, $resource, $action]);
-                            // Also remove from denied if exists
-                            $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
-                            $stmt->execute([$adminId, $resource, $action]);
-                        }
-                    } else {
-                        // Permission is unchecked
-                        if ($isInRole) {
-                            // It's in role permissions, so deny it
-                            $stmt = $pdo->prepare("INSERT IGNORE INTO Admin_Permission_Denied (admin_id, resource, action) VALUES (?, ?, ?)");
-                            $stmt->execute([$adminId, $resource, $action]);
-                        } else {
-                            // It's not in role permissions, so remove from explicit permissions
-                            $stmt = $pdo->prepare("DELETE FROM Admin_Permission WHERE admin_id = ? AND resource = ? AND action = ?");
-                            $stmt->execute([$adminId, $resource, $action]);
-                            // Also remove from denied if exists
-                            $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
-                            $stmt->execute([$adminId, $resource, $action]);
+                            // Permission is unchecked
+                            if ($isInRole) {
+                                // It's in role permissions, so deny it
+                                $stmt = $pdo->prepare("INSERT IGNORE INTO Admin_Permission_Denied (admin_id, resource, action) VALUES (?, ?, ?)");
+                                $stmt->execute([$adminId, $resource, $action]);
+                            } else {
+                                // It's not in role permissions, so remove from explicit permissions
+                                $stmt = $pdo->prepare("DELETE FROM Admin_Permission WHERE admin_id = ? AND resource = ? AND action = ?");
+                                $stmt->execute([$adminId, $resource, $action]);
+                                // Also remove from denied if exists
+                                $stmt = $pdo->prepare("DELETE FROM Admin_Permission_Denied WHERE admin_id = ? AND resource = ? AND action = ?");
+                                $stmt->execute([$adminId, $resource, $action]);
+                            }
                         }
                     }
                 }
+
+                $pdo->commit();
+                $message = "Admin permissions updated successfully!";
+                $message_type = "success";
+                $selectedAdminId = $adminId;
+                $activeTab = 'admins';
+
+                // Reload admin info
+                $stmt = $pdo->prepare("SELECT admin_id, username, email, role FROM Admin WHERE admin_id = ?");
+                $stmt->execute([$adminId]);
+                $selectedAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
+            } catch (PDOException $e) {
+                $pdo->rollBack();
+                $message = "Error updating admin permissions: " . $e->getMessage();
+                $message_type = "error";
             }
-
-            $pdo->commit();
-            $message = "Admin permissions updated successfully!";
-            $message_type = "success";
-            $selectedAdminId = $adminId;
-            $activeTab = 'admins';
-
-            // Reload admin info
-            $stmt = $pdo->prepare("SELECT admin_id, username, email, role FROM Admin WHERE admin_id = ?");
-            $stmt->execute([$adminId]);
-            $selectedAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            $pdo->rollBack();
-            $message = "Error updating admin permissions: " . $e->getMessage();
-            $message_type = "error";
         }
     }
 }
@@ -595,7 +613,9 @@ if ($selectedAdmin) {
 
                         <!-- Role Management Buttons -->
                         <div style="margin-bottom: 15px; display: flex; gap: 8px; flex-direction: column;">
-                            <button class="btn btn-primary" onclick="openCreateRoleModal()" style="width: 100%; padding: 8px; font-size: 0.9rem;">+ Add New Role</button>
+                            <?php if (has_permission('permissions', 'update')): ?>
+                                <button class="btn btn-primary" onclick="openCreateRoleModal()" style="width: 100%; padding: 8px; font-size: 0.9rem;">+ Add New Role</button>
+                            <?php endif; ?>
                         </div>
 
                         <?php if (empty($roles)): ?>
@@ -615,10 +635,12 @@ if ($selectedAdmin) {
                         <?php if (!empty($selectedRole)): ?>
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid #f3f4f6;">
                                 <h3 style="margin: 0;">Permissions for Role: <?= htmlspecialchars(ucwords($selectedRole)) ?></h3>
-                                <button type="button" class="btn" onclick="confirmDeleteRole('<?= htmlspecialchars($selectedRole) ?>')"
-                                    style="background: #dc2626; color: white; padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
-                                    🗑 Delete Role
-                                </button>
+                                <?php if (has_permission('permissions', 'update')): ?>
+                                    <button type="button" class="btn" onclick="confirmDeleteRole('<?= htmlspecialchars($selectedRole) ?>')"
+                                        style="background: #dc2626; color: white; padding: 6px 12px; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+                                        🗑 Delete Role
+                                    </button>
+                                <?php endif; ?>
                             </div>
 
                             <form method="POST">
@@ -647,8 +669,10 @@ if ($selectedAdmin) {
                                 <?php endforeach; ?>
 
                                 <div style="margin-top: 30px; display: flex; gap: 10px;">
-                                    <button type="submit" id="role_save_btn" name="save_role_permissions" class="btn btn-primary" disabled style="opacity:0.6;cursor:not-allowed;">Save Role Permissions</button>
-                                    <button type="button" id="role_clear_btn" class="btn" disabled style="background: #cbd5e0;opacity:0.6;cursor:not-allowed;">Clear Selection</button>
+                                    <?php if (has_permission('permissions', 'update')): ?>
+                                        <button type="submit" id="role_save_btn" name="save_role_permissions" class="btn btn-primary" disabled style="opacity:0.6;cursor:not-allowed;">Save Role Permissions</button>
+                                        <button type="button" id="role_clear_btn" class="btn" disabled style="background: #cbd5e0;opacity:0.6;cursor:not-allowed;">Clear Selection</button>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         <?php else: ?>
@@ -733,8 +757,10 @@ if ($selectedAdmin) {
                                 <?php endforeach; ?>
 
                                 <div style="margin-top: 30px; display: flex; gap: 10px;">
-                                    <button type="submit" id="admin_save_btn" name="save_admin_permissions" class="btn btn-primary" disabled style="opacity:0.6;cursor:not-allowed;">Save Admin Permissions</button>
-                                    <button type="button" id="admin_clear_btn" class="btn" disabled style="background: #cbd5e0;opacity:0.6;cursor:not-allowed;">Clear Selection</button>
+                                    <?php if (has_permission('permissions', 'update')): ?>
+                                        <button type="submit" id="admin_save_btn" name="save_admin_permissions" class="btn btn-primary" disabled style="opacity:0.6;cursor:not-allowed;">Save Admin Permissions</button>
+                                        <button type="button" id="admin_clear_btn" class="btn" disabled style="background: #cbd5e0;opacity:0.6;cursor:not-allowed;">Clear Selection</button>
+                                    <?php endif; ?>
                                 </div>
                             </form>
                         <?php else: ?>

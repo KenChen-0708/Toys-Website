@@ -23,31 +23,39 @@ try {
 
 // Handle status update
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
-    $feedback_id = intval($_POST['feedback_id']);
-    $new_status = $_POST['status'];
-    $admin_response = trim($_POST['admin_response'] ?? '');
-    
-    try {
-        $sql = "UPDATE Feedback SET status = ?, admin_response = ?, updated_at = NOW() WHERE feedback_id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$new_status, $admin_response, $feedback_id]);
-        $success_message = 'Feedback updated successfully!';
-    } catch (PDOException $e) {
-        $error_message = 'Failed to update feedback: ' . $e->getMessage();
+    if (!has_permission('feedback', 'update')) {
+        $error_message = 'You do not have permission to update feedback.';
+    } else {
+        $feedback_id = intval($_POST['feedback_id']);
+        $new_status = $_POST['status'];
+        $admin_response = trim($_POST['admin_response'] ?? '');
+
+        try {
+            $sql = "UPDATE Feedback SET status = ?, admin_response = ?, updated_at = NOW() WHERE feedback_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$new_status, $admin_response, $feedback_id]);
+            $success_message = 'Feedback updated successfully!';
+        } catch (PDOException $e) {
+            $error_message = 'Failed to update feedback: ' . $e->getMessage();
+        }
     }
 }
 
 // Handle delete
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_feedback'])) {
-    $feedback_id = intval($_POST['feedback_id']);
-    
-    try {
-        $sql = "DELETE FROM Feedback WHERE feedback_id = ?";
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute([$feedback_id]);
-        $success_message = 'Feedback deleted successfully!';
-    } catch (PDOException $e) {
-        $error_message = 'Failed to delete feedback: ' . $e->getMessage();
+    if (!has_permission('feedback', 'delete')) {
+        $error_message = 'You do not have permission to delete feedback.';
+    } else {
+        $feedback_id = intval($_POST['feedback_id']);
+
+        try {
+            $sql = "DELETE FROM Feedback WHERE feedback_id = ?";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute([$feedback_id]);
+            $success_message = 'Feedback deleted successfully!';
+        } catch (PDOException $e) {
+            $error_message = 'Failed to delete feedback: ' . $e->getMessage();
+        }
     }
 }
 
@@ -68,7 +76,7 @@ try {
         while ($col = $member_columns_result->fetch()) {
             $member_columns[] = $col['Field'];
         }
-        
+
         // Check for common name column variations
         if (in_array('member_name', $member_columns)) {
             $member_name_col = 'member_name';
@@ -79,7 +87,7 @@ try {
         } elseif (in_array('username', $member_columns)) {
             $member_name_col = 'username';
         }
-        
+
         // Check for email column
         if (in_array('member_email', $member_columns)) {
             $member_email_col = 'member_email';
@@ -153,6 +161,7 @@ try {
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -161,10 +170,11 @@ try {
     <link rel="stylesheet" href="../assets/css/manage_orders.css">
     <link rel="stylesheet" href="../assets/css/feedback_management.css">
 </head>
+
 <body>
     <div class="admin-container">
         <?php include '../partials/admin_panel.php'; ?>
-        
+
         <div class="main-content">
             <div class="admin-header">
                 <h1>💬 Feedback Management</h1>
@@ -303,19 +313,23 @@ try {
                                 <?php endif; ?>
 
                                 <div class="feedback-actions">
-                                    <button class="expand-btn" onclick="toggleResponseForm(<?php echo $feedback['feedback_id']; ?>)">
-                                        💬 Respond & Update Status
-                                    </button>
-                                    <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this feedback?');">
-                                        <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
-                                        <button type="submit" name="delete_feedback" class="btn btn-danger">🗑️ Delete</button>
-                                    </form>
+                                    <?php if (has_permission('feedback', 'update')): ?>
+                                        <button class="expand-btn" onclick="toggleResponseForm(<?php echo $feedback['feedback_id']; ?>)">
+                                            💬 Respond & Update Status
+                                        </button>
+                                    <?php endif; ?>
+                                    <?php if (has_permission('feedback', 'delete')): ?>
+                                        <form method="POST" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this feedback?');">
+                                            <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
+                                            <button type="submit" name="delete_feedback" class="btn btn-danger">🗑️ Delete</button>
+                                        </form>
+                                    <?php endif; ?>
                                 </div>
 
                                 <div class="response-form" id="form-<?php echo $feedback['feedback_id']; ?>">
                                     <form method="POST">
                                         <input type="hidden" name="feedback_id" value="<?php echo $feedback['feedback_id']; ?>">
-                                        
+
                                         <div class="form-group">
                                             <label>Admin Response</label>
                                             <textarea name="admin_response" placeholder="Type your response to the customer..."><?php echo htmlspecialchars($feedback['admin_response'] ?? ''); ?></textarea>
@@ -360,12 +374,12 @@ try {
             const form = document.getElementById('form-' + feedbackId);
             form.classList.toggle('active');
         }
-        
+
         // Mobile menu functionality from admin_panel.php
         document.addEventListener('DOMContentLoaded', function() {
             const mobileBtn = document.querySelector('.mobile-menu-btn');
             const sidebar = document.querySelector('.sidebar');
-            
+
             if (mobileBtn && sidebar) {
                 mobileBtn.addEventListener('click', function() {
                     sidebar.classList.toggle('mobile-open');
@@ -374,4 +388,5 @@ try {
         });
     </script>
 </body>
+
 </html>
