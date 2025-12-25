@@ -155,19 +155,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $password = password_hash($password_raw, PASSWORD_BCRYPT);
 
                 try {
-                    $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date)
-                                        VALUES (?, ?, ?, ?, ?, NOW())");
-                    $stmt->execute([$username, $email, $phone, $address, $password]);
+                    $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, profile_photo_path, register_date)
+                                        VALUES (?, ?, ?, ?, ?, ?, NOW())");
+                    $stmt->execute([$username, $email, $phone, $address, $password, '/assets/img/profile_photo/user_icon.svg']);
 
                     $member_id = $pdo->lastInsertId();
                     // Create default settings
                     $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
                     $settingsStmt->execute([$member_id]);
 
-                    // Also create a Cart for consistency if not present (optional improvement, but good for stability)
-                    $cartStmt = $pdo->prepare("INSERT IGNOR INTO Cart (member_id) VALUES (?)");
-                    // Wait, syntax error risks if I mistype. I will stick to JUST settings as requested.
-                    // Actually, let's just do settings.
+                    // Also create a Cart for consistency if not present
+                    $cartStmt = $pdo->prepare("INSERT IGNORE INTO Cart (member_id) VALUES (?)");
+                    $cartStmt->execute([$member_id]);
 
                     $message = "Member created successfully!";
                     $message_type = "success";
@@ -406,12 +405,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             $password_hash = password_hash($password_raw, PASSWORD_BCRYPT);
 
-                            $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, register_date) VALUES (?, ?, ?, ?, ?, NOW())");
-                            $stmt->execute([$username, $email, $phone, $address, $password_hash]);
+                            $stmt = $pdo->prepare("INSERT INTO Member (username, email, phone_number, address, password, profile_photo_path, register_date) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+                            $stmt->execute([$username, $email, $phone, $address, $password_hash, '/assets/img/profile_photo/user_icon.svg']);
 
                             $member_id = $pdo->lastInsertId();
                             $settingsStmt = $pdo->prepare("INSERT INTO Member_Settings (member_id, theme_preference, email_notifications) VALUES (?, 'light', 1)");
                             $settingsStmt->execute([$member_id]);
+
+                            // Also create a Cart for consistency
+                            $cartStmt = $pdo->prepare("INSERT IGNORE INTO Cart (member_id) VALUES (?)");
+                            $cartStmt->execute([$member_id]);
                             $successCount++;
                         } else {
                             $errorCount++;
@@ -769,7 +772,7 @@ $member_stats['with_phone'] = $pdo->query("SELECT COUNT(*) FROM Member WHERE pho
                                             <?php
                                             $profilePhotoPath = !empty($m['profile_photo_path'])
                                                 ? $m['profile_photo_path']
-                                                : '/assets/img/profile_photo/test.jpg';
+                                                : '/assets/img/profile_photo/user_icon.svg';
                                             ?>
                                             <img
                                                 src="<?= htmlspecialchars($profilePhotoPath) ?>"
@@ -1169,6 +1172,13 @@ alice,alice@example.com,AlicePass1!,,"34 Rose Ave, City"
                 if (event.target.matches(checkboxSelector)) {
                     updateButtons();
                     syncSelectAll();
+                }
+            });
+
+            deleteBtn?.addEventListener('click', (e) => {
+                const checkedCount = getRowCheckboxes().filter(cb => cb.checked).length;
+                if (!confirm(`Are you sure you want to delete ${checkedCount} selected member(s)?`)) {
+                    e.preventDefault();
                 }
             });
 
