@@ -208,7 +208,7 @@ $orderStatus = $orderStatusStmt->fetchAll(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Deep Analytics & Insights - Admin Panel</title>
+    <title>Analytics & Insights - Admin Panel</title>
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
     <link rel="stylesheet" href="../assets/css/analytics.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -221,7 +221,7 @@ $orderStatus = $orderStatusStmt->fetchAll(PDO::FETCH_ASSOC);
         <div class="main-content">
             <div class="analytics-container">
                 <div class="header">
-                    <h1><i class="fas fa-chart-pie"></i> Deep Analytics & Reports</h1>
+                    <h1><i class="fas fa-chart-pie"></i> Analytics & Reports</h1>
                     <div class="header-actions">
                         <button class="btn btn-secondary" onclick="window.print()"><i class="fas fa-print"></i> Print Report</button>
                         <button class="btn btn-primary" onclick="exportDeepData()"><i class="fas fa-download"></i> Export CSV</button>
