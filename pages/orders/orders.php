@@ -3,8 +3,8 @@
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
 session_start();
-require_once 'helper/pdo_connection.php';
-require_once 'helper/auth.php';
+require_once '../../helper/pdo_connection.php';
+require_once '../../helper/auth.php';
 is_logged_in();
 
 // Redirect if not logged in
@@ -156,15 +156,15 @@ try {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>My Orders</title>
-    <link rel="stylesheet" href="assets/css/orders.css">
-    <link rel="stylesheet" href="assets/css/styles.css">
-    <link rel="stylesheet" href="/assets/css/dark_mode_style.css">
-    <link rel="stylesheet" href="assets/css/review.css">
+    <link rel="stylesheet" href="../../assets/css/orders.css">
+    <link rel="stylesheet" href="../../assets/css/styles.css">
+    <link rel="stylesheet" href="../../assets/css/dark_mode_style.css">
+    <link rel="stylesheet" href="../../assets/css/review.css">
 </head>
 
 <?php
 $title = "Home";
-include 'partials/header.php';
+include '../../partials/header.php';
 
 ?>
 <div class="user-container">
@@ -268,9 +268,9 @@ include 'partials/header.php';
                             <td><?php echo number_format($row['total_amount'], 2); ?></td>
                             <td>
                                 <?php if (!empty($row['thumb'])): ?>
-                                    <img src="<?php echo htmlspecialchars($row['thumb']); ?>" alt="Order thumbnail" class="thumb">
+                                    <img src="../../<?php echo htmlspecialchars($row['thumb']); ?>" alt="Order thumbnail" class="thumb">
                                 <?php else: ?>
-                                    <img src="../assets/img/default.jpg" alt="Default thumbnail" class="thumb">
+                                    <img src="../../assets/img/default.jpg" alt="Default thumbnail" class="thumb">
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -414,7 +414,7 @@ include 'partials/header.php';
         modalBody.innerHTML = '<p style="text-align: center; padding: 20px;">Loading review...</p>';
         modal.style.display = 'flex';
 
-        fetch('pages/product/review.php?order_id=' + orderId + '&ajax=1')
+        fetch('../../pages/product/review.php?order_id=' + orderId + '&ajax=1')
             .then(response => response.text())
             .then(html => {
                 modalBody.innerHTML = html;
@@ -436,7 +436,7 @@ include 'partials/header.php';
                 e.preventDefault();
                 const formData = new FormData(form);
                 
-                fetch('pages/product/review_post.php?ajax=1', {
+                fetch('../../pages/product/review_post.php?ajax=1', {
                     method: 'POST',
                     body: formData
                 })
@@ -481,4 +481,4 @@ include 'partials/header.php';
 
 </html>
 
-<?php include 'partials/footer.php'; ?>
+<?php include '../../partials/footer.php'; ?>
