@@ -19,6 +19,7 @@ $page_title = 'Review Order';
 $error_message = '';
 $notice_type = $_GET['type'] ?? '';
 $notice_message = $_GET['message'] ?? '';
+$edit_window_hours = 48; // hours allowed to edit an existing review
 $order = null;
 $items = [];
 $existing_reviews = [];
@@ -85,6 +86,16 @@ if ($is_ajax) {
 					<?php foreach ($items as $item):
 						$product_id = (int)$item['product_id'];
 						$existing = $existing_reviews[$product_id] ?? null;
+						$can_edit = false;
+						$edit_deadline_str = '';
+						if ($existing && !empty($existing['created_date'])) {
+							$created_ts = strtotime($existing['created_date']);
+							if ($created_ts) {
+								$deadline_ts = strtotime("+{$edit_window_hours} hours", $created_ts);
+								$edit_deadline_str = $deadline_ts ? date('M j, Y H:i', $deadline_ts) : '';
+								$can_edit = $deadline_ts !== false && $deadline_ts >= time();
+							}
+						}
 					?>
 						<section class="review-card" style="padding: 14px;">
 							<div class="product-meta" style="grid-template-columns: auto 1fr auto; gap: 12px;">
@@ -109,7 +120,29 @@ if ($is_ajax) {
 									</div>
 									<p class="review-text" style="margin: 0 0 6px 0; font-size: 13px;"><?php echo nl2br(htmlspecialchars($existing['review_text'] ?? '')); ?></p>
 									<p class="submitted-on" style="margin: 0; font-size: 11px;">Submitted on <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($existing['created_date']))); ?></p>
+									<?php if ($edit_deadline_str): ?>
+										<p class="submitted-on" style="margin: 6px 0 0 0; font-size: 11px; color: #0f172a;">Edit window <?php echo $can_edit ? 'until ' : 'ended on '; ?><?php echo htmlspecialchars($edit_deadline_str); ?></p>
+									<?php endif; ?>
 								</div>
+
+								<?php if ($can_edit): ?>
+									<form class="review-form" style="gap: 8px; margin-top: 10px;">
+										<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
+										<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
+
+										<label class="form-label" style="font-size: 13px;">Update rating</label>
+										<div class="rating-input">
+											<?php for ($i = 5; $i >= 1; $i--): ?>
+												<input type="radio" id="rating-<?php echo $product_id; ?>-<?php echo $i; ?>" name="rating" value="<?php echo $i; ?>" <?php echo ((int)$existing['rating'] === $i) ? 'checked' : ''; ?> required>
+												<label for="rating-<?php echo $product_id; ?>-<?php echo $i; ?>" style="width: 28px; height: 28px; font-size: 14px;">★</label>
+											<?php endfor; ?>
+										</div>
+										<label class="form-label" for="review-text-<?php echo $product_id; ?>" style="font-size: 13px;">Update feedback</label>
+										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="3" placeholder="What did you like or dislike?" maxlength="1000" required style="font-size: 13px;"><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
+
+										<button type="submit" class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Update Review</button>
+									</form>
+								<?php endif; ?>
 							<?php else: ?>
 								<form class="review-form" style="gap: 8px;">
 									<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
@@ -182,6 +215,16 @@ if ($is_ajax) {
 					<?php foreach ($items as $item):
 						$product_id = (int)$item['product_id'];
 						$existing = $existing_reviews[$product_id] ?? null;
+						$can_edit = false;
+						$edit_deadline_str = '';
+						if ($existing && !empty($existing['created_date'])) {
+							$created_ts = strtotime($existing['created_date']);
+							if ($created_ts) {
+								$deadline_ts = strtotime("+{$edit_window_hours} hours", $created_ts);
+								$edit_deadline_str = $deadline_ts ? date('M j, Y H:i', $deadline_ts) : '';
+								$can_edit = $deadline_ts !== false && $deadline_ts >= time();
+							}
+						}
 					?>
 						<section class="review-card">
 							<div class="product-meta">
@@ -206,8 +249,31 @@ if ($is_ajax) {
 									</div>
 									<p class="review-text"><?php echo nl2br(htmlspecialchars($existing['review_text'] ?? '')); ?></p>
 									<p class="submitted-on">Submitted on <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($existing['created_date']))); ?></p>
+									<?php if ($edit_deadline_str): ?>
+										<p class="submitted-on">Edit window <?php echo $can_edit ? 'until ' : 'ended on '; ?><?php echo htmlspecialchars($edit_deadline_str); ?></p>
+									<?php endif; ?>
 								</div>
-								<a class="btn btn-success" href="product_details.php?id=<?php echo $product_id; ?>">View Product</a>
+
+								<?php if ($can_edit): ?>
+									<form class="review-form" method="POST" action="review_post.php">
+										<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
+										<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
+
+										<label class="form-label">Update rating</label>
+										<div class="rating-input">
+											<?php for ($i = 5; $i >= 1; $i--): ?>
+												<input type="radio" id="rating-<?php echo $product_id; ?>-<?php echo $i; ?>" name="rating" value="<?php echo $i; ?>" <?php echo ((int)$existing['rating'] === $i) ? 'checked' : ''; ?> required>
+												<label for="rating-<?php echo $product_id; ?>-<?php echo $i; ?>">★</label>
+											<?php endfor; ?>
+										</div>
+										<label class="form-label" for="review-text-<?php echo $product_id; ?>">Update feedback</label>
+										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="4" placeholder="What did you like or dislike?" maxlength="1000" required><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
+
+										<button type="submit" class="btn btn-primary">Update Review</button>
+									</form>
+								<?php endif; ?>
+
+								<a class="btn btn-success" href="../product/product_details.php?id=<?php echo $product_id; ?>">View Product</a>
 							<?php else: ?>
 								<form class="review-form" method="POST" action="review_post.php">
 									<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">

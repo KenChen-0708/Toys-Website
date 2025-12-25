@@ -422,7 +422,7 @@ include '../../partials/header.php';
         modalBody.innerHTML = '<p style="text-align: center; padding: 20px;">Loading review...</p>';
         modal.style.display = 'flex';
 
-        fetch('../../pages/product/review.php?order_id=' + orderId + '&ajax=1')
+        fetch('../../pages/review/review.php?order_id=' + orderId + '&ajax=1')
             .then(response => response.text())
             .then(html => {
                 modalBody.innerHTML = html;
@@ -444,7 +444,7 @@ include '../../partials/header.php';
                 e.preventDefault();
                 const formData = new FormData(form);
                 
-                fetch('../../pages/product/review_post.php?ajax=1', {
+                fetch('../../pages/review/review_post.php?ajax=1', {
                     method: 'POST',
                     body: formData
                 })
