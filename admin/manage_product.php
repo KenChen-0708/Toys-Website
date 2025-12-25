@@ -732,7 +732,7 @@ $stats['unavailable'] = $pdo->query("SELECT COUNT(*) FROM Product WHERE status =
                     Laptop,999.99,High performance laptop,Electronics,50,Available<br>
                     Mouse,29.99,Wireless mouse,Electronics,100,Available</p>
                 <div style="margin-top: 15px;">
-                    <a href="sample_products.csv" download class="btn btn-info btn-sm">📥 Download Sample CSV</a>
+                    <a href="download_sample.php" class="btn btn-info btn-sm">📥 Download Sample CSV</a>
                 </div>
             </div>
             <form method="POST" enctype="multipart/form-data">

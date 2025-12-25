@@ -1,0 +1,11 @@
+name,price,description,category,stock,status
+Laptop,999.99,High-performance laptop,Electronics,50,Available
+Smartphone,599.99,Latest smartphone model,Electronics,75,Available
+Headphones,149.99,Wireless noise-canceling headphones,Electronics,30,Available
+T-Shirt,19.99,Cotton t-shirt,Clothing,100,Available
+Jeans,49.99,Denim jeans,Clothing,60,Available
+Sneakers,89.99,Running sneakers,Footwear,40,Available
+Book,12.99,Fiction novel,Books,200,Available
+Notebook,5.99,Spiral notebook,Stationery,150,Available
+Pen,2.99,Ballpoint pen,Stationery,300,Available
+Mouse,29.99,Wireless mouse,Electronics,100,Available
