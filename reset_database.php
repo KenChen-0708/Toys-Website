@@ -229,6 +229,16 @@ CREATE TABLE Review (
         ON DELETE CASCADE ON UPDATE CASCADE
 );
 
+CREATE TABLE Review_Media (
+    review_media_id INT AUTO_INCREMENT PRIMARY KEY,
+    review_id INT NOT NULL,
+    file_path VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    FOREIGN KEY (review_id) REFERENCES Review(review_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+);
+
 CREATE TABLE Voucher (
     voucher_id INT AUTO_INCREMENT PRIMARY KEY,
     code VARCHAR(50) NOT NULL UNIQUE,
@@ -335,11 +345,7 @@ INSERT INTO Product (name, price, description, category, stock, status, main_ima
 ('Flipbook', 30.97, 'Flipbook product.', 'books', 16, 'Available', '../assets/img/Product15_books_30.97_Flipbook.jpg'),
 ('Playpopo Puzzle Ball', 49.90, 'Playpopo Puzzle Ball product.', 'puzzles', 25, 'Available', '../assets/img/Product16_puzzles_49.90_playpopo puzzle ball.jpg'),
 ('Cube Puzzle Toys', 6.66, 'Cube Puzzle Toys product.', 'puzzles', 11, 'Available', '../assets/img/Product17_puzzles_6.66_cube puzze toys.jpg'),
-('Lion City 100-Piece Puzzle', 60.42, 'Lion City 100-Piece Puzzle product.', 'puzzles', 40, 'Available', '../assets/img/Product18_puzzles_60.42_Lion City 100-Piece Puzzle.jpg'),
--- Sample deleted products for testing
-('Discontinued Toy Car', 25.99, 'Old toy car model that was discontinued.', 'vehicles', 0, 'Deleted', '../assets/img/default.jpg'),
-('Old Puzzle Set', 15.50, 'Puzzle set that is no longer available.', 'puzzles', 0, 'Deleted', '../assets/img/default.jpg'),
-('Vintage Doll', 45.00, 'Vintage doll that was removed from catalog.', 'dolls', 0, 'Deleted', '../assets/img/default.jpg');
+('Lion City 100-Piece Puzzle', 60.42, 'Lion City 100-Piece Puzzle product.', 'puzzles', 40, 'Available', '../assets/img/Product18_puzzles_60.42_Lion City 100-Piece Puzzle.jpg');
 
 
 -- password: Password123!
@@ -495,9 +501,8 @@ INSERT INTO Payment (order_id, payment_method, payment_date, amount, status) VAL
 INSERT INTO Order_Item (order_id, product_id, quantity, price) VALUES
 (1,1,1,5500.00),(1,2,1,150.00),(2,3,1,3200.00),(3,3,1,3200.00),
 (4,4,1,450.00),(4,5,1,130.00),(5,4,1,450.00),(6,7,5,35.00),
-(7,8,1,120.00),(9,10,1,650.00),
--- Add an order for a deleted product to test foreign key protection
-(1,20,1,15.50);
+(7,8,1,120.00),(9,10,1,650.00);
+
 
 INSERT INTO Review (product_id, member_id, rating, review_text, created_date) VALUES
 (1,1,5,'Great quality Lego set, my son loved it!','2024-01-12 10:30:00'),

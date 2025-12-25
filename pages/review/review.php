@@ -23,6 +23,23 @@ $edit_window_hours = 48; // hours allowed to edit an existing review
 $order = null;
 $items = [];
 $existing_reviews = [];
+$review_media = [];
+
+// Ensure Review_Media table exists before querying
+try {
+	$pdo->exec(<<<SQL
+	CREATE TABLE IF NOT EXISTS Review_Media (
+		review_media_id INT AUTO_INCREMENT PRIMARY KEY,
+		review_id INT NOT NULL,
+		file_path VARCHAR(255) NOT NULL,
+		created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (review_id) REFERENCES Review(review_id)
+			ON DELETE CASCADE ON UPDATE CASCADE
+	);
+	SQL);
+} catch (Throwable $e) {
+	// Ignore if already exists
+}
 
 try {
 	if ($order_id <= 0) {
@@ -54,6 +71,28 @@ try {
 		$review_stmt->execute(array_merge([$member_id], $product_ids));
 		foreach ($review_stmt->fetchAll(PDO::FETCH_ASSOC) as $review) {
 			$existing_reviews[$review['product_id']] = $review;
+		}
+
+		$review_ids = array_values(array_map(function ($review) {
+			return $review['review_id'];
+		}, $existing_reviews));
+
+		if (!empty($review_ids)) {
+			try {
+				$placeholders = implode(',', array_fill(0, count($review_ids), '?'));
+				$media_stmt = $pdo->prepare("SELECT review_id, file_path FROM Review_Media WHERE review_id IN ($placeholders)");
+				$media_stmt->execute($review_ids);
+				foreach ($media_stmt->fetchAll(PDO::FETCH_ASSOC) as $media) {
+					$rid = (int)$media['review_id'];
+					if (!isset($review_media[$rid])) {
+						$review_media[$rid] = [];
+					}
+					$review_media[$rid][] = $media['file_path'];
+				}
+			} catch (Throwable $mediaEx) {
+				// Log error but don't break the page
+				error_log("Review media loading error: " . $mediaEx->getMessage());
+			}
 		}
 	}
 } catch (Throwable $e) {
@@ -88,6 +127,7 @@ if ($is_ajax) {
 						$existing = $existing_reviews[$product_id] ?? null;
 						$can_edit = false;
 						$edit_deadline_str = '';
+						$media_list = $existing ? ($review_media[$existing['review_id']] ?? []) : [];
 						if ($existing && !empty($existing['created_date'])) {
 							$created_ts = strtotime($existing['created_date']);
 							if ($created_ts) {
@@ -112,13 +152,25 @@ if ($is_ajax) {
 							</div>
 
 							<?php if ($existing): ?>
-								<div class="existing-review" style="padding: 10px 12px;">
+								<div class="existing-review" style="padding: 10px 12px; position: relative;">
+									<?php if ($can_edit): ?>
+										<button type="button" class="toggle-edit-btn" data-product-id="<?php echo $product_id; ?>" style="position: absolute; top: 10px; right: 10px; background: #3b82f6; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+											<span>✏️</span> Edit
+										</button>
+									<?php endif; ?>
 									<div class="rating-static" style="margin-bottom: 8px;">
 										<?php for ($i = 1; $i <= 5; $i++): ?>
 											<span class="star <?php echo $i <= (int)$existing['rating'] ? 'filled' : ''; ?>">★</span>
 										<?php endfor; ?>
 									</div>
 									<p class="review-text" style="margin: 0 0 6px 0; font-size: 13px;"><?php echo nl2br(htmlspecialchars($existing['review_text'] ?? '')); ?></p>
+									<?php if (!empty($media_list)): ?>
+										<div class="review-media" style="display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px 0;">
+											<?php foreach ($media_list as $path): ?>
+												<img src="<?php echo htmlspecialchars($path); ?>" alt="Review media" style="width: 72px; height: 72px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+											<?php endforeach; ?>
+										</div>
+									<?php endif; ?>
 									<p class="submitted-on" style="margin: 0; font-size: 11px;">Submitted on <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($existing['created_date']))); ?></p>
 									<?php if ($edit_deadline_str): ?>
 										<p class="submitted-on" style="margin: 6px 0 0 0; font-size: 11px; color: #0f172a;">Edit window <?php echo $can_edit ? 'until ' : 'ended on '; ?><?php echo htmlspecialchars($edit_deadline_str); ?></p>
@@ -126,7 +178,7 @@ if ($is_ajax) {
 								</div>
 
 								<?php if ($can_edit): ?>
-									<form class="review-form" style="gap: 8px; margin-top: 10px;">
+									<form class="review-form" id="edit-form-<?php echo $product_id; ?>" method="POST" enctype="multipart/form-data" style="gap: 8px; margin-top: 10px; display: none;">
 										<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
 										<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
 
@@ -140,11 +192,13 @@ if ($is_ajax) {
 										<label class="form-label" for="review-text-<?php echo $product_id; ?>" style="font-size: 13px;">Update feedback</label>
 										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="3" placeholder="What did you like or dislike?" maxlength="1000" required style="font-size: 13px;"><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
 
+										<label class="form-label" style="font-size: 13px;">Update photos (optional, max 3)</label>
+										<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+
 										<button type="submit" class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Update Review</button>
-									</form>
-								<?php endif; ?>
+								</form>								<?php endif; ?>
 							<?php else: ?>
-								<form class="review-form" style="gap: 8px;">
+								<form class="review-form" method="POST" enctype="multipart/form-data" style="gap: 8px;">
 									<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
 									<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
 
@@ -158,9 +212,12 @@ if ($is_ajax) {
 									<label class="form-label" for="review-text-<?php echo $product_id; ?>" style="font-size: 13px;">Feedback</label>
 									<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="3" placeholder="What did you like or dislike?" maxlength="1000" required style="font-size: 13px;"></textarea>
 
+									<label class="form-label" style="font-size: 13px;">Upload photos (optional, max 3)</label>
+									<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple style="font-size: 13px;">
+
 									<button type="submit" class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Submit Review</button>
-								</form>
-							<?php endif; ?>
+							</form>
+						<?php endif; ?>
 						</section>
 					<?php endforeach; ?>
 				</div>
@@ -217,6 +274,7 @@ if ($is_ajax) {
 						$existing = $existing_reviews[$product_id] ?? null;
 						$can_edit = false;
 						$edit_deadline_str = '';
+						$media_list = $existing ? ($review_media[$existing['review_id']] ?? []) : [];
 						if ($existing && !empty($existing['created_date'])) {
 							$created_ts = strtotime($existing['created_date']);
 							if ($created_ts) {
@@ -248,6 +306,13 @@ if ($is_ajax) {
 										<?php endfor; ?>
 									</div>
 									<p class="review-text"><?php echo nl2br(htmlspecialchars($existing['review_text'] ?? '')); ?></p>
+									<?php if (!empty($media_list)): ?>
+										<div class="review-media" style="display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 6px 0;">
+											<?php foreach ($media_list as $path): ?>
+												<img src="<?php echo htmlspecialchars($path); ?>" alt="Review media" style="width: 90px; height: 90px; object-fit: cover; border-radius: 6px; border: 1px solid #e2e8f0;">
+											<?php endforeach; ?>
+										</div>
+									<?php endif; ?>
 									<p class="submitted-on">Submitted on <?php echo htmlspecialchars(date('M j, Y H:i', strtotime($existing['created_date']))); ?></p>
 									<?php if ($edit_deadline_str): ?>
 										<p class="submitted-on">Edit window <?php echo $can_edit ? 'until ' : 'ended on '; ?><?php echo htmlspecialchars($edit_deadline_str); ?></p>
@@ -255,7 +320,7 @@ if ($is_ajax) {
 								</div>
 
 								<?php if ($can_edit): ?>
-									<form class="review-form" method="POST" action="review_post.php">
+									<form class="review-form" method="POST" action="review_post.php" enctype="multipart/form-data">
 										<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
 										<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
 
@@ -269,13 +334,16 @@ if ($is_ajax) {
 										<label class="form-label" for="review-text-<?php echo $product_id; ?>">Update feedback</label>
 										<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="4" placeholder="What did you like or dislike?" maxlength="1000" required><?php echo htmlspecialchars($existing['review_text'] ?? ''); ?></textarea>
 
+										<label class="form-label">Update photos (optional, max 3)</label>
+										<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
+
 										<button type="submit" class="btn btn-primary">Update Review</button>
 									</form>
 								<?php endif; ?>
 
 								<a class="btn btn-success" href="../product/product_details.php?id=<?php echo $product_id; ?>">View Product</a>
 							<?php else: ?>
-								<form class="review-form" method="POST" action="review_post.php">
+								<form class="review-form" method="POST" action="review_post.php" enctype="multipart/form-data">
 									<input type="hidden" name="order_id" value="<?php echo htmlspecialchars($order_id); ?>">
 									<input type="hidden" name="product_id" value="<?php echo $product_id; ?>">
 
@@ -288,6 +356,9 @@ if ($is_ajax) {
 									</div>
 									<label class="form-label" for="review-text-<?php echo $product_id; ?>">Feedback</label>
 									<textarea id="review-text-<?php echo $product_id; ?>" name="review_text" rows="4" placeholder="What did you like or dislike?" maxlength="1000" required></textarea>
+
+									<label class="form-label">Upload photos (optional, max 3)</label>
+									<input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple>
 
 									<button type="submit" class="btn btn-primary">Submit Review</button>
 								</form>
