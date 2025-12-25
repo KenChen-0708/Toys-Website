@@ -1587,6 +1587,10 @@
   background: #047857;  /* consistent dark forest green */
 }
 
+.stat-icon--wishlist img {
+  filter: brightness(0) invert(1);
+}
+
 .stat-body {
   display: flex;
   flex-direction: column;
