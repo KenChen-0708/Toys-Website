@@ -8,17 +8,35 @@ function toggleAddressForm(e) {
     // This prevents blocking the checkout process if user just types but doesn't save
 }
 
-// Highlight selected address
-document.querySelectorAll('.address-option').forEach(option => {
-    option.addEventListener('click', function() {
-        document.querySelectorAll('.address-option').forEach(opt => {
-            opt.style.borderColor = '#ddd';
-            opt.style.boxShadow = 'none';
+// Highlight selected address - Initialize with checked address
+function initializeAddressSelection() {
+    document.querySelectorAll('.address-option').forEach(option => {
+        const radioInput = option.querySelector('input[type="radio"]');
+        
+        // Add click event listener
+        option.addEventListener('click', function() {
+            document.querySelectorAll('.address-option').forEach(opt => {
+                opt.style.borderColor = '#ddd';
+                opt.style.boxShadow = 'none';
+            });
+            this.style.borderColor = '#4CAF50';
+            this.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
         });
-        this.style.borderColor = '#4CAF50';
-        this.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
+        
+        // If this option's radio is checked (default address), apply highlight styles
+        if (radioInput && radioInput.checked) {
+            option.style.borderColor = '#4CAF50';
+            option.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.2)';
+        }
     });
-});
+}
+
+// Initialize on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeAddressSelection);
+} else {
+    initializeAddressSelection();
+}
 
 // Auto-hide alerts after 5 seconds
 setTimeout(() => {

@@ -429,12 +429,17 @@ if ($shipping_fee > 0 && $final_total < $shipping_fee) {
 
                         <div class="address-grid" id="addressGrid">
                             <?php if (!empty($shipping_addresses)): ?>
-                                <?php foreach ($shipping_addresses as $address): ?>
-                                    <label class="address-option">
+                                <?php foreach ($shipping_addresses as $idx => $address): ?>
+                                    <?php $isDefault = ($idx === 0); ?>
+                                    <label class="address-option <?php echo $isDefault ? 'address-option--default' : ''; ?>">
                                         <input type="radio"
                                             name="shipping_address_id"
                                             value="<?php echo $address['shipping_address_id']; ?>"
+                                            <?php echo $isDefault ? 'checked' : ''; ?>
                                             required>
+                                        <?php if ($isDefault): ?>
+                                            <div class="address-default-badge">Default</div>
+                                        <?php endif; ?>
                                         <div class="address-content">
                                             <div class="address-line primary">
                                                 <?php echo htmlspecialchars($address['address_line1']); ?>

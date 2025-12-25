@@ -106,6 +106,20 @@ function initializePasswordToggles() {
   });
 }
 
+// UI Alert notification function
+function showAlert(message, type = 'error') {
+  const alert = document.createElement('div');
+  alert.className = `alert alert-${type}`;
+  alert.textContent = message;
+  document.body.appendChild(alert);
+
+  // Auto-hide after 5 seconds
+  setTimeout(() => {
+    alert.style.animation = 'slideOut 0.3s ease';
+    setTimeout(() => alert.remove(), 300);
+  }, 5000);
+}
+
 // Clear password form functionality - reusable function
 function initializeClearPasswordButton() {
   $(document).off('click', '#clearPasswordForm').on('click', '#clearPasswordForm', function(e) {
@@ -521,9 +535,15 @@ $(document).ready(function() {
     const $form = $('#addressEditForm');
     if ($form.length) {
       $form[0].reset();
+      // Explicitly clear all input fields
+      $('input[name="address_street"]').val('');
+      $('input[name="address_city"]').val('');
+      $('input[name="address_postcode"]').val('');
+      $('input[name="address_line2"]').val('');
+      $('select[name="address_state"]').val('');
+      $('input[name="address_country"]').val('Malaysia');
       $('#addressFormAction').val('create');
       $('#addressFormId').val('');
-      $('input[name="address_country"]').val('Malaysia');
     }
     $('#addressEditModal').addClass('active');
   });
@@ -681,10 +701,10 @@ $(document).ready(function() {
             window.location.hash = '#address';
             window.location.reload();
           } else {
-            alert(resp && resp.error ? resp.error : 'Failed to delete address');
+            showAlert(resp && resp.error ? resp.error : 'Failed to delete address', 'error');
           }
         }).fail(function(){
-          alert('Failed to delete address');
+          showAlert('Failed to delete address', 'error');
         });
       });
   });
@@ -703,10 +723,10 @@ $(document).ready(function() {
         window.location.hash = '#address';
         window.location.reload();
       } else {
-        alert(resp && resp.error ? resp.error : 'Failed to set default');
+        showAlert(resp && resp.error ? resp.error : 'Failed to set default', 'error');
       }
     }).fail(function(){
-      alert('Failed to set default');
+      showAlert('Failed to set default', 'error');
     });
   });
 
@@ -737,10 +757,15 @@ $(document).ready(function() {
         window.location.hash = '#address';
         window.location.reload();
       } else {
-        alert(resp && resp.error ? resp.error : 'Failed to save address');
+        showAlert(resp && resp.error ? resp.error : 'Failed to save address', 'error');
       }
-    }).fail(function(){
-      alert('Failed to save address');
+    }).fail(function(jqXHR){
+      try {
+        const resp = JSON.parse(jqXHR.responseText);
+        showAlert(resp && resp.error ? resp.error : 'Failed to save address', 'error');
+      } catch(e) {
+        showAlert('Failed to save address', 'error');
+      }
     });
   });
 

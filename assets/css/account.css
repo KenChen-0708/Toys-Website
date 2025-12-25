@@ -5,6 +5,54 @@
   padding-bottom: 2rem;
 }
 
+/* Alert notifications */
+.alert {
+  padding: 15px 20px;
+  border-radius: 8px;
+  font-size: 15px;
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 400px;
+  z-index: 10000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.alert-error {
+  background-color: #fee;
+  color: #c33;
+  border-left: 4px solid #c33;
+}
+
+.alert-success {
+  background-color: #d4edda;
+  color: #155724;
+  border-left: 4px solid #28a745;
+}
+
 .accounts.section--lg {
   padding-block: 0 2rem;
 }
