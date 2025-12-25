@@ -159,6 +159,7 @@ function initializeClearPasswordButton() {
       if (icon) {
         icon.classList.remove('fi-rs-check');
         icon.classList.add('fi-rs-cross-small');
+        icon.textContent = '✖';
       }
     });
     
@@ -219,6 +220,10 @@ $(document).ready(function() {
     if (contentId === 'change-password') {
       initializePasswordToggles();
       initializeClearPasswordButton();
+      // Force a refresh so checklist renders immediately
+      if (window.__refreshPasswordRequirements) {
+        window.__refreshPasswordRequirements();
+      }
     }
     
     // Update URL hash without scrolling
@@ -228,6 +233,251 @@ $(document).ready(function() {
       window.location.hash = '#' + contentId;
     }
   });
+
+  // Edit Personal Information functionality
+  const editPersonalInfoBtn = document.getElementById('editPersonalInfoBtn');
+  const saveProfileBtn = document.getElementById('saveProfileBtn');
+  const editableFields = document.querySelectorAll('.profile-editable-field');
+  let isEditMode = false;
+
+  // Reset fields to original values and lock editing
+  function resetProfileFieldsToOriginal() {
+    isEditMode = false;
+    editableFields.forEach(field => {
+      field.setAttribute('readonly', true);
+      const originalValue = field.getAttribute('data-original') || field.defaultValue || '';
+      field.value = originalValue;
+    });
+    if (saveProfileBtn) {
+      saveProfileBtn.setAttribute('disabled', true);
+    }
+    if (editPersonalInfoBtn) {
+      editPersonalInfoBtn.innerHTML = '<i class="fi fi-rs-edit"></i> <span>Edit</span>';
+      editPersonalInfoBtn.classList.add('btn--outline');
+      editPersonalInfoBtn.classList.remove('btn--danger-outline');
+    }
+  }
+
+  if (editPersonalInfoBtn && saveProfileBtn) {
+    editPersonalInfoBtn.addEventListener('click', function() {
+      isEditMode = !isEditMode;
+      
+      if (isEditMode) {
+        // Enable editing
+        editableFields.forEach(field => field.removeAttribute('readonly'));
+        saveProfileBtn.removeAttribute('disabled');
+        editPersonalInfoBtn.innerHTML = '<i class="fi fi-rs-cross"></i> <span>Cancel</span>';
+        editPersonalInfoBtn.classList.remove('btn--outline');
+        editPersonalInfoBtn.classList.add('btn--danger-outline');
+      } else {
+        // Disable editing and reset fields
+        editableFields.forEach(field => {
+          field.setAttribute('readonly', true);
+          // Reset to original values
+          const originalValue = field.getAttribute('data-original') || field.defaultValue;
+          field.value = originalValue;
+        });
+        saveProfileBtn.setAttribute('disabled', true);
+        editPersonalInfoBtn.innerHTML = '<i class="fi fi-rs-edit"></i> <span>Edit</span>';
+        editPersonalInfoBtn.classList.add('btn--outline');
+        editPersonalInfoBtn.classList.remove('btn--danger-outline');
+      }
+    });
+  }
+
+  // OTP modal for profile verification
+  const otpModal = document.getElementById('otpProfileModal');
+  const otpInput = document.getElementById('otpProfileInput');
+  const otpErrorDiv = document.getElementById('otpErrorMessage');
+  const otpHidden = document.getElementById('profileOtpCodeHidden');
+  const otpSubmit = document.getElementById('submitOtpProfileModal');
+  const otpCancel = document.getElementById('cancelOtpProfileModal');
+  const otpClose = document.getElementById('closeOtpProfileModal');
+  const profileForm = document.querySelector('form.profile-edit-form');
+  // No password field in OTP modal anymore
+
+  // Password verify modal elements
+  const pwdModal = document.getElementById('passwordVerifyModal');
+  const pwdInput = document.getElementById('passwordVerifyInput');
+  const pwdSubmit = document.getElementById('submitPasswordVerifyModal');
+  const pwdCancel = document.getElementById('cancelPasswordVerifyModal');
+  const pwdClose = document.getElementById('closePasswordVerifyModal');
+  const emailInput = document.getElementById('profileEmailInput');
+  const phoneInput = document.getElementById('profilePhoneInput');
+  let pendingSensitiveSubmit = false;
+
+  function closeOtpModal() {
+    if (otpModal) {
+      otpModal.classList.remove('active');
+    }
+  }
+
+  function openOtpModal() {
+    if (otpModal) {
+      otpModal.classList.add('active');
+      if (otpInput) {
+        setTimeout(() => otpInput.focus(), 50);
+      }
+    }
+  }
+
+  // Display OTP error message if page has invalid OTP flag
+  function displayOtpError() {
+    const errorDiv = document.getElementById('otpErrorMessage');
+    if (errorDiv) {
+      errorDiv.innerHTML = '<i class="fi fi-rs-alert"></i> Invalid or expired verification code. Please try again.';
+      errorDiv.style.display = 'block';
+      errorDiv.style.backgroundColor = '#ffebee';
+      errorDiv.style.color = '#c33';
+      errorDiv.style.borderLeft = '4px solid #c33';
+      errorDiv.style.padding = '0.75rem';
+      errorDiv.style.marginBottom = '1rem';
+      errorDiv.style.borderRadius = '8px';
+      if (otpInput) {
+        otpInput.value = '';
+        otpInput.focus();
+      }
+    }
+  }
+
+  if (window.otpProfileRequired && otpModal) {
+    openOtpModal();
+    // If there's an invalid OTP, show error immediately
+    if (window.otpInvalidProfile) {
+      setTimeout(displayOtpError, 100);
+    }
+  }
+
+  // Also open modal if OTP was invalid (to show error message)
+  if (window.otpInvalidProfile && otpModal) {
+    openOtpModal();
+    setTimeout(displayOtpError, 100);
+  }
+
+  // Also check when modal opens manually
+  const originalOpenOtpModal = openOtpModal;
+  openOtpModal = function() {
+    originalOpenOtpModal();
+    if (window.otpInvalidProfile) {
+      setTimeout(displayOtpError, 150);
+    }
+  };
+
+  if (otpSubmit && profileForm && otpHidden) {
+    otpSubmit.addEventListener('click', function() {
+      if (otpInput && otpInput.value.trim().length === 6) {
+        otpHidden.value = otpInput.value.trim();
+        profileForm.submit();
+      } else if (otpInput) {
+        otpInput.reportValidity();
+      }
+    });
+  }
+
+  [otpCancel, otpClose].forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', function() {
+        // Immediately revert visible fields without waiting
+        resetProfileFieldsToOriginal();
+        // Clear OTP session data when user cancels/closes
+        fetch('/pages/profile/clear_otp_session.php', {
+          method: 'POST',
+          credentials: 'same-origin'
+        }).then(() => {
+          closeOtpModal();
+          // Reload page to show original data
+          window.location.href = '/accounts.php#update-profile';
+        }).catch(() => {
+          closeOtpModal();
+          window.location.href = '/accounts.php#update-profile';
+        });
+      });
+    }
+  });
+
+  // Helpers for password verify modal
+  function openPwdModal() {
+    if (pwdModal) {
+      pwdModal.classList.add('active');
+      setTimeout(() => { if (pwdInput) pwdInput.focus(); }, 50);
+    }
+  }
+  function closePwdModal() {
+    if (pwdModal) {
+      pwdModal.classList.remove('active');
+    }
+  }
+
+  [pwdCancel, pwdClose].forEach(btn => {
+    if (btn) {
+      btn.addEventListener('click', function() {
+        pendingSensitiveSubmit = false;
+        closePwdModal();
+      });
+    }
+  });
+
+  // Detect if sensitive fields (email/phone) changed
+  function hasSensitiveChanges() {
+    if (!emailInput && !phoneInput) return false;
+    let changed = false;
+    if (emailInput) {
+      const originalEmail = (emailInput.getAttribute('data-original') || '').trim();
+      const currentEmail = (emailInput.value || '').trim();
+      if (originalEmail.toLowerCase() !== currentEmail.toLowerCase()) changed = true;
+    }
+    if (phoneInput) {
+      const origPhone = (phoneInput.getAttribute('data-original') || '').replace(/\D/g, '');
+      const currPhone = (phoneInput.value || '').replace(/\D/g, '');
+      if (origPhone !== currPhone) changed = true;
+    }
+    return changed;
+  }
+
+  // Intercept profile form submit to ask for password in a small modal
+  if (profileForm) {
+    profileForm.addEventListener('submit', function(e) {
+      try {
+        const mainPwdField = profileForm.querySelector('input[name="current_password"]');
+        const needPwd = hasSensitiveChanges();
+        const hasPwd = !!(mainPwdField && mainPwdField.value);
+        if (needPwd && !hasPwd) {
+          e.preventDefault();
+          if (!pendingSensitiveSubmit) {
+            pendingSensitiveSubmit = true;
+            openPwdModal();
+          }
+        }
+      } catch (err) {
+        console.error('Profile submit intercept error:', err);
+      }
+    });
+  }
+
+  if (pwdSubmit && profileForm) {
+    pwdSubmit.addEventListener('click', function() {
+      if (!pwdInput || !pwdInput.value) {
+        if (pwdInput && pwdInput.reportValidity) pwdInput.reportValidity();
+        return;
+      }
+      const mainPwdField = profileForm.querySelector('input[name="current_password"]');
+      if (mainPwdField) {
+        mainPwdField.value = pwdInput.value;
+      } else {
+        // Fallback: inject a hidden input if not present
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'current_password';
+        hidden.value = pwdInput.value;
+        profileForm.appendChild(hidden);
+      }
+      closePwdModal();
+      setTimeout(() => {
+        pendingSensitiveSubmit = false;
+        profileForm.submit();
+      }, 10);
+    });
+  }
 
   // Handle hash navigation on page load
   if (window.location.hash) {
@@ -276,6 +526,89 @@ $(document).ready(function() {
       $('input[name="address_country"]').val('Malaysia');
     }
     $('#addressEditModal').addClass('active');
+  });
+
+  // Use current location to autofill address via server-side Google Geocoding proxy
+  $(document).on('click', '#useCurrentLocationBtn', function() {
+    const $status = $('#useLocationStatus');
+    $status.text('Locating…').show();
+    if (!navigator.geolocation) {
+      $status.text('Geolocation not supported').show();
+      setTimeout(() => $status.hide(), 2500);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      const lat = pos.coords.latitude;
+      const lng = pos.coords.longitude;
+      $status.text('Resolving address…').show();
+      $.getJSON('/pages/profile/geocode_reverse.php', { lat: lat, lng: lng })
+        .done(function(resp) {
+          if (resp && resp.ok && resp.address) {
+            const a = resp.address;
+            
+            // Use vanilla JS to find and populate form fields
+            setTimeout(function() {
+              const streetInput = document.querySelector('input[name="address_street"]');
+              const cityInput = document.querySelector('input[name="address_city"]');
+              const stateSelect = document.querySelector('select[name="address_state"]');
+              const postcodeInput = document.querySelector('input[name="address_postcode"]');
+              const countryInput = document.querySelector('input[name="address_country"]');
+              
+              if (streetInput) {
+                streetInput.value = a.street || '';
+                streetInput.dispatchEvent(new Event('input', { bubbles: true }));
+                streetInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              if (cityInput) {
+                cityInput.value = a.city || '';
+                cityInput.dispatchEvent(new Event('input', { bubbles: true }));
+                cityInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              if (stateSelect) {
+                // Find option by text
+                for (let opt of stateSelect.options) {
+                  if (opt.text === (a.state || '')) {
+                    stateSelect.value = opt.value;
+                    break;
+                  }
+                }
+                stateSelect.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              if (postcodeInput) {
+                postcodeInput.value = a.postcode || '';
+                postcodeInput.dispatchEvent(new Event('input', { bubbles: true }));
+                postcodeInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+              
+              if (countryInput) {
+                countryInput.value = a.country || 'Malaysia';
+                countryInput.dispatchEvent(new Event('input', { bubbles: true }));
+                countryInput.dispatchEvent(new Event('change', { bubbles: true }));
+              }
+
+              // Show map preview for quick visual confirmation
+              renderLocationMap(pos.coords.latitude, pos.coords.longitude, a.formatted || a.street || 'Current location');
+              
+              $status.text('Location applied').show();
+              setTimeout(() => $status.hide(), 1800);
+            }, 100);
+          } else {
+            $status.text(resp && resp.error ? resp.error : 'Unable to resolve address').show();
+            setTimeout(() => $status.hide(), 2500);
+          }
+        })
+        .fail(function() {
+          $status.text('Service unavailable').show();
+          setTimeout(() => $status.hide(), 2500);
+        });
+    }, function(err) {
+      const msg = (err && err.message) ? err.message : 'Location error';
+      $status.text(msg).show();
+      setTimeout(() => $status.hide(), 2500);
+    }, { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 });
   });
 
   // Open edit-address modal for a specific card
@@ -1327,7 +1660,8 @@ $(document).ready(function() {
     const confirmPassword = document.getElementById('new_password_confirm');
     const passwordStrengthFill = document.getElementById('passwordStrengthFill');
     const passwordStrengthText = document.getElementById('passwordStrengthText');
-    const passwordRequirements = document.querySelectorAll('.password-req-item');
+    // Do not cache requirements; re-query in handler to avoid timing issues
+    let passwordRequirements = null;
     const passwordMatch = document.getElementById('passwordMatch');
     const clearBtn = document.getElementById('clearPasswordForm');
 
@@ -1336,6 +1670,8 @@ $(document).ready(function() {
 
     // Password strength checker
     function checkPasswordStrength(password) {
+      // Query requirement rows fresh each time in case DOM changed
+      passwordRequirements = document.querySelectorAll('.password-req-item');
       let strength = 0;
       const checks = {
         length: password.length >= 8,
@@ -1345,15 +1681,17 @@ $(document).ready(function() {
         special: /[@$!%*#?&^_\-]/.test(password)
       };
 
-      // Update requirement indicators
+      // Update requirement indicators (force icon class swap for reliability)
       passwordRequirements.forEach(item => {
         const req = item.getAttribute('data-requirement');
         const icon = item.querySelector('.req-icon');
-        if (checks[req]) {
+        const ok = !!checks[req];
+        if (ok) {
           item.classList.add('valid');
           if (icon) {
             icon.classList.remove('fi-rs-cross-small');
             icon.classList.add('fi-rs-check');
+            icon.textContent = '✔';
           }
           strength++;
         } else {
@@ -1361,6 +1699,7 @@ $(document).ready(function() {
           if (icon) {
             icon.classList.remove('fi-rs-check');
             icon.classList.add('fi-rs-cross-small');
+            icon.textContent = '✖';
           }
         }
       });
@@ -1399,11 +1738,26 @@ $(document).ready(function() {
       }
     }
 
+    // Expose a lightweight refresher for panels
+    window.__refreshPasswordRequirements = function() {
+      try {
+        checkPasswordStrength(newPassword.value || '');
+        checkPasswordMatch();
+      } catch (e) { /* noop */ }
+    };
+
     // Event listeners
-    newPassword.addEventListener('input', function() {
-      checkPasswordStrength(this.value);
+    const recheck = function() {
+      checkPasswordStrength(newPassword.value);
       checkPasswordMatch();
-    });
+    };
+
+    newPassword.addEventListener('input', recheck);
+    newPassword.addEventListener('keyup', recheck);
+    newPassword.addEventListener('change', recheck);
+
+    // Ensure validation state is updated immediately on page load (in case of autofill)
+    checkPasswordStrength(newPassword.value || '');
 
     confirmPassword.addEventListener('input', function() {
       checkPasswordMatch();
@@ -1414,6 +1768,16 @@ $(document).ready(function() {
         this.reportValidity();
       }
     });
+
+    // Re-evaluate requirements after form reset/clear
+    if (clearBtn) {
+      clearBtn.addEventListener('click', function() {
+        setTimeout(() => {
+          checkPasswordStrength(newPassword.value || '');
+          checkPasswordMatch();
+        }, 0);
+      });
+    }
 
 
     // Form validation
@@ -1561,3 +1925,104 @@ $(document).ready(function() {
     }, 300);
   }
 })();
+
+// Lazy-load Leaflet for the location preview map
+// Fallback real-time password validator (global) in case scoped init doesn't run
+(function(){
+  function simpleCheck(password){
+    const reqItems = document.querySelectorAll('.password-req-item');
+    const strengthFill = document.getElementById('passwordStrengthFill');
+    const strengthText = document.getElementById('passwordStrengthText');
+    const checks = {
+      length: (password||'').length >= 8,
+      uppercase: /[A-Z]/.test(password||''),
+      lowercase: /[a-z]/.test(password||''),
+      number: /\d/.test(password||''),
+      special: /[@$!%*#?&^_\-]/.test(password||'')
+    };
+    let s=0;
+    reqItems.forEach(item=>{
+      const req=item.getAttribute('data-requirement');
+      const icon=item.querySelector('.req-icon');
+      if (checks[req]){ item.classList.add('valid'); if(icon){icon.classList.remove('fi-rs-cross-small'); icon.classList.add('fi-rs-check'); icon.textContent='✔';} s++; }
+      else { item.classList.remove('valid'); if(icon){icon.classList.remove('fi-rs-check'); icon.classList.add('fi-rs-cross-small'); icon.textContent='✖';} }
+    });
+    if (strengthFill && strengthText){
+      if (s===0){ strengthFill.className='password-strength-fill'; strengthText.textContent='Password strength'; }
+      else if (s<=2){ strengthFill.className='password-strength-fill weak'; strengthText.textContent='Weak password'; }
+      else if (s<=4){ strengthFill.className='password-strength-fill medium'; strengthText.textContent='Medium strength'; }
+      else { strengthFill.className='password-strength-fill strong'; strengthText.textContent='Strong password'; }
+    }
+  }
+  const np=document.getElementById('new_password');
+  const cp=document.getElementById('new_password_confirm');
+  if (np){ ['input','keyup','change'].forEach(evt=> np.addEventListener(evt, ()=>simpleCheck(np.value))); simpleCheck(np.value||''); }
+  if (cp && np){ ['input','keyup','change'].forEach(evt=> cp.addEventListener(evt, ()=>{ const m=document.getElementById('passwordMatch'); if (!m) return; if (cp.value && cp.value===np.value){ m.classList.add('show'); } else { m.classList.remove('show'); } })); }
+})();
+
+const LEAFLET_CSS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+const LEAFLET_JS_URL = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+let locationMap = null;
+let locationMarker = null;
+
+function ensureLeafletLoaded(callback) {
+  if (window.L && typeof window.L.map === 'function') {
+    callback();
+    return;
+  }
+
+  if (!document.getElementById('leaflet-css')) {
+    const link = document.createElement('link');
+    link.id = 'leaflet-css';
+    link.rel = 'stylesheet';
+    link.href = LEAFLET_CSS_URL;
+    document.head.appendChild(link);
+  }
+
+  const existingScript = document.getElementById('leaflet-js');
+  if (existingScript) {
+    if (existingScript.dataset.loaded === 'true') {
+      callback();
+    } else {
+      existingScript.addEventListener('load', callback, { once: true });
+    }
+    return;
+  }
+
+  const script = document.createElement('script');
+  script.id = 'leaflet-js';
+  script.src = LEAFLET_JS_URL;
+  script.dataset.loaded = 'false';
+  script.onload = () => {
+    script.dataset.loaded = 'true';
+    callback();
+  };
+  document.body.appendChild(script);
+}
+
+function renderLocationMap(lat, lng, label) {
+  const container = document.getElementById('useLocationMap');
+  if (!container) return;
+
+  container.style.display = 'block';
+  ensureLeafletLoaded(() => {
+    if (!locationMap) {
+      locationMap = L.map('useLocationMap', { zoomControl: true, attributionControl: true });
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(locationMap);
+    }
+
+    locationMap.setView([lat, lng], 16);
+
+    if (locationMarker) {
+      locationMarker.setLatLng([lat, lng]).setPopupContent(label || 'Current location');
+    } else {
+      locationMarker = L.marker([lat, lng]).addTo(locationMap).bindPopup(label || 'Current location');
+    }
+
+    locationMarker.openPopup();
+    setTimeout(() => locationMap.invalidateSize(), 80);
+  });
+}

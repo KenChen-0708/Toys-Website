@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Test Address Form</title>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+
+<h2>Test Address Form Population</h2>
+
+<div id="addressEditModal">
+  <form id="addressEditForm">
+    <div>
+      <label>Street Address</label>
+      <input type="text" name="address_street" placeholder="Enter street address" />
+    </div>
+
+    <div>
+      <label>City</label>
+      <input type="text" name="address_city" placeholder="Enter city" />
+    </div>
+
+    <div>
+      <label>State</label>
+      <select name="address_state">
+        <option value="">Select State</option>
+        <option value="Kuala Lumpur">Kuala Lumpur</option>
+        <option value="Selangor">Selangor</option>
+      </select>
+    </div>
+
+    <div>
+      <label>Postcode</label>
+      <input type="text" name="address_postcode" placeholder="e.g., 50000" />
+    </div>
+
+    <div>
+      <label>Country</label>
+      <input type="text" name="address_country" readonly />
+    </div>
+  </form>
+</div>
+
+<script>
+// Simulate what the JavaScript does
+const mockResponse = {
+  "ok": true,
+  "address": {
+    "street": "123 Main Road",
+    "city": "Kuala Lumpur",
+    "state": "Kuala Lumpur",
+    "postcode": "50000",
+    "country": "Malaysia"
+  }
+};
+
+// Wait a moment then populate
+setTimeout(function() {
+  const $modal = $('#addressEditModal');
+  console.log('Modal found:', $modal.length);
+  
+  const $street = $modal.find('input[name="address_street"]');
+  const $city = $modal.find('input[name="address_city"]');
+  const $state = $modal.find('select[name="address_state"]');
+  const $postcode = $modal.find('input[name="address_postcode"]');
+  const $country = $modal.find('input[name="address_country"]');
+  
+  console.log('Fields found:', {
+    street: $street.length,
+    city: $city.length,
+    state: $state.length,
+    postcode: $postcode.length,
+    country: $country.length
+  });
+  
+  const a = mockResponse.address;
+  
+  if ($street.length) {
+    $street.val(a.street || '');
+    console.log('Street set to:', $street.val());
+  }
+  if ($city.length) {
+    $city.val(a.city || '');
+    console.log('City set to:', $city.val());
+  }
+  if ($state.length) {
+    const stateVal = a.state || '';
+    const match = $state.find('option').filter(function(){ return $(this).text() === stateVal; }).val();
+    $state.val(match || stateVal || '');
+    console.log('State set to:', $state.val());
+  }
+  if ($postcode.length) {
+    $postcode.val(a.postcode || '');
+    console.log('Postcode set to:', $postcode.val());
+  }
+  if ($country.length) {
+    $country.val(a.country || 'Malaysia');
+    console.log('Country set to:', $country.val());
+  }
+}, 100);
+</script>
+
+</body>
+</html>

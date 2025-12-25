@@ -50,6 +50,12 @@ if ($defaultAddress) {
     $addressParts['country'] = $defaultAddress['country'] ?? 'Malaysia';
 }
 
+// OTP/Pending changes support
+$pendingProfile = $_SESSION['pending_profile'] ?? [];
+$otpRequiredProfile = !empty($_SESSION['otp_required_profile']);
+$otpRequiredPassword = !empty($_SESSION['otp_required_password']);
+$otpInvalidProfile = !empty($_SESSION['otp_invalid']);
+
 // Malaysian states list
 $malaysianStates = [
   'Johor',
@@ -103,6 +109,12 @@ if (!$member) {
   header('Location: /pages/auth/logout.php');
   exit;
 }
+
+$profileFingerprint = hash('sha256', implode('|', [
+  (string)($member['username'] ?? ''),
+  (string)($member['email'] ?? ''),
+  (string)($member['phone_number'] ?? ''),
+]));
 
 // Simple dashboard stats for this member
 $stats = [
@@ -182,7 +194,8 @@ $passwordErrors  = $_SESSION['password_errors']  ?? [];
 $passwordSuccess = $_SESSION['password_success'] ?? '';
 $profilePhotoUpdated = $_SESSION['profile_photo_updated'] ?? false;
 
-unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['password_errors'], $_SESSION['password_success'], $_SESSION['profile_photo_updated']);
+// Clear flash messages and OTP invalid flag after reading
+unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['password_errors'], $_SESSION['password_success'], $_SESSION['profile_photo_updated'], $_SESSION['otp_invalid']);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -278,7 +291,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 
           <div class="content-panel__body">
             <div class="account-stats grid">
-            <div class="account-stat-card stat-card--orders" data-stat-action="orders" data-stat-url="orders.php">
+            <div class="account-stat-card stat-card--orders" data-stat-action="orders" data-stat-url="/pages/orders/orders.php">
               <div class="stat-icon stat-icon--orders">
                 <i class="fi fi-rs-shopping-bag"></i>
               </div>
@@ -288,7 +301,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
               </div>
             </div>
 
-            <div class="account-stat-card stat-card--spent" data-stat-action="orders" data-stat-url="orders.php">
+            <div class="account-stat-card stat-card--spent" data-stat-action="orders" data-stat-url="/pages/orders/orders.php">
               <div class="stat-icon stat-icon--spent">
                 <i class="fi fi-rs-credit-card"></i>
               </div>
@@ -298,7 +311,7 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
               </div>
             </div>
 
-            <div class="account-stat-card stat-card--active" data-stat-action="orders" data-stat-url="orders.php?status=active">
+            <div class="account-stat-card stat-card--active" data-stat-action="orders" data-stat-url="/pages/orders/orders.php?status=active">
               <div class="stat-icon stat-icon--active">
                 <i class="fi fi-rs-truck-side"></i>
               </div>
@@ -624,6 +637,25 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                   </label>
                 </div>
 
+                <?php if ($otpRequiredPassword): ?>
+                <div class="password-field-group">
+                  <label class="password-label">
+                    <span>Verification Code (OTP)</span>
+                    <div class="password-input-wrapper">
+                      <input
+                        type="text"
+                        name="otp_code"
+                        id="password_otp_code"
+                        placeholder="Enter 6-digit code"
+                        class="form__input password-input"
+                        pattern="^\d{6}$"
+                        maxlength="6" />
+                    </div>
+                    <p class="profile-photo-hint"><i class="fi fi-rs-info"></i> We emailed a 6-digit code. Enter it to confirm your password change.</p>
+                  </label>
+                </div>
+                <?php endif; ?>
+
                 <div class="password-change-actions">
                   <button type="button" class="btn btn--md btn--outline" id="clearPasswordForm">
                     <i class="fi fi-rs-refresh"></i> Clear
@@ -686,20 +718,29 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
             <div class="profile-edit-card">
               <form class="profile-edit-form" method="POST" action="/pages/profile/profile_update_post.php" novalidate>
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="hidden" name="profile_fingerprint" value="<?= htmlspecialchars($profileFingerprint) ?>">
+                <input type="hidden" name="otp_code" id="profileOtpCodeHidden" value="">
 
                 <!-- Personal Information Section -->
                 <div class="profile-section">
-                  <h4 class="profile-section__title">Personal Information</h4>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h4 class="profile-section__title" style="margin: 0;">Personal Information</h4>
+                    <button type="button" class="btn btn--sm btn--outline" id="editPersonalInfoBtn">
+                      <i class="fi fi-rs-edit"></i> <span>Edit</span>
+                    </button>
+                  </div>
                   <div class="profile-edit-fields">
                     <label class="form__label">
                       <span>Username <span class="required">*</span></span>
                       <input
                         type="text"
                         name="username"
-                        class="form__input"
+                        class="form__input profile-editable-field"
                         required
+                        readonly
                         minlength="3"
-                        value="<?= htmlspecialchars($member['username']) ?>"
+                        value="<?= htmlspecialchars($pendingProfile['username'] ?? $member['username']) ?>"
+                        data-original="<?= htmlspecialchars($member['username'] ?? '') ?>"
                         placeholder="Enter your username" />
                     </label>
 
@@ -708,25 +749,25 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                       <input
                         type="email"
                         name="email"
-                        class="form__input"
+                        id="profileEmailInput"
+                        class="form__input profile-editable-field"
                         required
-                        value="<?= htmlspecialchars($member['email']) ?>"
+                        readonly
+                        value="<?= htmlspecialchars($pendingProfile['email'] ?? $member['email']) ?>"
+                        data-original="<?= htmlspecialchars($member['email'] ?? '') ?>"
                         placeholder="Enter your email address" />
                     </label>
-                  </div>
-                </div>
 
-                <!-- Contact Information Section -->
-                <div class="profile-section">
-                  <h4 class="profile-section__title">Contact Information</h4>
-                  <div class="profile-edit-fields">
                     <label class="form__label">
                       <span>Phone Number</span>
                       <input
                         type="tel"
                         name="phone"
-                        class="form__input"
-                        value="<?= htmlspecialchars($member['phone_number'] ?? '') ?>"
+                        id="profilePhoneInput"
+                        class="form__input profile-editable-field"
+                        readonly
+                        value="<?= htmlspecialchars($pendingProfile['phone'] ?? ($member['phone_number'] ?? '')) ?>"
+                        data-original="<?= htmlspecialchars($member['phone_number'] ?? '') ?>"
                         placeholder="e.g., 012-3456789 or 0123456789"
                         pattern="^0\d{1,2}-?\d{6,8}$"
                         maxlength="12"
@@ -735,9 +776,11 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
                   </div>
                 </div>
 
+                
+
                 <!-- Action Buttons -->
                 <div class="profile-edit-actions">
-                  <button class="btn btn--md btn--primary" type="submit">
+                  <button class="btn btn--md btn--primary" type="submit" id="saveProfileBtn" disabled>
                     <i class="fi fi-rs-check"></i> Save Changes
                   </button>
                 </div>
@@ -749,6 +792,69 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
     </div>
   </section>
 </main>
+
+<?php if ($otpRequiredProfile): ?>
+<!-- OTP Modal for Profile Verification -->
+<div class="address-edit-modal active" id="otpProfileModal">
+  <div class="address-edit-modal__content" style="max-width:420px;">
+    <button class="address-edit-modal__close" id="closeOtpProfileModal">
+      <i class="fi fi-rs-cross"></i>
+    </button>
+    <h3 class="address-edit-modal__title">Verify Your Changes</h3>
+    <p style="margin:0 0 1rem; color: var(--text-color);">We emailed a 6-digit code. Enter it to confirm your profile updates.</p>
+    <div class="alert alert--danger" id="otpErrorMessage" style="display:<?= $otpInvalidProfile ? 'block' : 'none' ?>; margin-bottom:1rem; padding:0.75rem; border-radius:8px; background:#ffebee; color:#c33; font-size:0.9rem; border-left:4px solid #c33; word-break:break-word;">
+      <?php if ($otpInvalidProfile): ?>
+        <i class="fi fi-rs-alert"></i> Invalid or expired verification code. Please try again.
+      <?php endif; ?>
+    </div>
+    <label class="form__label">
+      <span>Verification Code</span>
+      <input type="text" id="otpProfileInput" class="form__input" placeholder="Enter 6-digit code" pattern="^\d{6}$" maxlength="6" autocomplete="one-time-code" />
+    </label>
+    <div class="address-edit-modal__actions" style="margin-top:1rem;">
+      <button type="button" class="btn btn--md btn--outline" id="cancelOtpProfileModal">
+        <i class="fi fi-rs-cross"></i> Cancel
+      </button>
+      <button type="button" class="btn btn--md btn--primary" id="submitOtpProfileModal">
+        <i class="fi fi-rs-check"></i> Verify &amp; Save
+      </button>
+    </div>
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- Password Verify Modal for sensitive changes -->
+<div class="address-edit-modal" id="passwordVerifyModal">
+  <div class="address-edit-modal__content" style="max-width:420px;">
+    <button class="address-edit-modal__close" id="closePasswordVerifyModal">
+      <i class="fi fi-rs-cross"></i>
+    </button>
+    <h3 class="address-edit-modal__title">Security Verification</h3>
+    <p style="margin:0 0 1rem; color: var(--text-color);">Enter your current password to confirm changes to your email or phone number.</p>
+    <label class="form__label">
+      <span>Current Password</span>
+      <div class="password-input-wrapper">
+        <input
+          type="password"
+          id="passwordVerifyInput"
+          class="form__input password-input"
+          placeholder="Enter your current password"
+          autocomplete="current-password" />
+        <button type="button" class="password-toggle" data-target="passwordVerifyInput" title="Show/Hide password">
+          <i class="fi fi-rs-eye"></i>
+        </button>
+      </div>
+    </label>
+    <div class="address-edit-modal__actions" style="margin-top:1rem;">
+      <button type="button" class="btn btn--md btn--outline" id="cancelPasswordVerifyModal">
+        <i class="fi fi-rs-cross"></i> Cancel
+      </button>
+      <button type="button" class="btn btn--md btn--primary" id="submitPasswordVerifyModal">
+        <i class="fi fi-rs-check"></i> Verify &amp; Continue
+      </button>
+    </div>
+  </div>
+</div>
 
 <!-- Profile Photo Change Modal -->
 <div class="profile-photo-modal" id="profilePhotoModal">
@@ -865,6 +971,13 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
       <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="action" id="addressFormAction" value="create">
       <input type="hidden" name="address_id" id="addressFormId" value="">
+      <div class="address-edit-toolbar" style="display:flex; gap:.5rem; align-items:center; margin-bottom:.75rem;">
+        <button type="button" class="btn btn--sm btn--outline" id="useCurrentLocationBtn">
+          <i class="fi fi-rs-marker"></i> Use Current Location
+        </button>
+        <span id="useLocationStatus" style="font-size:.85rem; color: var(--text-color); display:none;">Locating…</span>
+      </div>
+      <div id="useLocationMap" style="display:none; height:220px; border-radius:12px; overflow:hidden; margin-bottom:1rem; background:#f5f7fb;"></div>
       
       <div class="address-edit-fields">
         <label class="form__label">
@@ -944,8 +1057,10 @@ unset($_SESSION['profile_errors'], $_SESSION['profile_success'], $_SESSION['pass
 <script>
   // Cities by state mapping for JavaScript
   const citiesByState = <?= json_encode($citiesByState, JSON_UNESCAPED_UNICODE) ?>;
+  window.otpProfileRequired = <?= $otpRequiredProfile ? 'true' : 'false' ?>;
+  window.otpInvalidProfile = <?= $otpInvalidProfile ? 'true' : 'false' ?>;
 </script>
-<script src="/assets/js/account.js"></script>
+<script src="/assets/js/account.js?v=<?= @filemtime(__DIR__ . '/assets/js/account.js') ?: time() ?>"></script>
 
 <!-- UI Confirm Modal -->
 <div class="address-edit-modal" id="confirmModal">
