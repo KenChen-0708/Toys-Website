@@ -21,7 +21,7 @@ $errors = [];
 // Failed attempts (before this try)
 $failedBefore = $_SESSION['failed_login_count'] ?? 0;
 // CAPTCHA required after 3 failed attempts
-$requireCaptcha = $failedBefore >= 3;
+$requireCaptcha = is_recaptcha_required('failed_login_count', 3);
 
 // Remember Me
 if (!empty($_POST['remember'])) {

@@ -1,7 +1,5 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
+require_once __DIR__ . '/recaptcha.php';
 
 if (!function_exists('e')) {
   /**
@@ -220,39 +218,4 @@ function can_access_page($page)
 
   // Default: deny access if page not in list
   return false;
-}
-
-/**
- * Verify Google reCAPTCHA
- * @param string $response - The g-recaptcha-response from the form
- * @return bool
- */
-function verify_recaptcha($response)
-{
-  $secret = '6LdtlBAsAAAAAKEkbvhhoY94jGMkg6BHMiWVSKV0';
-
-  if (empty($response)) {
-    return false;
-  }
-
-  $verify_url = 'https://www.google.com/recaptcha/api/siteverify';
-  $data = [
-    'secret' => $secret,
-    'response' => $response,
-    'remoteip' => $_SERVER['REMOTE_ADDR'] ?? ''
-  ];
-
-  $options = [
-    'http' => [
-      'header' => "Content-type: application/x-www-form-urlencoded\r\n",
-      'method' => 'POST',
-      'content' => http_build_query($data)
-    ]
-  ];
-
-  $context = stream_context_create($options);
-  $verify_response = file_get_contents($verify_url, false, $context);
-  $response_data = json_decode($verify_response);
-
-  return !empty($response_data->success);
 }

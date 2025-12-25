@@ -49,7 +49,7 @@ try {
     $recent_orders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Recent Feedback (Latest 5)
-    $stmt = $pdo->query("SELECT f.*, m.username FROM Feedback f LEFT JOIN Member m ON f.member_id = m.member_id ORDER BY f.created_at DESC LIMIT 5");
+    $stmt = $pdo->query("SELECT f.*, m.username, m.profile_photo_path FROM Feedback f LEFT JOIN Member m ON f.member_id = m.member_id ORDER BY f.created_at DESC LIMIT 5");
     $recent_feedback = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     // Silently continue or log error
@@ -65,7 +65,6 @@ try {
     <title>Admin Dashboard - Control Center</title>
     <link rel="stylesheet" href="../assets/css/admin_panel.css">
     <link rel="stylesheet" href="../assets/css/admin_dashboard.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -355,6 +354,13 @@ try {
             font-weight: 600;
             color: var(--text-muted);
             flex-shrink: 0;
+            overflow: hidden;
+        }
+
+        .feedback-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .feedback-content {
@@ -415,56 +421,56 @@ try {
                 <div class="shortcuts-grid">
                     <?php if (can_access_page('manage_orders.php')): ?>
                         <a href="manage_orders.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-shopping-cart"></i></div>
+                            <div class="shortcut-icon">🛒</div>
                             <span class="shortcut-label">Orders</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('manage_product.php')): ?>
                         <a href="manage_product.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-box"></i></div>
+                            <div class="shortcut-icon">📦</div>
                             <span class="shortcut-label">Products</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('manage_member.php')): ?>
                         <a href="manage_member.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-users"></i></div>
+                            <div class="shortcut-icon">👥</div>
                             <span class="shortcut-label">Members</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('feedback_management.php')): ?>
                         <a href="feedback_management.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-comments"></i></div>
+                            <div class="shortcut-icon">💬</div>
                             <span class="shortcut-label">Feedback</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('manage_voucher.php')): ?>
                         <a href="manage_voucher.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-ticket-alt"></i></div>
+                            <div class="shortcut-icon">🎟️</div>
                             <span class="shortcut-label">Vouchers</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('analytics.php')): ?>
                         <a href="analytics.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-chart-line"></i></div>
+                            <div class="shortcut-icon">📈</div>
                             <span class="shortcut-label">Analytics</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (can_access_page('manage_email.php')): ?>
                         <a href="manage_email.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-envelope"></i></div>
+                            <div class="shortcut-icon">📧</div>
                             <span class="shortcut-label">Email Notifications</span>
                         </a>
                     <?php endif; ?>
 
                     <?php if (get_admin_role() === 'super admin'): ?>
                         <a href="manage_permissions.php" class="shortcut-card">
-                            <div class="shortcut-icon"><i class="fas fa-shield-alt"></i></div>
+                            <div class="shortcut-icon">🔐</div>
                             <span class="shortcut-label">Permissions</span>
                         </a>
                     <?php endif; ?>
@@ -473,28 +479,28 @@ try {
                 <!-- Summary Stats -->
                 <div class="stats-summary">
                     <div class="stat-box pending">
-                        <div class="stat-box-icon"><i class="fas fa-clock"></i></div>
+                        <div class="stat-box-icon">🕒</div>
                         <div class="stat-box-info">
                             <h3>Pending Orders</h3>
                             <p class="value"><?= number_format($stats['pending_orders']) ?></p>
                         </div>
                     </div>
                     <div class="stat-box revenue">
-                        <div class="stat-box-icon"><i class="fas fa-dollar-sign"></i></div>
+                        <div class="stat-box-icon">💰</div>
                         <div class="stat-box-info">
                             <h3>Revenue (This Month)</h3>
                             <p class="value">RM <?= number_format($stats['revenue_month'], 2) ?></p>
                         </div>
                     </div>
                     <div class="stat-box stock">
-                        <div class="stat-box-icon"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div class="stat-box-icon">⚠️</div>
                         <div class="stat-box-info">
                             <h3>Low Stock Items</h3>
                             <p class="value"><?= number_format($stats['low_stock']) ?></p>
                         </div>
                     </div>
                     <div class="stat-box members">
-                        <div class="stat-box-icon"><i class="fas fa-user-plus"></i></div>
+                        <div class="stat-box-icon">👤</div>
                         <div class="stat-box-info">
                             <h3>New Members (7d)</h3>
                             <p class="value"><?= number_format($stats['new_members_7d']) ?></p>
@@ -512,7 +518,7 @@ try {
                         <div class="section-body">
                             <?php if (empty($recent_orders)): ?>
                                 <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-                                    <i class="fas fa-shopping-bag" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                                    <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;">🛍️</div>
                                     <p>No recent orders found.</p>
                                 </div>
                             <?php else: ?>
@@ -553,25 +559,29 @@ try {
                         <div class="section-body">
                             <?php if (empty($recent_feedback)): ?>
                                 <div style="padding: 40px; text-align: center; color: var(--text-muted);">
-                                    <i class="fas fa-comment-slash" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                                    <div style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;">💬</div>
                                     <p>No feedback received recently.</p>
                                 </div>
                             <?php else: ?>
                                 <?php foreach ($recent_feedback as $feedback): ?>
                                     <div class="feedback-item">
                                         <div class="feedback-avatar">
-                                            <?= strtoupper(substr($feedback['username'] ?: 'U', 0, 1)) ?>
+                                            <?php if (!empty($feedback['profile_photo_path'])): ?>
+                                                <img src="<?= e($feedback['profile_photo_path']) ?>" alt="Profile">
+                                            <?php else: ?>
+                                                <?= strtoupper(substr($feedback['username'] ?: 'U', 0, 1)) ?>
+                                            <?php endif; ?>
                                         </div>
                                         <div class="feedback-content">
                                             <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                                                 <div class="feedback-user"><?= e($feedback['username'] ?: 'Guest') ?></div>
                                                 <div class="rating-stars">
                                                     <?php for ($i = 1; $i <= 5; $i++): ?>
-                                                        <i class="<?= $i <= $feedback['rating'] ? 'fas' : 'far' ?> fa-star"></i>
+                                                        <span><?= $i <= $feedback['rating'] ? '⭐' : '☆' ?></span>
                                                     <?php endfor; ?>
                                                 </div>
                                             </div>
-                                            <div class="feedback-text"><?= e(substr($feedback['content'], 0, 100)) ?><?= strlen($feedback['content']) > 100 ? '...' : '' ?></div>
+                                            <div class="feedback-text"><?= e(substr($feedback['message'], 0, 100)) ?><?= strlen($feedback['message']) > 100 ? '...' : '' ?></div>
                                             <div class="feedback-time"><?= date('M j, Y H:i', strtotime($feedback['created_at'])) ?></div>
                                         </div>
                                     </div>

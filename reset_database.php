@@ -566,6 +566,13 @@ INSERT INTO Sent_Email (admin_id, subject, message, recipient_count, sent_at) VA
 (1, 'Holiday Sale!', 'Check out our amazing holiday deals!', 11, '2025-12-15 10:30:00'),
 (2, 'Exclusive Offer', 'A special discount just for you.', 5, '2025-12-20 14:00:00');
 
+INSERT INTO Feedback (member_id, subject, category, rating, message, status, created_at) VALUES
+(1, 'Great service', 'customer_service', 5, 'The support team was very helpful with my order.', 'reviewed', '2025-12-20 10:00:00'),
+(2, 'Fast delivery', 'delivery', 5, 'I received my items much sooner than expected!', 'reviewed', '2025-12-21 14:30:00'),
+(3, 'Excellent products', 'product_quality', 4, 'The quality of the toys is amazing.', 'reviewed', '2025-12-22 09:15:00'),
+(4, 'Website suggestion', 'website', 3, 'The shopping experience is smooth but could use a dark mode.', 'pending', '2025-12-23 16:45:00'),
+(5, 'Pricing question', 'pricing', 4, 'The prices are reasonable for the quality provided.', 'pending', '2025-12-24 11:20:00');
+
 SQL;
 
 // Execute all SQL

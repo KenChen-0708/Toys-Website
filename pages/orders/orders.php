@@ -98,8 +98,16 @@ if ($search !== '') {
 
 // Add status filter
 if ($filter_status) {
-    $sql .= " AND o.status = ?";
-    $params[] = $filter_status;
+    // Support semantic aliases like 'active' → Pending or Shipped
+    if (strtolower($filter_status) === 'active') {
+        $sql .= " AND o.status IN ('Pending','Shipped')";
+    } elseif (strtolower($filter_status) === 'completed') {
+        // Treat 'completed' as Delivered
+        $sql .= " AND o.status = 'Delivered'";
+    } else {
+        $sql .= " AND o.status = ?";
+        $params[] = $filter_status;
+    }
 }
 
 // Add date range filter
