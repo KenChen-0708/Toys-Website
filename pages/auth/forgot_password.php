@@ -113,7 +113,7 @@ unset($_SESSION['errors'], $_SESSION['success']);
         </div>
 
         <div class="form__row captcha-row">
-          <div class="g-recaptcha" data-sitekey="6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj"></div>
+          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars(get_recaptcha_site_key()) ?>"></div>
           <p id="captchaHint" class="field-hint">Please complete the CAPTCHA.</p>
         </div>
 

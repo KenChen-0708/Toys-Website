@@ -5,13 +5,9 @@ require_once '../../helper/auth.php';
 require_guest();
 redirect_if_admin();
 
-// reCAPTCHA SITE KEY
-$recaptcha_site_key = '6LdtlBAsAAAAALXJnaRjT_-VL98wF1bYuzuwKbVj';
-
-// Failed attempts
-$failedAttempts = $_SESSION['failed_login_count'] ?? 0;
-// Require CAPTCHA after 3 failed attempts
-$requireCaptcha = $failedAttempts >= 3;
+// reCAPTCHA configuration
+$recaptcha_site_key = get_recaptcha_site_key();
+$requireCaptcha = is_recaptcha_required('failed_login_count', 3);
 
 ?>
 <!DOCTYPE html>
