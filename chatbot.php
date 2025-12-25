@@ -32,13 +32,31 @@ function getBotReply($msg)
         "5 years" => "For 5-year-olds: LEGO City, RC cars, craft kits!",
 
 
-        // Store Information
+        // Store Information & Links
+        "about" => "Learn more about ToyWorld! 🏪 <a href='about.php' class='chat-link'>Visit Our About Page</a>",
+        "about us" => "We're ToyWorld - Malaysia's favorite toy store! 🎉 <a href='about.php' class='chat-link'>Learn More About Us</a>",
+        "who are you" => "I'm the ToyWorld Assistant! Want to know more? <a href='about.php' class='chat-link'>Visit About Us</a> 🎁",
+        "company" => "ToyWorld has been serving families since 2010! <a href='about.php' class='chat-link'>Read Our Story</a>",
+        
+        "products" => "Browse all our amazing toys! 🎁 <a href='pages/product/product_list.php' class='chat-link'>View Products</a>",
+        "product" => "Check out our full collection! <a href='pages/product/product_list.php' class='chat-link'>Browse Products</a>",
+        "catalog" => "See our complete catalog! <a href='pages/product/product_list.php' class='chat-link'>View All Products</a>",
+        "shop" => "Ready to shop? <a href='pages/product/product_list.php' class='chat-link'>Browse Our Store</a> 🛒",
+        
+        "orders" => "Track and manage your orders! <a href='pages/orders/orders.php' class='chat-link'>View My Orders</a> 📦",
+        "my order" => "Check your order status! <a href='pages/orders/orders.php' class='chat-link'>Go to Orders</a>",
+        "order history" => "View all your orders! <a href='pages/orders/orders.php' class='chat-link'>Order History</a>",
+        
+
+        "feedback" => "We'd love to hear from you! <a href='feedback.php' class='chat-link'>Send Feedback</a> 💬",
+        
+        
         "price" => "Our products start from RM10! What toy are you interested in?",
         "delivery" => "Yes! We deliver anywhere in Malaysia 🇲🇾",
         "shipping" => "Shipping takes 1–3 days depending on location.",
         "payment" => "We accept online banking, debit/credit cards, and e-wallets.",
         "hours" => "We are open daily from 9AM to 9PM! ⏰",
-        "location" => "We are located at ToyWorld Mall, Level 2! 🏬",
+        "location" => "We are located at ToyWorld Mall, Level 2! 🏬 <a href='store-locator.php' class='chat-link'>View on Map</a>",
 
 
         // Customer Support
@@ -51,7 +69,6 @@ function getBotReply($msg)
         // Small Talk
         "thank" => "You're welcome! 💚",
         "thanks" => "Glad to help! 😊",
-        "who are you" => "I'm the ToyWorld Assistant! I help customers find toys 🎁",
         "bye" => "Goodbye! Have a wonderful day 😄",
         "goodbye" => "See you again! 👋"
     ];
@@ -64,7 +81,7 @@ function getBotReply($msg)
     }
 
 
-    return "Hmm... I'm not sure about that 🤔 Try asking about *cars, dolls, LEGO, prices,* or *delivery*!";
+    return "Hmm... I'm not sure about that 🤔 Try asking about *products, about us, orders, delivery,* or specific toys!";
 }
 
 
