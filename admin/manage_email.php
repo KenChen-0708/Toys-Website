@@ -5,8 +5,7 @@ require_once '../helper/auth.php';
 require_once '../helper/mailer.php';
 
 // Ensure permissions
-// Using 'members' view permission as a baseline
-require_permission('members', 'view');
+require_permission('emails', 'view');
 
 $message = $message ?? '';
 $message_type = $message_type ?? '';
@@ -15,7 +14,7 @@ $message_type = $message_type ?? '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['send_notification'])) {
 
     // Permission check for sending
-    if (!has_permission('members', 'update')) {
+    if (!has_permission('emails', 'create')) {
         $message = "You do not have permission to send notifications.";
         $message_type = "error";
     } else {
