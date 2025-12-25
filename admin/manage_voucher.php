@@ -6,8 +6,7 @@ require_once '../helper/pdo_connection.php';
 require_once '../helper/auth.php';
 
 // Ensure only admin can access with proper permissions
-// Using 'orders' as vouchers related to checkout/money
-require_permission('orders', 'view');
+require_permission('vouchers', 'view');
 
 $message = $_SESSION['message'] ?? '';
 $message_type = $_SESSION['message_type'] ?? '';
@@ -40,7 +39,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!empty($selectedIds)) {
             try {
-                if (!has_permission('orders', 'delete')) {
+                if (!has_permission('vouchers', 'delete')) {
                     throw new Exception("You don't have permission to delete vouchers.");
                 }
                 $placeholders = implode(',', array_fill(0, count($selectedIds), '?'));
@@ -63,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** CREATE VOUCHER **/
     if (isset($_POST['create_voucher'])) {
-        if (!has_permission('orders', 'create')) {
+        if (!has_permission('vouchers', 'create')) {
             $message = "You don't have permission to create vouchers.";
             $message_type = 'error';
         } else {
@@ -113,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** UPDATE VOUCHER **/
     if (isset($_POST['update_voucher'])) {
-        if (!has_permission('orders', 'update')) {
+        if (!has_permission('vouchers', 'update')) {
             $message = "You don't have permission to update vouchers.";
             $message_type = 'error';
         } else {
@@ -161,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     /** DELETE VOUCHER **/
     if (isset($_POST['delete_voucher'])) {
-        if (!has_permission('orders', 'delete')) {
+        if (!has_permission('vouchers', 'delete')) {
             $message = "You don't have permission to delete vouchers.";
             $message_type = 'error';
         } else {
