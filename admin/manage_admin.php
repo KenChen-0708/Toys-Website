@@ -106,9 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $message = "Error deleting selected admins: " . $e->getMessage();
                     $message_type = "error";
                 }
-        } else {
-            $message = "Please select at least one admin before deleting.";
-            $message_type = "error";
+            } else {
+                $message = "Please select at least one admin before deleting.";
+                $message_type = "error";
+            }
         }
     }
 
@@ -214,7 +215,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
-    }
     }
 
     /** UPDATE ADMIN **/
@@ -899,7 +899,17 @@ jane_admin,jane@example.com,Password!234,super admin
 
     <script>
         function openCreateModal() {
-            document.getElementById('createModal').style.display = 'block';
+            const modal = document.getElementById('createModal');
+            const form = document.getElementById('createAdminForm');
+            if (form) {
+                form.reset();
+                // Clear any error states
+                form.querySelectorAll('.input--error').forEach(el => el.classList.remove('input--error'));
+                form.querySelectorAll('.hint--error').forEach(el => {
+                    el.classList.remove('hint--error', 'field-hint--visible');
+                });
+            }
+            modal.style.display = 'block';
         }
 
         function openCSVModalAdmin() {
@@ -1208,9 +1218,13 @@ jane_admin,jane@example.com,Password!234,super admin
 
                     if (!valid) {
                         e.preventDefault();
+                    } else {
+                        // Form is valid, allow submission
+                        // The page will reload after POST, so modal will close automatically
                     }
                 });
             }
+
 
             // ===== EDIT ADMIN FORM VALIDATION =====
             const editForm = document.getElementById('editAdminForm');
@@ -1279,6 +1293,13 @@ jane_admin,jane@example.com,Password!234,super admin
 
             setupRowClickSelection('#adminBulkForm .selectable-row');
         });
+
+        // Close create modal if admin was successfully created
+        <?php if (!empty($message) && $message_type === 'success' && isset($_POST['create_admin'])): ?>
+        window.addEventListener('load', function() {
+            closeModal('createModal');
+        });
+        <?php endif; ?>
     </script>
 
 </body>
